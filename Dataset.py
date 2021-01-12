@@ -11,6 +11,9 @@ import sounddevice as sd
 import numpy as np
 import pandas as pd
 
+from csv import reader
+
+
 def load_sound_file(file_path, sr=22050, mono=True):
     #Loads the raw sound time series and returns also the sampling rate
     raw_sound, sr = librosa.load(file_path)
@@ -115,12 +118,34 @@ class SoundDataset(torch.utils.data.Dataset):
     #                           metadata= dizionario con altri dati
    
     def load_dataset(self,sample):
-        csvData = pd.read_csv('UrbanSound8K/metadata/UrbanSound8K.csv')
-        sounds = list()
-        dizionario = dict()
-        for i in range(10):
-          print(csvData.iloc[0, :])
-          dizionario.add(csvData[i])
+        file_path_audio = "UrbanSound8K-CNN-sound-classification/data/UrbanSound8K/audio/"
+        with open('data/UrbanSound8K/metadata/UrbanSound8K.csv', 'r') as read_obj:
+            csv_reader = reader(read_obj)
+            n = 0
+            audios_data_from_csv = []
+            for row in csv_reader:
+                audios_data_from_csv.append(row)
+
+            list_audios = []
+            for audio in audios_data_from_csv:
+
+                metadata = {
+                    "fsID":audio[1],
+                    "start":audio[2],
+                    "end":audio[3],
+                    "salience":audio[4]
+                }   
+                audiodict = {
+                    "file_path":file_path_audio+"fold"+audio[5]+"/"+audio[0],
+                    "class_id":audio[6],
+                    "class_name":audio[7],
+                    "meta_data": metadata
+                }
+
+                list_audios.append(audiodict)
+
+        return list_audios        
+                
             
       
 
@@ -134,15 +159,17 @@ class SoundDataset(torch.utils.data.Dataset):
         return len(self.data)
 
 if __name__ == "__main__":
-    DATASET_DIR = "UrbanSound8K"#data
+    DATASET_DIR = "data"#data
     DATASET_NAME = "UrbanSound8K"
-    #dataset = SoundDataset(DATASET_DIR, DATASET_NAME)
+    dataset = SoundDataset(DATASET_DIR, DATASET_NAME)
     sound, sr = librosa.load(librosa.ex('trumpet'))
     #play_sound(sound,sr)
     #plot_sound_waves(sound, sound_file_name="file.wav", show=True, sound_class="Prova")
     #plot_sound_spectrogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova", log_scale=False)
     #plot_sound_spectrogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova", log_scale=True)
     #plot_sound_spectrogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova", log_scale=True, title="Different hop length", hop_length=2048, sr=22050)
-    plot_periodogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova")
+    #plot_periodogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova")
     
+    
+    print(dataset.data)
    
