@@ -1,5 +1,7 @@
 import torch
 
+from scipy import signal
+
 import librosa
 import librosa.display
 
@@ -7,6 +9,7 @@ from matplotlib import pyplot as plt
 import sounddevice as sd
 
 import numpy as np
+import pandas as pd
 
 def load_sound_file(file_path, sr=22050, mono=True):
     #Loads the raw sound time series and returns also the sampling rate
@@ -66,6 +69,19 @@ def plot_sound_spectrogram(sound, sound_file_name = None, sound_class=None, show
     
     return plot
 
+#from https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.periodogram.html
+def plot_periodogram(sound, sound_file_name = None, sound_class=None, show = False, sr=22050, title=None):
+    f, Pxx_den = signal.periodogram(sound, sr)
+    plot = plt.figure()
+    plt.semilogy(f, Pxx_den)
+    plt.ylim([1e-7, 1e2])
+    plt.xlabel('frequency [Hz]')
+    plt.ylabel('Magnitude (norm)')
+
+    if show:
+        plt.show()
+    return plot
+
 class SoundDataset(torch.utils.data.Dataset):
     def __init__(self, dataset_dir, dataset_name):
         self.dataset_dir = dataset_dir
@@ -88,8 +104,11 @@ class SoundDataset(torch.utils.data.Dataset):
         return preprocessed_sample, class_id, class_name, meta_data 
 
 
-    def preprocess(self, sample):
-        pass
+    def preprocess(self, sample, spectrogram=True):
+        if spectrogram:
+            pass
+        else:
+            pass
 
     #lista data, ogni elemento della lista è
     #un dizionario con campi : filepath,classeId,className,
@@ -98,7 +117,7 @@ class SoundDataset(torch.utils.data.Dataset):
     def load_dataset(self,sample):
         csvData = pd.read_csv('UrbanSound8K/metadata/UrbanSound8K.csv')
         sounds = list()
-        Dict dizionario = dict()
+        dizionario = dict()
         for i in range(10):
           print(csvData.iloc[0, :])
           dizionario.add(csvData[i])
@@ -117,13 +136,13 @@ class SoundDataset(torch.utils.data.Dataset):
 if __name__ == "__main__":
     DATASET_DIR = "UrbanSound8K"#data
     DATASET_NAME = "UrbanSound8K"
-    dataset = SoundDataset(DATASET_DIR, DATASET_NAME)
-    #sound, sr = librosa.load(librosa.ex('trumpet'))
+    #dataset = SoundDataset(DATASET_DIR, DATASET_NAME)
+    sound, sr = librosa.load(librosa.ex('trumpet'))
     #play_sound(sound,sr)
     #plot_sound_waves(sound, sound_file_name="file.wav", show=True, sound_class="Prova")
     #plot_sound_spectrogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova", log_scale=False)
     #plot_sound_spectrogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova", log_scale=True)
     #plot_sound_spectrogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova", log_scale=True, title="Different hop length", hop_length=2048, sr=22050)
-    
+    plot_periodogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova")
     
    
