@@ -23,6 +23,7 @@ class SoundDataset(torch.utils.data.Dataset):
         prep_sample = sample
         return prep_sample
     
+    def __len__(self):
 #TODO MICHELE
         pass
 
