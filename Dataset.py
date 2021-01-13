@@ -1,3 +1,5 @@
+import random
+
 import torch
 
 from scipy import signal
@@ -78,20 +80,23 @@ def plot_periodogram(sound, sound_file_name = None, sound_class=None, show = Fal
     plot = plt.figure()
     plt.semilogy(f, Pxx_den)
     plt.ylim([1e-7, 1e2])
-    plt.xlabel('frequency [Hz]')
+    plt.xlabel('Frequency [Hz]')
     plt.ylabel('Magnitude (norm)')
 
     if show:
         plt.show()
     return plot
+    
 
-class SoundDataset(torch.utils.data.Dataset):
-    def __init__(self, dataset_dir, dataset_name):
+
+class SoundDatasetFold(torch.utils.data.IterableDataset):
+    def __init__(self, dataset_dir, dataset_name, folds = [], shuffle_dataset = False, generate_spectrograms = True, test = False):
+        super(SoundDataset).__init__()
         self.dataset_dir = dataset_dir
         self.dataset_name = dataset_name
-#TODO MICHELE
-        self.data = self.load_dataset(dataset_dir)
-        
+        self.folds = folds
+        self.data, self.data_ids = self.load_dataset(dataset_dir, folds=self.folds) 
+        self.generate_spectrograms = generate_spectrograms
 
 #TODO EMANUELE
     def __getitem__(self, index):
@@ -101,15 +106,65 @@ class SoundDataset(torch.utils.data.Dataset):
         class_name = sample["class_name"]
         meta_data = sample["meta_data"]
         
-        preprocessed_sample = self.preprocess(sample)
+        if self.generate_spectrograms:
+            original_spectrograms, preprocessed_spectrograms = self.preprocess(sample, spectrograms=True)
+            returned_samples = []
+            for orig_spec, prep_spec in zip(original_spectrograms, preprocessed_spectrograms):
 
-        #Considerare quali labels usare
-        return preprocessed_sample, class_id, class_name, meta_data 
+                returned_samples.append({
+                        "original_spectrogram" : orig_spec, 
+                        "preprocessed_spectrogram" : prep_spec, 
+                        "class_id" : class_id, 
+                        "class_name" : class_name, 
+                        "meta_data" : meta_data
+                        })
+            return returned_samples
+        else:
+            mfccs, chroma, mel, contrast, tonnetz = self.preprocess(sample, spectrograms=False)
+            return [{
+                    "mfccs" : mfccs, 
+                    "chroma" : chroma, 
+                    "mel" : mel, 
+                    "contrast" : contrast, 
+                    "tonnetz" : tonnetz, 
+                    "class_ids" : class_id, 
+                    "class_names" : class_names, 
+                    "meta_data" : meta_data
+                    }]
 
+    
+    #pattern iter, chiamo n=len(dataset) volte __getitem__ (nostro metodo getter)
+    #con yield
+    #forse spacchetto dati di __getitem__, e.q se due finestre, una alla volta
+    def __iter__(self):
+        if shuffle_dataset:
+            random.shuffle(image_ids)
 
+        for index in self.data_ids:
+            preprocessed_samples, class_id, class_name, meta_data = self[index]
+            for sample in preprocessed_samples:
+                yield sample
+                
+#TODO implement the FFN data preprocessing
     def preprocess(self, sample, spectrogram=True):
-        if spectrogram:
-            pass
+        file_name = sample["file_path"]
+        X, sample_rate = librosa.load(file_name)    
+        if not spectrogram:
+            #extract_feature
+            print "Features :",len(X), "sampled at ", sample_rate, "hz"
+            #Short-time Fourier transform(STFT)
+            stft = np.abs(librosa.stft(X))
+            #Mel-frequency cepstral coefficients (MFCCs)
+            mfccs = np.mean(librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=40).T,axis=0)
+            #Compute a chromagram from a waveform or power spectrogram.
+            chroma = np.mean(librosa.feature.chroma_stft(S=stft, sr=sample_rate).T,axis=0)
+            #Compute a mel-scaled spectrogram.
+            mel = np.mean(librosa.feature.melspectrogram(X, sr=sample_rate).T,axis=0)
+            contrast = np.mean(librosa.feature.spectral_contrast(S=stft, sr=sample_rate).T,axis=0)
+            #Computes the tonal centroid features (tonnetz)
+            tonnetz = np.mean(librosa.feature.tonnetz(y=librosa.effects.harmonic(X), sr=sample_rate).T,axis=0)
+            
+            return mfccs,chroma,mel,contrast,tonnetz
         else:
             pass
 
@@ -117,51 +172,45 @@ class SoundDataset(torch.utils.data.Dataset):
     #un dizionario con campi : filepath,classeId,className,
     #                           metadata= dizionario con altri dati
    
-    def load_dataset(self,sample):
+    def load_dataset(self,sample, folds = []):
         file_path_audio = "UrbanSound8K-CNN-sound-classification/data/UrbanSound8K/audio/"
         with open('data/UrbanSound8K/metadata/UrbanSound8K.csv', 'r') as read_obj:
             csv_reader = reader(read_obj)
-            n = 0
             audios_data_from_csv = []
             for row in csv_reader:
                 audios_data_from_csv.append(row)
 
-            list_audios = []
+            index = 0
+            list_audios = {}
             for audio in audios_data_from_csv:
+                fold = audio[5]
+                if fold not in folds:
+                    metadata = {
+                        "fsID":audio[1],
+                        "start":audio[2],
+                        "end":audio[3],
+                        "salience":audio[4]
+                    }   
+                    audiodict = {
+                        "file_path":file_path_audio+"fold"+fold+"/"+audio[0],
+                        "class_id":audio[6],
+                        "class_name":audio[7],
+                        "meta_data": metadata
+                    }
 
-                metadata = {
-                    "fsID":audio[1],
-                    "start":audio[2],
-                    "end":audio[3],
-                    "salience":audio[4]
-                }   
-                audiodict = {
-                    "file_path":file_path_audio+"fold"+audio[5]+"/"+audio[0],
-                    "class_id":audio[6],
-                    "class_name":audio[7],
-                    "meta_data": metadata
-                }
+                    list_audios[index] = audiodict
+                    audio_ids = index
+                    index += 1
 
-                list_audios.append(audiodict)
-
-        return list_audios        
-                
+        return list_audios, audio_ids     
             
-      
-
-         
-        
-#TODO EMANUELE
-        prep_sample = sample
-        return prep_sample
-    
     def __len__(self):
         return len(self.data)
 
 if __name__ == "__main__":
     DATASET_DIR = "data"#data
     DATASET_NAME = "UrbanSound8K"
-    dataset = SoundDataset(DATASET_DIR, DATASET_NAME)
+    dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, generate_spectrograms=False)
     sound, sr = librosa.load(librosa.ex('trumpet'))
     #play_sound(sound,sr)
     #plot_sound_waves(sound, sound_file_name="file.wav", show=True, sound_class="Prova")
@@ -171,5 +220,13 @@ if __name__ == "__main__":
     #plot_periodogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova")
     
     
-    print(dataset.data)
+    #print(dataset.data)
+
+    mfccs,chroma,mel,contrast,tonnetz = preprocess(dataset.data[0],False)
+
+    print("mfcss : "+mfcss)
+    print("chroma: "+chroma)
+    print("mel: "+ mel)
+    print("contrast: "+contrast)
+    print("tonnetz: "+tonnetz)
    
