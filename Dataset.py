@@ -90,24 +90,67 @@ def plot_periodogram(sound, sound_file_name = None, sound_class=None, show = Fal
 
 
 class SoundDatasetFold(torch.utils.data.IterableDataset):
-    def __init__(self, dataset_dir, dataset_name, folds = [], shuffle_dataset = False, generate_spectrograms = True, test = False):
-        super(SoundDataset).__init__()
+    def __init__(self, dataset_dir, dataset_name, 
+                folds = [], 
+                shuffle_dataset = False, 
+                generate_spectrograms = True, 
+                image_augmentation_pipeline = None,
+                test = False
+                ):
+        super(SoundDatasetFold).__init__()
         self.dataset_dir = dataset_dir
         self.dataset_name = dataset_name
         self.folds = folds
         self.data, self.data_ids = self.load_dataset(dataset_dir, folds=self.folds) 
         self.generate_spectrograms = generate_spectrograms
+        self.image_augmentation_pipeline = image_augmentation_pipeline
+    
+    def get_preprocessed_fields(): 
+        if self.generate_spectrograms:
+            return ["original_spectrogram", "preprocessed_spectrogram"]
+        else:
+            return ["mfccs", "chroma", "mel", "contrast", "tonnetz"]
 
-#TODO EMANUELE
+    def get_unpreprocessed_fields(): return ["class_id", "class_name", "meta_data"]
+
+    def __call__(self, sound, sample_rate=22050):
+        if self.generate_spectrograms:
+            original_spectrograms, preprocessed_spectrograms = self.preprocess(sound, sample_rate=sample_rate, spectrograms=True)
+            returned_samples = []
+            for orig_spec, prep_spec in zip(original_spectrograms, preprocessed_spectrograms):
+
+                returned_samples.append({
+                        "original_spectrogram" : orig_spec, 
+                        "preprocessed_spectrogram" : prep_spec, 
+                        "class_id" : None, 
+                        "class_name" : None, 
+                        "meta_data" : None
+                        })
+            return returned_samples
+        else:
+            mfccs, chroma, mel, contrast, tonnetz = self.preprocess(sample, sample_rate=sample_rate, spectrograms=False)
+            return [{
+                    "mfccs" : mfccs, 
+                    "chroma" : chroma, 
+                    "mel" : mel, 
+                    "contrast" : contrast, 
+                    "tonnetz" : tonnetz, 
+                    "class_id" : None, 
+                    "class_name" : None, 
+                    "meta_data" : None
+                    }]
+
+
     def __getitem__(self, index):
-        #Decidere come salvare dati -> estrarre sample
         sample = self.data[index]
         class_id = sample["class_id"]
         class_name = sample["class_name"]
         meta_data = sample["meta_data"]
         
+        sound, sample_rate = librosa.load(sample["file_path"])  
+
         if self.generate_spectrograms:
-            original_spectrograms, preprocessed_spectrograms = self.preprocess(sample, spectrograms=True)
+            original_spectrograms, preprocessed_spectrograms = self.preprocess(sound, sample_rate = sample_rate, spectrograms=True)
             returned_samples = []
             for orig_spec, prep_spec in zip(original_spectrograms, preprocessed_spectrograms):
 
@@ -120,7 +163,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                         })
             return returned_samples
         else:
-            mfccs, chroma, mel, contrast, tonnetz = self.preprocess(sample, spectrograms=False)
+            mfccs, chroma, mel, contrast, tonnetz = self.preprocess(sound, sample_rate = sample_rate, spectrograms=False)
             return [{
                     "mfccs" : mfccs, 
                     "chroma" : chroma, 
@@ -146,25 +189,23 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 yield sample
                 
 #TODO implement the FFN data preprocessing
-    def preprocess(self, sample, spectrogram=True):
-        file_name = sample["file_path"]
-        X, sample_rate = librosa.load(file_name)    
+    def preprocess(self, sound, sample_rate = 22050, spectrogram=True):  
         if not spectrogram:
             #extract_feature
-            print "Features :",len(X), "sampled at ", sample_rate, "hz"
+            print("Features :"+len(sound)+" sampled at "+sample_rate+"hz")
             #Short-time Fourier transform(STFT)
-            stft = np.abs(librosa.stft(X))
+            stft = np.abs(librosa.stft(sound))
             #Mel-frequency cepstral coefficients (MFCCs)
-            mfccs = np.mean(librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=40).T,axis=0)
+            mfccs = np.mean(librosa.feature.mfcc(y=sound, sr=sample_rate, n_mfcc=40).T,axis=0)
             #Compute a chromagram from a waveform or power spectrogram.
             chroma = np.mean(librosa.feature.chroma_stft(S=stft, sr=sample_rate).T,axis=0)
             #Compute a mel-scaled spectrogram.
-            mel = np.mean(librosa.feature.melspectrogram(X, sr=sample_rate).T,axis=0)
+            mel = np.mean(librosa.feature.melspectrogram(sound, sr=sample_rate).T,axis=0)
             contrast = np.mean(librosa.feature.spectral_contrast(S=stft, sr=sample_rate).T,axis=0)
             #Computes the tonal centroid features (tonnetz)
-            tonnetz = np.mean(librosa.feature.tonnetz(y=librosa.effects.harmonic(X), sr=sample_rate).T,axis=0)
+            tonnetz = np.mean(librosa.feature.tonnetz(y=librosa.effects.harmonic(sound), sr=sample_rate).T,axis=0)
             
-            return mfccs,chroma,mel,contrast,tonnetz
+            return mfccs, chroma, mel, contrast, tonnetz
         else:
             pass
 

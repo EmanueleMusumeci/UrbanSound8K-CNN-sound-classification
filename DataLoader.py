@@ -36,22 +36,11 @@ class DataLoader():
         self.device = device
         self.tensorize_gold_data = tensorize_gold_data
 
-        self.fields = [
-                       "image",                             #[batch_size, CNN_input_width, CNN_input_height]
-                       "region_proposals_bounding_boxes"    #List([N_bounding_box_of_image, 4]) of size batch_size
-                      ]
+        self.fields = self.dataset.get_preprocessed_fields()
 
-        self.gold_fields = [
-                            "gold_class_names",
-                            "region_proposals_class_names",
-                            "gold_bounding_boxes"
-                           ]
+        self.gold_fields = self.dataset.get_gold_fields()
 
-        self.unpreprocessed_fields = [
-                                      "image_id",
-                                      "image_name",
-                                      "original_image"
-                                     ]
+        self.unpreprocessed_fields = self.dataset.get_unpreprocessed_fields()
 
         self.prediction_mode = prediction_mode
 
@@ -140,25 +129,18 @@ class DataLoader():
           # Use the same permutation mask for all batches
           permutation_mask = np.random.permutation(batch_size)
 
-        bounding_boxes = []
         for field, value in current_batch.items():
           if field in self.unpreprocessed_fields:
             continue
-          # We don't encode the sentences as we need them raw
-          # (the model will receive only the embeddings)
-          if value is None: continue
 
           array = []
 
           #Convert to numpy arrays 
           try:
-            if field=="gold_class_names" or field=="region_proposals_class_names":
-              if self.dataset.encode_labels:
-                #array = np.asarray(value, dtype=np.int64)
-              #else:
-                continue
+            if field=="original_spectrogram" or field=="preprocessed_spectrogram":
+                array = np.asarray(value, dtype=np.int64)
             else:
-              array = np.asarray(value, dtype=np.int64)
+                array = np.asarray(value)
           except Exception as e:
               print("Exception during conversion to numpy arrays, raised by field ",field," with value ",value)
               for i,el in enumerate(value):
@@ -167,20 +149,13 @@ class DataLoader():
               raise e
 
           #Convert to tensors
-          try:
-            #If we use Bert embeddings use a float tensor            
-            if field=="region_proposals_bounding_boxes" or field=="gold_bounding_boxes":
-              for i,element in enumerate(array):
-                current_batch[field][i] = torch.autograd.Variable(
-                      torch.from_numpy(element)).type(torch.LongTensor).cpu()
-            #elif field=="gold_bounding_boxes" or field=="gold_class_names" or field=="region_proposals_class_names":
-            #  continue
-            elif field=="image": 
-              current_batch[field] = torch.autograd.Variable(
-                  torch.from_numpy(array)).type(torch.FloatTensor).cpu()
-            elif field=="region_proposal_class_names" or field=="gold_class_names":
+          try:        
+            if field=="original_spectrogram" or field=="preprocessed_spectrogram": 
               current_batch[field] = torch.autograd.Variable(
                   torch.from_numpy(array)).type(torch.LongTensor).cpu()
+            else:
+              current_batch[field] = torch.autograd.Variable(
+                  torch.from_numpy(array)).type(torch.FloatTensor).cpu()
 
           except Exception as e:
               print("Exception during conversion to tensors, raised by field ",field," with value ",value)
@@ -193,115 +168,6 @@ class DataLoader():
             current_batch[field] = torch.transpose(current_batch[field], 0, 1)
 
         return current_batch
-
-#TODO RAW (UNANNOTATED) IMAGE PREDICTION PIPELINE
-    '''
-    def __call__(self, input_image):
-      images, = self.dataset(input_image)
-      batches = []
-      for sentence in sentences:
-        batches.append(self.collate_sample([sentence]))
-      return batches
-    
-
-    def collate_sample(self, samples):
-      #This function is called only when in prediction mode (in the docker framework)
-
-      #If in prediction mode and the predicate_id is -1, this sentence has no
-      #predicate so we return a batch of empty lists (it will not be predicted anyway)
-      
-      if self.prediction_mode and samples[0]["predicate_id"]==-1:
-        sample_batch = self.collate_fn(samples)
-        return sample_batch
-      else:
-        sample_batch = self.collate_fn(samples)
-        sample_batch = self.preprocess_batch(sample_batch)
-        return sample_batch
-    '''
-
-    def get_random_image(self, only_multi_object=False, only_single_object=False):
-      sample = [self.dataset.get_random_image(only_multi_object, only_single_object)]
-      
-      return self.preprocess_batch(self.collate_fn(sample))
-
-    def preprocess_image_from_dataset_id(self, id):
-      return self.preprocess_batch(self.collate_fn(self.dataset[id]))
-
-    def pad_sequences(self, batch, max_sequence_length, padding_symbol_index=None, padding_dimension=1, lengths_vector=None, nested = False, pad_left=False, use_token_index_as_padding_symbol=False, debug=False):
-        """
-        Adds padding to all sequences of a batch that are shorter than the longest sequence in that batch
-        Args:
-          - batch: list of sequences to pad
-          - max_sequence_length: length of the longest sentence in the batch, if a sentence
-            is shorter than this length it is padded in order for it to reach this length
-          - padding_symbol_index: symbol used as padding
-          OPTIONAL:
-          - padding_dimension: if 1 only a single padding_symbol is added, if >1 instead
-                      of a padding symbol, a whole vector of padding symbols of length padding_dimension is added
-          - lengths_vector: vector of lengths of the batch vector, that will be used
-            to pack the sequences in the neural network. For every padding added a 0
-            will be added to this vector
-          - nested: determines if we want to pad a list of lists or a list
-          - pad_left: determines wether we want to pad to the left or to the right
-          - use_token_index_as_padding_symbol
-        """
-        assert padding_symbol_index is not None or use_token_index_as_padding_symbol, "Specify a padding symbol!"
-        if nested:
-            for line in batch:
-                for i, sequence in enumerate(line):
-                    if len(sequence) < max_sequence_length:
-                        for j in range(max_sequence_length - len(sequence)):
-                            if use_token_index_as_padding_symbol:
-                              padding_symbol_index = len(sequence)+j
-                            if padding_dimension > 1:
-                              if pad_left:
-                                sequence.insert(0,[padding_symbol_index]
-                                                * padding_dimension)
-                              else:
-                                sequence.append([padding_symbol_index]
-                                                * padding_dimension)
-                            else:
-                              if pad_left:
-                                sequence.insert(0,padding_symbol_index)
-                              else:
-                                sequence.append(padding_symbol_index)
-                            if lengths_vector is not None:
-                                lengths_vector[i].append(0)
-        else:
-            for i, sequence in enumerate(batch):
-                if debug:
-                    print(len(sequence))
-                    print(max_sequence_length)
-                if len(sequence) < max_sequence_length:
-                    for j in range(max_sequence_length - len(sequence)):
-                        if use_token_index_as_padding_symbol:
-                          padding_symbol_index = len(sequence)+j
-                        if padding_dimension > 1:
-                          if pad_left:
-                            sequence.insert(0,[padding_symbol_index]
-                                            * padding_dimension)
-                          else:
-                            sequence.append([padding_symbol_index]
-                                            * padding_dimension)
-                        else:
-                          if pad_left:
-                            sequence.insert(0,padding_symbol_index)
-                          else:
-                            sequence.append(padding_symbol_index)
-                        if lengths_vector is not None:
-                            lengths_vector[i].append(0)
-                
-
-    def get_padding_masks(self, sentence_lengths, max_sentence_length):
-      '''Returns a binary padding mask (has 0 for padding tokens, 1 for the others)
-         for the sentences in the batch
-      '''
-      padding_mask = []
-      for length in sentence_lengths:
-          line = [1]*max_sentence_length
-          line[:length] = [0]*length
-          padding_mask.append(line)
-      return padding_mask
 
     def shuffle_batch(self, batch, batch_dim, random_indices=None):
       if random_indices is None:
