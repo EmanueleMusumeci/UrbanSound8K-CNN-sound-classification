@@ -3,7 +3,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import numpy as np
-from sklearn.datasets import make_blobs
+#from sklearn.datasets import make_blobs
+
+import os
+
+
+
+def load_sound_files(parent_dir, file_paths):
+    raw_sounds = []
+    for fp in file_paths:
+        X,sr = librosa.load(parent_dir + fp)
+        raw_sounds.append(X)
+    return raw_sounds
+
 
 #traduzione in PyTorch da tensorflow del tutorial:
 #   https://github.com/jaron/deep-listening/blob/master/2-us8k-ffn-train-predict.ipynb
@@ -44,6 +56,7 @@ class FeedForwardNetwork(nn.Module):
 
 if __name__ == "__main__":
     ##Softmax
+    
     m = nn.Softmax(dim = 1)
     input = torch.randn(2,3)
     #print("input softmax: ", input)
@@ -60,23 +73,32 @@ if __name__ == "__main__":
     ## CrossEntropyLoss
     loss = nn.CrossEntropyLoss()
     input = torch.randn(3, 5, requires_grad=True)
-    print("input loss: ", input)
+    #print("input loss: ", input)
     target = torch.empty(3, dtype=torch.long).random_(5)
     output = loss(input, target)
-    print("output loss: ",output)
+    #print("output loss: ",output)
 
     output.backward()
     #print("output dropout: ",output)
-    print("Test FFN: ")
+    #print("Test FFN: ")
 
 
     net = FeedForwardNetwork(2, 10)
     criterion = torch.nn.BCELoss()
     #optimizer = torch.optim.SGD(net.parameters(), lr = 0.01)
-    optimizer = torch.optim
+    #optimizer = torch.optim
     print(net)
     #print(optimizer)
 
+    print("Load data: ")
+    base_dir = os.path.dirname(os.path.realpath(__file__))
+    DATASET_DIR = os.path.join(base_dir,"data")
+
+    print("base_dir: ",base_dir)
+    print("DATASET_DIR: ",DATASET_DIR)
+
+
+    #raw_sounds = load_sound_files(parent_dir, sound_file_paths)
 
 
 

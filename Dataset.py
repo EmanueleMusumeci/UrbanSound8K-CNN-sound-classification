@@ -34,108 +34,7 @@ from tqdm import tqdm
 
 from image_transformations import SpectrogramAddGaussNoise, SpectrogramReshape, SpectrogramShift
 
-from utils import function_timer, code_timer, print_code_stats
-
-#Snippet taken from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
-'''
-This function loads an audio file for a specified duration (default 4 secs), overlays on a silent audio segment 
-(providing a native padding), resamples it a t 22050 Hz, sets it to mono and converts it to float
-'''
-@function_timer
-def load_audio_file(path, duration = 4000, sample_rate = 22050):
-
-    with code_timer("pydub.AudioSegment.silent"):
-        audio = pydub.AudioSegment.silent(duration=duration)
-    
-    with code_timer("pydub.AudioSegment.from_file"):
-        audio_segment = pydub.AudioSegment.from_file(path).set_frame_rate(sample_rate).set_channels(1)
-
-    with code_timer("audio.overlay"):
-        audio = audio.overlay(audio_segment)[0:duration]
-    
-    with code_timer("np.from_buffer"):
-        raw = (np.frombuffer(audio._data, dtype="int16") + 0.5) / (0x7FFF + 0.5)   # convert to float
-    
-    return raw, sample_rate
-
-'''
-This function loads an audio file
-'''
-#def load_audio_file(file_path, sample_rate=22050, mono=True):
-#    #Loads the raw sound time series and returns also the sampling rate
-#    raw_sound, sr = librosa.load(file_path)
-#    return raw_sound
-
-def play_sound(sound, sr = 22050, blocking=True):
-    sd.play(sound, sr, blocking=True)
-
-'''
-Displays a wave plot for the input raw sound (using the Librosa library)
-'''
-def plot_sound_waves(sound, sound_file_name = None, sound_class=None, show=False, sr=22050):
-    plot_title = "Wave plot"
-    
-    if sound_file_name is not None:
-        plot_title += "File: "+sound_file_name
-    
-    if sound_class is not None:
-        plot_title+=" (Class: "+sound_class+")"
-    
-    plot = plt.figure(plot_title)
-    librosa.display.waveplot(np.array(sound),sr=sr)
-    plt.title(plot_title)
-    
-    if show:
-        plt.show()
-
-def plot_sound_spectrogram(sound, sound_file_name = None, sound_class=None, show = False, log_scale = False, hop_length=512, sr=22050, colorbar_format = "%+2.f dB", title=None):
-    if title is None:
-        plot_title = title
-    else:
-        plot_title = "Spectrogram"
-        
-        if sound_file_name is not None:
-            plot_title += "File: "+sound_file_name
-        
-        if sound_class is not None:
-            plot_title+=" (Class: "+sound_class+")"
-    
-    sound = librosa.stft(sound, hop_length = hop_length)
-    sound = librosa.amplitude_to_db(np.abs(sound), ref=np.max)
-
-    if log_scale:
-        y_axis = "log"
-    else:
-        y_axis = "linear"
-
-    plot = plt.figure(plot_title)
-    librosa.display.specshow(sound, hop_length = hop_length, x_axis="time", y_axis=y_axis)
-
-    plt.title(plot_title)
-    plt.colorbar(format=colorbar_format)
-    
-    if show:
-        plt.show()
-    
-    return plot
-
-#from https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.periodogram.html
-def plot_periodogram(sound, sound_file_name = None, sound_class=None, show = False, sr=22050, title=None):
-    f, Pxx_den = signal.periodogram(sound, sr)
-    plot = plt.figure()
-    plt.semilogy(f, Pxx_den)
-    plt.ylim([1e-7, 1e2])
-    plt.xlabel('Frequency [Hz]')
-    plt.ylabel('Magnitude (norm)')
-
-    if show:
-        plt.show()
-    return plot
-    
-def display_heatmap(data):
-    plt.imshow(data, cmap="hot", interpolation='nearest')
-    plt.show()
-
+from utils import function_timer, code_timer, print_code_stats, display_heatmap, play_sound, load_audio_file, pickle_data, unpickle_data
 
 class SoundDatasetFold(torch.utils.data.IterableDataset):
     def __init__(self, dataset_dir, dataset_name, 
@@ -168,7 +67,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         self.dataset_dir = dataset_dir
         self.dataset_name = dataset_name
         self.folds = folds
-        self.data, self.data_ids = self.load_dataset(dataset_dir, folds=self.folds) 
+        self.data, self.data_ids = self.load_dataset_index(dataset_dir, folds=self.folds) 
 
         self.shuffle_dataset = shuffle_dataset
 
@@ -450,12 +349,28 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                                 preprocessed_spectrograms_with_deltas[i, :, :, 2] = shifted_delta_delta_spectrogram
                 
             return original_spectrograms, preprocessed_spectrograms_with_deltas
+
+   #from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
+   def load_compacted_dataset(dataset_dir, folds = [1,2,3,4,5,6,7,8,9,10]):
+    """Load raw audio and metadata content from the UrbanSound8K dataset."""
+    
+    audio_meta = []
+    audio_raw = []
+    for fold in folds:
+        if os.path.isfile(os.path.join(dataset_dir,'urban_meta_fold_{}.pkl'.format(fold))) and os.path.isfile(os.path.join(dataset_dir,'urban_audio_fold_{}.dat'.format(fold))):
+            fold_meta = unpickle_data(os.path.join(dataset_dir,'urban_meta_fold_{}.pkl'.format(fold)))
+            fold_raw = np.memmap(os.path.join(dataset_dir,'urban_audio_fold_{}.dat'.format(fold)), dtype='float32', mode='r', shape=(len(fold_meta), 88200))
+            audio_meta = np.concatenate(audio_meta, fold_meta, axis = 0)
+            audio_raw.append(fold_raw)
+        else:
+            raise FileNotFoundError
+    return audio_meta, audio_raw
+
     #lista data, ogni elemento della lista è
     #un dizionario con campi : filepath,classeId,className,
     #                           metadata= dizionario con altri dati
-   
-    def load_dataset(self,sample, folds = [], skip_first_line=True):
-        with open('data/UrbanSound8K/metadata/UrbanSound8K.csv', 'r') as read_obj:
+    def load_dataset_index(self,sample, folds = [], skip_first_line=True):
+        with open(os.path.join(self.dataset_dir,'metadata','UrbanSound8K.csv', 'r') as read_obj:
             csv_reader = reader(read_obj)
             
             #next skips the first line that contains the header info
@@ -467,7 +382,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
 
             index = 0
             audio_ids = []
-            list_audios = {}
+            audio_meta = []
             for audio in audios_data_from_csv:
                 fold_number = audio[5]
                 if fold_number not in self.folds:
@@ -485,10 +400,10 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                         "meta_data": metadata
                     }
 
-                    list_audios[index] = audiodict
+                    audio_meta.append(audiodict)
                     audio_ids.append(index)
                     index += 1
-        return list_audios, audio_ids     
+        return audio_meta, audio_ids     
             
     #def __len__(self):
     #    #if self.generate_spectrograms:
@@ -516,7 +431,7 @@ if __name__ == "__main__":
                                 DATASET_DIR, DATASET_NAME,
                                 folds = [1], 
                                 shuffle_dataset = True, 
-                                generate_spectrograms = True, 
+                                generate_spectrograms = False, 
                                 shift_transformation = left_shift_transformation,
                                 background_noise_transformation = background_noise_transformation,
                                 audio_augmentation_pipeline = [],
@@ -540,7 +455,7 @@ if __name__ == "__main__":
     #plot_sound_spectrogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova", log_scale=True, title="Different hop length", hop_length=2048, sr=22050)
     #plot_periodogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova")
     
-    #print(dataset.data[0])
+    print(dataset.data[0])
 
     #sample = dataset[1][0]
     #display_heatmap(sample["original_spectrogram"][:,:,0])
@@ -551,9 +466,9 @@ if __name__ == "__main__":
     #play_sound(load_audio_file(dataset.data[0]["file_path"])[0])
 
     #progress_bar = tqdm(total=len(dataset), desc="Sample", position=0)
-    for i, obj in enumerate(dataset):
-        if i>100: 
-            break
+    #for i, obj in enumerate(dataset):
+    #    if i>100: 
+    #        break
         #progress_bar.update(1)
     #progress_bar.close()
     #print("mfccs : "+str(sample["mfccs"]))
@@ -562,7 +477,7 @@ if __name__ == "__main__":
     #print("contrast: "+str(sample["contrast"]))
     #print("tonnetz: "+str(sample["tonnetz"]))
 
-    print_code_stats()
+    #print_code_stats()
 
 
     
