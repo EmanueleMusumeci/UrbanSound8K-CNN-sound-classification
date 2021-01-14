@@ -126,6 +126,8 @@ def SpectrogramReshape(object):
     def __call__(self, img):
       return img.reshape(self.output_size)
 
+
+
 if __name__ == "__main__":
     #TBC: vedi 1:Feature Extraction
     #https://github.com/mariostrbac/environmental-sound-classification/blob/main/notebooks/data_preprocessing.ipynb
