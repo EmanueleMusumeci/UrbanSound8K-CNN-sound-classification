@@ -185,6 +185,38 @@ class DataLoader():
 
       return batch
 
+    def parse_batch(batch,batch_size):
+        for i in range(batch_size):
+            mfccs = batch["mfccs"][i]
+            chroma = batch["chroma"][i]
+            mel = batch["mel"][i]
+            contrast = batch["contrast"][i]
+            tonnetz = batch["tonnetz"][i]
+            print(mfccs,chroma,mel,contrast,tonnetz)
+            ext_features = np.hstack([mfccs,chroma,mel,contrast,tonnetz])
+            print(ext_features)
+            features = np.vstack([features,ext_features])
+            print(features)
+            labels = np.append(labels, fn.split('fold')[1].split('-')[1])
+            print(labels)
+
+    def parse_audio_files():
+        features, labels = np.empty((0,193)), np.empty(0)
+        #for fn in glob.glob(os.path.join(parent_dir, sub_dir, file_ext)):
+        for i in range(8):
+            try:
+                mfccs = batch["mfccs"][i]
+                chroma = batch["chroma"][i]
+                mel = batch["mel"][i]
+                contrast = batch["contrast"][i]
+                tonnetz = batch["tonnetz"][i]
+                ext_features = np.hstack([mfccs,chroma,mel,contrast,tonnetz])
+                features = np.vstack([features,ext_features])
+                labels = np.append(labels, fn.split('fold')[1].split('-')[1])
+            except:
+                print("Error processing " + fn + " - skipping")
+        return np.array(features), np.array(labels, dtype = np.int)   
+
 if __name__=="__main__":
   base_dir = os.path.dirname(os.path.realpath(__file__))
   DATASET_DIR = os.path.join(base_dir,"data")
@@ -215,7 +247,7 @@ if __name__=="__main__":
                             progress_bar = True
                             )
 
-  dataloader = DataLoader(dataset, batch_size=16, shuffle=False)
+  dataloader = DataLoader(dataset, batch_size=8, shuffle=False)
 
   batch = next(iter(dataloader))
   #print(batch)
@@ -228,6 +260,55 @@ if __name__=="__main__":
   #    print("###############################"+str(batch))
 
 
-  print("batch: ",str(batch))
+  #print("batch: ",str(batch))
   
-  print("mfccs:",str(batch["mfccs"]))
+  print("keys_batch:",str(batch.keys()))
+
+  #valutare cosa significa cambiare in 154,tolto errore in vstack intanto
+  features, labels = np.empty((0,154)), np.empty(0)
+  #for fn in glob.glob(os.path.join(parent_dir, sub_dir, file_ext)):
+  for i in range(8):
+
+    mfccs = batch["mfccs"][i]
+    chroma = batch["chroma"][i]
+    mel = batch["mel"][i]
+    contrast = batch["contrast"][i]
+    tonnetz = batch["tonnetz"][i]
+    """hstack orizzontalmente
+    a = np.array((1,2,3))
+    b = np.array((2,3,4))
+    np.hstack((a,b))
+    array([1, 2, 3, 2, 3, 4])
+    """
+    ext_features = np.hstack([mfccs,chroma,mel,contrast,tonnetz])
+    print("ext_features: ",ext_features)
+    print(len(ext_features))
+    features = np.vstack([features,ext_features]) 
+    """ vstack lo fa verticalmente
+    a = np.array([1, 2, 3])
+    b = np.array([2, 3, 4])
+    np.vstack((a,b))
+    array([[1, 2, 3],
+           [2, 3, 4]])
+    """
+    #print("features ",features)
+    label = batch["class_id"][i]
+    labels = np.append(labels,label)
+  print(np.array(features), np.array(labels, dtype = np.int))
+  print("labels: ",labels)
+
+  ###da save folds https://github.com/jaron/deep-listening/blob/master/1-us8k-ffn-extract-explore.ipynb
+  #mi creo un feature file
+  feature_file = os.path.join(base_dir, 'features.npy')
+
+  #da hot and code https://github.com/jaron/deep-listening/blob/master/1-us8k-ffn-extract-explore.ipynb
+  n_labels = len(labels)
+  print(n_labels)
+  n_unique_labels = len(np.unique(labels))
+  print("n_unique_labels ",n_unique_labels)
+  one_hot_encode = np.zeros((n_labels,n_unique_labels))
+  print(one_hot_encode)
+  print(labels)
+  print(isinstance(labels,int))
+  one_hot_encode[np.arange(n_labels), labels] = 1
+  print(one_hot_encode)
