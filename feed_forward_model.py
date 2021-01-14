@@ -53,6 +53,7 @@ class FeedForwardNetwork(nn.Module):
 
 if __name__ == "__main__":
     ##Softmax
+    
     m = nn.Softmax(dim = 1)
     input = torch.randn(2,3)
     #print("input softmax: ", input)
@@ -82,7 +83,7 @@ if __name__ == "__main__":
     net = FeedForwardNetwork(2, 10)
     criterion = torch.nn.BCELoss()
     #optimizer = torch.optim.SGD(net.parameters(), lr = 0.01)
-    optimizer = torch.optim
+    #optimizer = torch.optim
     print(net)
     #print(optimizer)
 
