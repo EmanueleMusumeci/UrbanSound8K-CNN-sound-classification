@@ -93,7 +93,9 @@ class DataLoader():
         #print("batch: "+str(i))
         try:
             samples.append(next(dataset_iterator))
+            print("--------------------------------------------------------" ,str(j+1)," element in batch")
             j+=1
+
         except StopIteration:
             break
         
@@ -201,7 +203,7 @@ if __name__=="__main__":
 
   dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
                             folds = [1], shuffle_dataset = True, 
-                            generate_spectrograms = True, 
+                            generate_spectrograms = False, 
                             shift_transformation = right_shift_transformation, 
                             background_noise_transformation = background_noise_transformation, 
                             audio_augmentation_pipeline = [], 
@@ -213,7 +215,7 @@ if __name__=="__main__":
                             progress_bar = True
                             )
 
-  dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
+  dataloader = DataLoader(dataset, batch_size=16, shuffle=False)
 
   batch = next(iter(dataloader))
   #print(batch)
@@ -222,5 +224,10 @@ if __name__=="__main__":
   #print(len(batch["class_id"]))
   #print(len(batch["class_name"]))
 
-  for i, batch in enumerate(dataloader):
-    continue
+  #for i, batch in enumerate(dataloader):
+  #    print("###############################"+str(batch))
+
+
+  print("batch: ",str(batch))
+  
+  print("mfccs:",str(batch["mfccs"]))

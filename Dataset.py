@@ -279,8 +279,8 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             if debug: print(" Returned samples: "+str(len(returned_samples)))
             return returned_samples
         else:
-            print("getitem -> entrato in else:")
-            print(sound)
+            #print("getitem -> entrato in else:")
+            #print(sound)
             mfccs, chroma, mel, contrast, tonnetz = self.preprocess(sound, spectrogram=False)
             if debug: print(" Returned samples: "+str(1))
             return [{
@@ -289,8 +289,8 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     "mel" : mel, 
                     "contrast" : contrast, 
                     "tonnetz" : tonnetz, 
-                    "class_ids" : class_id, 
-                    "class_names" : class_name, 
+                    "class_id" : class_id, 
+                    "class_name" : class_name, 
                     "meta_data" : meta_data
                     }]
     
