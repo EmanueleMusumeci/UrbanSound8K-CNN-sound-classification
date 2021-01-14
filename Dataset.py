@@ -36,12 +36,14 @@ from image_transformations import SpectrogramAddGaussNoise, SpectrogramReshape, 
 
 from utils import function_timer, code_timer, print_code_stats
 
+from feed_forward_model import FeedForwardNetwork
+
 #Snippet taken from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
 '''
 This function loads an audio file for a specified duration (default 4 secs), overlays on a silent audio segment 
 (providing a native padding), resamples it a t 22050 Hz, sets it to mono and converts it to float
 '''
-@function_timer
+#@function_timer
 def load_audio_file(path, duration = 4000, sample_rate = 22050):
 
     with code_timer("pydub.AudioSegment.silent"):
@@ -213,7 +215,8 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
 
     def __call__(self, sound, sample_rate=22050):
         if self.generate_spectrograms:
-            original_spectrograms, preprocessed_spectrograms = self.preprocess(sound, sample_rate=sample_rate, spectrograms=True)
+            print("call-> if")
+            original_spectrograms, preprocessed_spectrograms = self.preprocess(sound,spectrograms=True)
             returned_samples = []
             for orig_spec, prep_spec in zip(original_spectrograms, preprocessed_spectrograms):
 
@@ -226,7 +229,9 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                         })
             return returned_samples
         else:
-            mfccs, chroma, mel, contrast, tonnetz = self.preprocess(sample, sample_rate=sample_rate, spectrograms=False)
+            print("call else: ")
+            print("sound: ",sound)
+            mfccs, chroma, mel, contrast, tonnetz = self.preprocess(sound,spectrogram=False)
             return [{
                     "mfccs" : mfccs, 
                     "chroma" : chroma, 
@@ -238,7 +243,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     "meta_data" : None
                     }]
 
-    @function_timer
+    #@function_timer
     def __getitem__(self, index):
         debug = False
         #Decidere come salvare dati -> estrarre sample
@@ -252,11 +257,13 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         try:
             #sound, sample_rate = librosa.load(sample["file_path"])  
             sound, sample_rate = load_audio_file(sample["file_path"], sample_rate=self.sample_rate)
+            #print("sound: ",sound)
         except pydub.exceptions.CouldntDecodeError as e:
             #print("EXCEPTION")
             raise e
 
         if self.generate_spectrograms:
+            print("entrato in if")
             original_spectrograms, preprocessed_spectrograms = self.preprocess(sound, spectrogram=True)
             returned_samples = []
             for orig_spec, prep_spec in zip(original_spectrograms, preprocessed_spectrograms):
@@ -272,7 +279,9 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             if debug: print(" Returned samples: "+str(len(returned_samples)))
             return returned_samples
         else:
-            mfccs, chroma, mel, contrast, tonnetz = self.preprocess(sample["file_path"], spectrogram=False)
+            print("getitem -> entrato in else:")
+            print(sound)
+            mfccs, chroma, mel, contrast, tonnetz = self.preprocess(sound, spectrogram=False)
             if debug: print(" Returned samples: "+str(1))
             return [{
                     "mfccs" : mfccs, 
@@ -311,8 +320,9 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             progress_bar.close()
                 
 #TODO implement the FFN data preprocessing
-    @function_timer
+    #@function_timer
     def preprocess(self, audio_clip, spectrogram=True, debug = False):
+        print(audio_clip)
         def overlapping_segments_generator(step_size, window_size, total_frames, drop_last = True):
 
             start = 0
@@ -322,19 +332,24 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             #If true, the last segment will be dropped if its length is lower than the segment size
             if not drop_last:
                 yield start, total_frames-1
-
+        """
         if self.normalize_audio:
+            print("normalize -> audio_clip: ", audio_clip)
             normalization_factor = 1 / np.max(np.abs(audio_clip)) 
             audio_clip = audio_clip * normalization_factor
+        """
 
         if not spectrogram:
             #extract_feature
             if debug: print("Features :"+str(len(audio_clip))+"sampled at "+str(sample_rate)+"hz")
             #Short-time Fourier transform(STFT)
+            print("preprocess -> audio_clip: ",audio_clip)
+
             stft = np.abs(librosa.stft(audio_clip))
             if debug: print("stft:\n"+str(stft))
             #Mel-frequency cepstral coefficients (MFCCs)
             if debug: print("before mfccs:\n"+str(stft))
+            sample_rate = self.sample_rate
             mfccs = np.mean(librosa.feature.mfcc(S=audio_clip, sr=sample_rate, n_mfcc=40).T,axis=0)
             if debug: print("mfccs:\n"+str(mfccs))
 
@@ -351,7 +366,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
 
             #The warning is triggered by this problem: https://github.com/librosa/librosa/issues/1214
             #Computes the tonal centroid features (tonnetz)
-            tonnetz = np.mean(librosa.feature.tonnetz(y=librosa.effects.harmonic(audio_clip), sr=sample_rate, center=False).T,axis=0)
+            tonnetz = np.mean(librosa.feature.tonnetz(y=librosa.effects.harmonic(audio_clip), sr=sample_rate).T,axis=0)
             if debug: print("tonnetz:\n"+str(tonnetz))
             
             return mfccs, chroma, mel, contrast, tonnetz
@@ -505,6 +520,7 @@ if __name__ == "__main__":
     spectrogram_bands = 60
 
     CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment)
+   
 
     right_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9)
     left_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, left=True)
@@ -516,7 +532,7 @@ if __name__ == "__main__":
                                 DATASET_DIR, DATASET_NAME,
                                 folds = [1], 
                                 shuffle_dataset = True, 
-                                generate_spectrograms = True, 
+                                generate_spectrograms = False, 
                                 shift_transformation = left_shift_transformation,
                                 background_noise_transformation = background_noise_transformation,
                                 audio_augmentation_pipeline = [],
@@ -527,6 +543,8 @@ if __name__ == "__main__":
                                 test = False,
                                 progress_bar = True
                             )
+
+    print("dataset[1]: ",dataset[1])
     
     #dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, generate_spectrograms=False,folds=["fold1","fold2","fold3","fold4","fold5","fold6","fold7","fold8", "fold9"])
     #sound, sr = librosa.load(librosa.ex('trumpet'))
@@ -551,9 +569,11 @@ if __name__ == "__main__":
     #play_sound(load_audio_file(dataset.data[0]["file_path"])[0])
 
     #progress_bar = tqdm(total=len(dataset), desc="Sample", position=0)
+    """
     for i, obj in enumerate(dataset):
         if i>100: 
             break
+    """
         #progress_bar.update(1)
     #progress_bar.close()
     #print("mfccs : "+str(sample["mfccs"]))
@@ -562,7 +582,7 @@ if __name__ == "__main__":
     #print("contrast: "+str(sample["contrast"]))
     #print("tonnetz: "+str(sample["tonnetz"]))
 
-    print_code_stats()
+    #print_code_stats()
 
 
     

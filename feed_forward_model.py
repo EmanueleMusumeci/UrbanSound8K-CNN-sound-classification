@@ -3,8 +3,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import numpy as np
-from sklearn.datasets import make_blobs
+#from sklearn.datasets import make_blobs
+import os
+import librosa
 
+#https://github.com/jaron/deep-listening/blob/master/1-us8k-ffn-extract-explore.ipynb
+def load_sound_files(parent_dir, file_paths):
+    raw_sounds = []
+    for fp in file_paths:
+        X,sr = librosa.load(parent_dir + fp)
+        raw_sounds.append(X)
+    return raw_sounds
 #traduzione in PyTorch da tensorflow del tutorial:
 #   https://github.com/jaron/deep-listening/blob/master/2-us8k-ffn-train-predict.ipynb
 
@@ -26,7 +35,7 @@ class FeedForwardNetwork(nn.Module):
         self.relu3 = nn.ReLU()
         self.drop2 = nn.Dropout(p=0.5)#aggiungi p a init variables?
 
-        self.softmax = nn.Softmax(dim = 1)
+        #self.softmax = nn.Softmax(dim = 1)
 
     def forward(self, x):
         out = self.fc1(x)
@@ -38,7 +47,7 @@ class FeedForwardNetwork(nn.Module):
         out = self.relu3(out)
         out = self.drop2(out)
 
-        out = self.softmax(out)
+        #out = self.softmax(out)
         return out
     
 
@@ -60,14 +69,14 @@ if __name__ == "__main__":
     ## CrossEntropyLoss
     loss = nn.CrossEntropyLoss()
     input = torch.randn(3, 5, requires_grad=True)
-    print("input loss: ", input)
+    #print("input loss: ", input)
     target = torch.empty(3, dtype=torch.long).random_(5)
     output = loss(input, target)
-    print("output loss: ",output)
+    #print("output loss: ",output)
 
     output.backward()
     #print("output dropout: ",output)
-    print("Test FFN: ")
+    #print("Test FFN: ")
 
 
     net = FeedForwardNetwork(2, 10)
@@ -77,7 +86,19 @@ if __name__ == "__main__":
     print(net)
     #print(optimizer)
 
-
+    print("Load data: ")
+    base_dir = os.path.dirname(os.path.realpath(__file__))
+    fold1_dir = os.path.join(base_dir,"data\\UrbanSound8K\\audio\\fold1")
+    #urban = os.path.join(fold1_dir,
+   
+    
+    sound_file_paths =  ["7061-6-0-0.wav","7383-3-0-0.wav","7383-3-0-1.wav","7383-3-1-0.wav","9031-3-1-0.wav","9031-3-2-0.wav","9031-3-3-0.wav","9031-3-4-0.wav"]
+    raw_sound = load_sound_files(fold1_dir, sound_file_paths)
+        
+    print("base dir: ",base_dir)
+    print("fold1_dir: ",fold1_dir)
+    print("raw: "+raw_sound)
+    #raw_sounds = load_sound_files(parent_dir, sound_file_paths)
 
 
 
