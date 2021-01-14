@@ -1,6 +1,11 @@
+import os
+
 import math
 import numpy as np
 import torch
+
+from Dataset import SoundDatasetFold
+from image_transformations import SpectrogramAddGaussNoise, SpectrogramReshape, SpectrogramShift
 
 class DataLoader():
     def __init__(self,
@@ -30,9 +35,6 @@ class DataLoader():
         self.batch_size = batch_size      
         self.batch_first = batch_first
         self.shuffle = shuffle
-        self.sequence_padding = sequence_padding
-        self.padding_vector = padding_vector
-        self.padding_symbol_index = padding_symbol_index
         self.device = device
         self.tensorize_gold_data = tensorize_gold_data
 
@@ -42,8 +44,7 @@ class DataLoader():
 
         self.unpreprocessed_fields = self.dataset.get_unpreprocessed_fields()
 
-        self.prediction_mode = prediction_mode
-
+    '''
     def __len__(self):
       return math.ceil(len(self.dataset)/self.batch_size)
 
@@ -59,7 +60,8 @@ class DataLoader():
       batch = self.collate_fn(samples)
       batch = self.preprocess_batch(batch)
       return batch
-
+    '''
+    
     def __iter__(self):
       '''
       __iter__ method for this custom DataLoader class, prepares data by performing
@@ -74,22 +76,27 @@ class DataLoader():
         5) Optionally, if time-major format is requested, transpose the first two dimensions
           of the tensors in the batch
       '''
-      num_batches = math.ceil(len(self.dataset) / self.batch_size)
+      #num_batches = math.ceil(len(self.dataset) / self.batch_size)
 
       dataset_iterator = iter(self.dataset)
-      for i in range(num_batches):
+      #for i in range(num_batches):
+      j = 0
+      samples = []
+      while True:
+        if j==self.batch_size:
+          batch = self.collate_fn(samples)
+          batch = self.preprocess_batch(batch)
+          
+          yield batch
+          samples = []
+          j=0
         #print("batch: "+str(i))
-        samples = []
-        for j in range(self.batch_size):
-          try:
-              samples.append(next(dataset_iterator))
-          except StopIteration:
-              break
+        try:
+            samples.append(next(dataset_iterator))
+            j+=1
+        except StopIteration:
+            break
         
-        batch = self.collate_fn(samples)
-        batch = self.preprocess_batch(batch)
-        
-        yield batch
 
     def collate_fn(self, samples):
         current_batch = {}
@@ -175,3 +182,45 @@ class DataLoader():
       batch = batch[random_indices]
 
       return batch
+
+if __name__=="__main__":
+  base_dir = os.path.dirname(os.path.realpath(__file__))
+  DATASET_DIR = os.path.join(base_dir,"data")
+  DATASET_NAME = "UrbanSound8K"
+  
+  spectrogram_frames_per_segment = 41
+  spectrogram_bands = 60
+
+  CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment)
+
+  right_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9)
+  left_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, left=True)
+  random_side_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, random_side=True)
+
+  background_noise_transformation = SpectrogramAddGaussNoise(input_size=CNN_INPUT_SIZE,prob_to_have_noise=0.55)
+
+  dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
+                            folds = [1], shuffle_dataset = True, 
+                            generate_spectrograms = True, 
+                            shift_transformation = right_shift_transformation, 
+                            background_noise_transformation = background_noise_transformation, 
+                            audio_augmentation_pipeline = [], 
+                            spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
+                            spectrogram_bands = spectrogram_bands, 
+                            compute_deltas=True, 
+                            compute_delta_deltas=True, 
+                            test = False, 
+                            progress_bar = True
+                            )
+
+  dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
+
+  batch = next(iter(dataloader))
+  #print(batch)
+  #print(len(batch["original_spectrogram"]))
+  #print(len(batch["preprocessed_spectrogram"]))
+  #print(len(batch["class_id"]))
+  #print(len(batch["class_name"]))
+
+  for i, batch in enumerate(dataloader):
+    continue
