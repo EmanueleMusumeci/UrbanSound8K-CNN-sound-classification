@@ -310,8 +310,9 @@ if __name__=="__main__":
 
     base_dir = os.path.dirname(os.path.realpath(__file__))
     DATASET_DIR = os.path.join(base_dir,"data")
-    audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [2])
-    #audio_meta, audio_raw = load_compacted_dataset(DATASET_DIR,folds = [2,3,4,5,6,7,8,9,10])
+    print(DATASET_DIR)
+    audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [1,2])
+    audio_meta, audio_raw = load_compacted_dataset(DATASET_DIR,folds = [1,2])
 
-    for i, audio in enumerate(audio_raw):
-        print("{}: {}".format(i,audio))
+    #for i, audio in enumerate(audio_raw):
+    #   print("{}: {}".format(i,audio))
