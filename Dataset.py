@@ -34,7 +34,9 @@ from tqdm import tqdm
 
 from image_transformations import SpectrogramAddGaussNoise, SpectrogramReshape, SpectrogramShift
 
-from utils import function_timer, code_timer, print_code_stats, display_heatmap, play_sound, load_audio_file, pickle_data, unpickle_data
+from utils import function_timer, code_timer, print_code_stats, display_heatmap, play_sound, load_audio_file, \
+    pickle_data, unpickle_data, \
+    load_compacted_dataset, compact_urbansound_dataset
 
 class SoundDatasetFold(torch.utils.data.IterableDataset):
     def __init__(self, dataset_dir, dataset_name, 
@@ -61,13 +63,21 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 compute_delta_deltas = False,
                 test = False,
                 progress_bar = False,
-                debug_preprocessing = False
+                debug_preprocessing = False,
+
+                load_compacted = True
                 ):
         super(SoundDatasetFold).__init__()
         self.dataset_dir = dataset_dir
         self.dataset_name = dataset_name
         self.folds = folds
-        self.data, self.data_ids = self.load_dataset_index(dataset_dir, folds=self.folds) 
+
+        self.load_compacted = load_compacted
+        if self.load_compacted:
+            self.audio_meta, self.audio_raw = load_compacted_dataset(dataset_dir, folds=self.folds) 
+            self.sample_ids = np.arange(0, len(self.audio_meta))
+        else:
+            self.audio_meta, self.sample_ids = self.load_dataset_index(dataset_dir, folds=self.folds) 
 
         self.shuffle_dataset = shuffle_dataset
 
@@ -144,20 +154,23 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
     def __getitem__(self, index):
         debug = False
         #Decidere come salvare dati -> estrarre sample
-        sample = self.data[index]
+        sample = self.audio_meta[index]
 
         class_id = sample["class_id"]
         class_name = sample["class_name"]
         meta_data = sample["meta_data"]
         
         if debug: print(sample["file_path"], end="")
-        try:
-            #sound, sample_rate = librosa.load(sample["file_path"])  
-            sound, sample_rate = load_audio_file(sample["file_path"], sample_rate=self.sample_rate)
-            #print("sound: ",sound)
-        except pydub.exceptions.CouldntDecodeError as e:
-            #print("EXCEPTION")
-            raise e
+        if self.load_compacted:
+            sound = self.audio_raw[index]
+        else:
+            try:
+                #sound, sample_rate = librosa.load(sample["file_path"])  
+                sound, sample_rate = load_audio_file(sample["file_path"], sample_rate=self.sample_rate)
+                #print("sound: ",sound)
+            except pydub.exceptions.CouldntDecodeError as e:
+                #print("EXCEPTION")
+                raise e
 
         if self.generate_spectrograms:
             print("entrato in if")
@@ -196,11 +209,11 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
     #forse spacchetto dati di __getitem__, e.q se due finestre, una alla volta
     def __iter__(self):
         if self.shuffle_dataset:
-            random.shuffle(self.data_ids)
+            random.shuffle(self.sample_ids)
 
         if self.progress_bar:
-            progress_bar = tqdm(total=len(self.data_ids), desc="Sample", position=0)
-        for index in self.data_ids:
+            progress_bar = tqdm(total=len(self.sample_ids), desc="Sample", position=0)
+        for index in self.sample_ids:
             try:
                 preprocessed_samples = self[index]
                 previous_samples = preprocessed_samples
@@ -363,27 +376,11 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 
             return original_spectrograms, preprocessed_spectrograms_with_deltas
 
-   #from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
-   def load_compacted_dataset(dataset_dir, folds = [1,2,3,4,5,6,7,8,9,10]):
-    """Load raw audio and metadata content from the UrbanSound8K dataset."""
-    
-    audio_meta = []
-    audio_raw = []
-    for fold in folds:
-        if os.path.isfile(os.path.join(dataset_dir,'urban_meta_fold_{}.pkl'.format(fold))) and os.path.isfile(os.path.join(dataset_dir,'urban_audio_fold_{}.dat'.format(fold))):
-            fold_meta = unpickle_data(os.path.join(dataset_dir,'urban_meta_fold_{}.pkl'.format(fold)))
-            fold_raw = np.memmap(os.path.join(dataset_dir,'urban_audio_fold_{}.dat'.format(fold)), dtype='float32', mode='r', shape=(len(fold_meta), 88200))
-            audio_meta = np.concatenate(audio_meta, fold_meta, axis = 0)
-            audio_raw.append(fold_raw)
-        else:
-            raise FileNotFoundError
-    return audio_meta, audio_raw
-
     #lista data, ogni elemento della lista è
     #un dizionario con campi : filepath,classeId,className,
     #                           metadata= dizionario con altri dati
-    def load_dataset_index(self,sample, folds = [], skip_first_line=True):
-        with open(os.path.join(self.dataset_dir,'metadata','UrbanSound8K.csv', 'r') as read_obj:
+    def load_dataset_index(self, sample, folds = [], skip_first_line=True):
+        with open(os.path.join(self.dataset_dir,'metadata','UrbanSound8K.csv'), 'r') as read_obj:
             csv_reader = reader(read_obj)
             
             #next skips the first line that contains the header info
@@ -443,9 +440,9 @@ if __name__ == "__main__":
 
     dataset = SoundDatasetFold(
                                 DATASET_DIR, DATASET_NAME,
-                                folds = [1], 
+                                folds = [1, 2], 
                                 shuffle_dataset = True, 
-                                generate_spectrograms = False, 
+                                generate_spectrograms = True, 
                                 shift_transformation = left_shift_transformation,
                                 background_noise_transformation = background_noise_transformation,
                                 audio_augmentation_pipeline = [],
@@ -457,7 +454,7 @@ if __name__ == "__main__":
                                 progress_bar = True
                             )
 
-    print("dataset[1]: ",dataset[1])
+    #print("dataset[1]: ",dataset[1])
     
     #dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, generate_spectrograms=False,folds=["fold1","fold2","fold3","fold4","fold5","fold6","fold7","fold8", "fold9"])
     #sound, sr = librosa.load(librosa.ex('trumpet'))
@@ -471,19 +468,24 @@ if __name__ == "__main__":
     #plot_sound_spectrogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova", log_scale=True, title="Different hop length", hop_length=2048, sr=22050)
     #plot_periodogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova")
     
-    print(dataset.data[0])
+    #print(dataset.audio_meta[0])
+    #print(dataset.audio_raw[0])
+    #sample = dataset[0]
+    #print(sample)
 
-    #sample = dataset[1][0]
+    #sample = sample[0]
     #display_heatmap(sample["original_spectrogram"][:,:,0])
     #print(sample["preprocessed_spectrogram"].shape)
     #display_heatmap(sample["preprocessed_spectrogram"][:,:,0])
     #display_heatmap(sample["preprocessed_spectrogram"][:,:,1])
     #display_heatmap(sample["preprocessed_spectrogram"][:,:,2])
     #play_sound(load_audio_file(dataset.data[0]["file_path"])[0])
+    #play_sound(dataset.audio_raw[0])
 
     #progress_bar = tqdm(total=len(dataset), desc="Sample", position=0)
-    #for i, obj in enumerate(dataset):
-    #    if i>100: 
+    for i, obj in enumerate(dataset):
+        continue
+    #    if i>1000: 
     #        break
         #progress_bar.update(1)
     #progress_bar.close()
@@ -493,7 +495,7 @@ if __name__ == "__main__":
     #print("contrast: "+str(sample["contrast"]))
     #print("tonnetz: "+str(sample["tonnetz"]))
 
-    #print_code_stats()
+    print_code_stats()
 
 
     
