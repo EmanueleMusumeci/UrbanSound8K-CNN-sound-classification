@@ -63,7 +63,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 compute_delta_deltas = False,
                 test = False,
                 progress_bar = False,
-                debug_preprocessing = False,
+                debug_preprocessing_time = False,
 
                 load_compacted = True
                 ):
@@ -109,7 +109,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
     
         self.progress_bar = progress_bar
 
-        self.debug_preprocessing = debug_preprocessing
+        self.debug_preprocessing_time = debug_preprocessing_time
 
     def get_preprocessed_fields(self): 
         if self.generate_spectrograms:
@@ -122,7 +122,6 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
 
     def __call__(self, sound, sample_rate=22050):
         if self.generate_spectrograms:
-            print("call-> if")
             original_spectrograms, preprocessed_spectrograms = self.preprocess(sound,spectrograms=True)
             returned_samples = []
             for orig_spec, prep_spec in zip(original_spectrograms, preprocessed_spectrograms):
@@ -136,8 +135,6 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                         })
             return returned_samples
         else:
-            print("call else: ")
-            print("sound: ",sound)
             mfccs, chroma, mel, contrast, tonnetz = self.preprocess(sound,spectrogram=False)
             return [{
                     "mfccs" : mfccs, 
@@ -150,7 +147,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     "meta_data" : None
                     }]
 
-    @function_timer
+    #@function_timer
     def __getitem__(self, index):
         debug = False
         #Decidere come salvare dati -> estrarre sample
@@ -165,15 +162,11 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             sound = self.audio_raw[index]
         else:
             try:
-                #sound, sample_rate = librosa.load(sample["file_path"])  
                 sound, sample_rate = load_audio_file(sample["file_path"], sample_rate=self.sample_rate)
-                #print("sound: ",sound)
-            except pydub.exceptions.CouldntDecodeError as e:
-                #print("EXCEPTION")
+            except:
                 raise e
 
         if self.generate_spectrograms:
-            print("entrato in if")
             original_spectrograms, preprocessed_spectrograms = self.preprocess(sound, spectrogram=True)
             returned_samples = []
             for orig_spec, prep_spec in zip(original_spectrograms, preprocessed_spectrograms):
@@ -189,8 +182,6 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             if debug: print(" Returned samples: "+str(len(returned_samples)))
             return returned_samples
         else:
-            #print("getitem -> entrato in else:")
-            #print(sound)
             mfccs, chroma, mel, contrast, tonnetz = self.preprocess(sound, spectrogram=False)
             if debug: print(" Returned samples: "+str(1))
             return [{
@@ -230,9 +221,8 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             progress_bar.close()
                 
 #TODO implement the FFN data preprocessing
-    @function_timer
-    def preprocess(self, audio_clip, spectrogram=True, debug = False):
-        print(audio_clip)
+    #@function_timer
+    def preprocess(self, audio_clip, spectrogram=True, debug = False, original_mel_spectrogram = None):
         def overlapping_segments_generator(step_size, window_size, total_frames, drop_last = True):
 
             start = 0
@@ -292,15 +282,16 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 if len(original_signal_segment) == math.floor(self.spectrogram_window_size) and segment_end<len(audio_clip): 
                     if debug: print("segment ("+str(segment_start)+", "+str(segment_end)+")")
 
-                    with code_timer("original librosa.feature.melspectrogram"):
+                    with code_timer("original librosa.feature.melspectrogram", debug=self.debug_preprocessing_time):
                         #Generate log-mel spectrogram spectrogram of original signal segment
-                        original_mel_spectrogram = librosa.feature.melspectrogram(original_signal_segment, n_mels = self.spectrogram_bands)
-                    with code_timer("original librosa.amplitude_to_db"):
+                        if original_mel_spectrogram is None:
+                            original_mel_spectrogram = librosa.feature.melspectrogram(original_signal_segment, n_mels = self.spectrogram_bands)
+                    with code_timer("original librosa.amplitude_to_db", debug=self.debug_preprocessing_time):
                         original_log_mel_spectrogram = librosa.amplitude_to_db(original_mel_spectrogram)
-                    with code_timer("original original_log_mel_spectrogram.T.flatten()"):
+                    with code_timer("original original_log_mel_spectrogram.T.flatten()", debug=self.debug_preprocessing_time):
                         original_log_mel_spectrogram = original_log_mel_spectrogram.T.flatten()[:, np.newaxis].T
                     
-                    with code_timer("drop silent"):
+                    with code_timer("drop silent", debug=self.debug_preprocessing_time):
                         #drop silent frames (taken from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb)
                         #ONLY if they aren't the only frame of the audio clip
                         if debug: print("Mean dB value:" +str(np.mean(original_log_mel_spectrogram)))
@@ -313,29 +304,29 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     #Apply all audio augmentations, in sequence
                     preprocessed_signal_segment = original_signal_segment
 
-                    with code_timer("audio augmentation"):
+                    with code_timer("audio augmentation", debug=self.debug_preprocessing_time):
     #TODO Try to use transforms.Compose also for audio segments (might work if we respect the class structure!)
                         for augmentation in self.audio_augmentation_pipeline:
                             preprocessed_signal_segment = augmentation(preprocessed_signal_segment)
 
                     #Generate log-mel spectrogram spectrogram of preprocessed signal segment
-                    with code_timer("preprocessed librosa.feature.melspectrogram"):
+                    with code_timer("preprocessed librosa.feature.melspectrogram", debug=self.debug_preprocessing_time):
                         preprocessed_mel_spectrogram = librosa.feature.melspectrogram(preprocessed_signal_segment, n_mels = self.spectrogram_bands)
-                    with code_timer("preprocessed librosa.amplitude_to_db"):
+                    with code_timer("preprocessed librosa.amplitude_to_db", debug=self.debug_preprocessing_time):
                         preprocessed_log_mel_spectrogram = librosa.amplitude_to_db(preprocessed_mel_spectrogram)
-                    with code_timer("preprocessed original_log_mel_spectrogram.T.flatten()"):
+                    with code_timer("preprocessed original_log_mel_spectrogram.T.flatten()", debug=self.debug_preprocessing_time):
                         preprocessed_log_mel_spectrogram = preprocessed_log_mel_spectrogram.T.flatten()[:, np.newaxis].T
                                             
                         preprocessed_spectrograms.append(preprocessed_log_mel_spectrogram)
             
-            with code_timer("original spectrogram reshape"):
+            with code_timer("original spectrogram reshape", debug=self.debug_preprocessing_time):
             #Reshape the spectrograms from [N_AUDIO_SEGMENT, N_BANDS, N_FRAMES] to [N_AUDIO_SEGMENT, N_BANDS, N_FRAMES, 1]
                 original_spectrograms = np.asarray(original_spectrograms).reshape(len(original_spectrograms),self.spectrogram_bands,self.spectrogram_frames_per_segment,1)
             
-            with code_timer("preprocessed spectrogram reshape"):
+            with code_timer("preprocessed spectrogram reshape", debug=self.debug_preprocessing_time):
                 preprocessed_spectrograms = np.asarray(preprocessed_spectrograms).reshape(len(preprocessed_spectrograms),self.spectrogram_bands,self.spectrogram_frames_per_segment,1)
             
-            with code_timer("deltas"):
+            with code_timer("deltas", debug=self.debug_preprocessing_time):
                 if self.compute_deltas:
                     #Make space for the delta features
                     preprocessed_spectrograms_with_deltas = np.concatenate((preprocessed_spectrograms, np.zeros(np.shape(preprocessed_spectrograms))), axis = 3)
@@ -353,7 +344,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             #N_FEATURES is 1, 2 or 3 depending on our choice of computing delta and delta-delta spectrograms
 
 
-            with code_timer("image augmentation"):
+            with code_timer("image augmentation", debug=self.debug_preprocessing_time):
 #TODO Testare image transformations
                 #Spectrogram image transformation
                 for i in range(len(preprocessed_spectrograms_with_deltas)):
@@ -451,7 +442,8 @@ if __name__ == "__main__":
                                 compute_deltas=True,
                                 compute_delta_deltas=True,
                                 test = False,
-                                progress_bar = True
+                                progress_bar = True,
+                                debug_preprocessing_time = True
                             )
 
     #print("dataset[1]: ",dataset[1])
@@ -483,10 +475,11 @@ if __name__ == "__main__":
     #play_sound(dataset.audio_raw[0])
 
     #progress_bar = tqdm(total=len(dataset), desc="Sample", position=0)
-    for i, obj in enumerate(dataset):
-        continue
-    #    if i>1000: 
-    #        break
+    with code_timer("OVERALL"):
+        for i, obj in enumerate(dataset):
+        #    continue
+            if i>100: 
+                break
         #progress_bar.update(1)
     #progress_bar.close()
     #print("mfccs : "+str(sample["mfccs"]))
