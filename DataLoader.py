@@ -76,10 +76,8 @@ class DataLoader():
         5) Optionally, if time-major format is requested, transpose the first two dimensions
           of the tensors in the batch
       '''
-      #num_batches = math.ceil(len(self.dataset) / self.batch_size)
-
+      
       dataset_iterator = iter(self.dataset)
-      #for i in range(num_batches):
       j = 0
       samples = []
       while True:
@@ -90,10 +88,8 @@ class DataLoader():
           yield batch
           samples = []
           j=0
-        #print("batch: "+str(i))
         try:
             samples.append(next(dataset_iterator))
-            print("--------------------------------------------------------" ,str(j+1)," element in batch")
             j+=1
 
         except StopIteration:
@@ -263,37 +259,45 @@ if __name__=="__main__":
   #print("batch: ",str(batch))
   
   print("keys_batch:",str(batch.keys()))
-
+ 
   #valutare cosa significa cambiare in 154,tolto errore in vstack intanto
   features, labels = np.empty((0,154)), np.empty(0)
   #for fn in glob.glob(os.path.join(parent_dir, sub_dir, file_ext)):
-  for i in range(8):
 
-    mfccs = batch["mfccs"][i]
-    chroma = batch["chroma"][i]
-    mel = batch["mel"][i]
-    contrast = batch["contrast"][i]
-    tonnetz = batch["tonnetz"][i]
-    """hstack orizzontalmente
-    a = np.array((1,2,3))
-    b = np.array((2,3,4))
-    np.hstack((a,b))
-    array([1, 2, 3, 2, 3, 4])
-    """
-    ext_features = np.hstack([mfccs,chroma,mel,contrast,tonnetz])
-    print("ext_features: ",ext_features)
-    print(len(ext_features))
-    features = np.vstack([features,ext_features]) 
-    """ vstack lo fa verticalmente
-    a = np.array([1, 2, 3])
-    b = np.array([2, 3, 4])
-    np.vstack((a,b))
-    array([[1, 2, 3],
-           [2, 3, 4]])
-    """
-    #print("features ",features)
-    label = batch["class_id"][i]
-    labels = np.append(labels,label)
+  mfccs = batch["mfccs"]
+  print(mfccs.shape)
+  chroma = batch["chroma"]
+  print(chroma.shape)
+  mel = batch["mel"]
+  print(mel.shape)
+  contrast = batch["contrast"]
+  print(contrast.shape)
+  tonnetz = batch["tonnetz"]
+  print(tonnetz.shape)
+  """hstack orizzontalmente
+  a = np.array((1,2,3))
+  b = np.array((2,3,4))
+  np.hstack((a,b))
+  array([1, 2, 3, 2, 3, 4])
+  """
+  ext_features = np.hstack([mfccs,chroma,mel,contrast,tonnetz])
+  print(ext_features.shape)
+  print("ext_features: ",ext_features)
+  print(len(ext_features))
+  features = np.vstack([features,ext_features])
+  print(features.shape)
+  raise
+  
+  """ vstack lo fa verticalmente
+  a = np.array([1, 2, 3])
+  b = np.array([2, 3, 4])
+  np.vstack((a,b))
+  array([[1, 2, 3],
+          [2, 3, 4]])
+  """
+  #print("features ",features)
+  label = batch["class_id"]
+
   print(np.array(features), np.array(labels, dtype = np.int))
   print("labels: ",labels)
 

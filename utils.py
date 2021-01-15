@@ -26,6 +26,11 @@ import librosa
 
 import matplotlib.pyplot as plt
 
+import contextlib
+
+code_timer_stats = {}
+
+#Code block timer used as a "with" block (taken from https://stackoverflow.com/questions/30433910/decorator-to-time-specific-lines-of-the-code-instead-of-whole-method)
 def function_timer(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -38,22 +43,21 @@ def function_timer(func):
 
     return wrapper
 
-#Code block timer used as a "with" block (taken from https://stackoverflow.com/questions/30433910/decorator-to-time-specific-lines-of-the-code-instead-of-whole-method)
-import contextlib
-
-code_timer_stats = {}
 
 @contextlib.contextmanager
-def code_timer(ident):
-    tstart = time.time()
-    yield
-    elapsed = time.time() - tstart
-    print("{0}: {1} ms".format(ident, elapsed))
-    if ident not in code_timer_stats:
-        code_timer_stats[ident] = {"avg_time" : 0, "total_time" : 0}
-    avg_time = (code_timer_stats[ident]["avg_time"] + elapsed)/2
-    total_time = code_timer_stats[ident]["total_time"] + elapsed
-    code_timer_stats[ident] = {"avg_time": avg_time, "total_time": total_time}
+def code_timer(ident, debug = True, print_single_block_info=False):
+    if debug:
+        tstart = time.time()
+        yield
+        elapsed = time.time() - tstart
+        if print_single_block_info: print("{0}: {1} ms".format(ident, elapsed))
+        if ident not in code_timer_stats:
+            code_timer_stats[ident] = {"avg_time" : 0, "total_time" : 0}
+        avg_time = (code_timer_stats[ident]["avg_time"] + elapsed)/2
+        total_time = code_timer_stats[ident]["total_time"] + elapsed
+        code_timer_stats[ident] = {"avg_time": avg_time, "total_time": total_time}
+    else:
+        yield
 
 def print_code_stats():
     table = PrettyTable(['Name','Avg. time', 'Total time'])
@@ -153,8 +157,8 @@ def pickle_data(data, path):
     with open(path, "wb+") as f:
         dill.dump(data, f)
 
-#@function_timer
 #from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
+@function_timer
 def load_compacted_dataset(dataset_dir, folds = []):
     """Load raw audio and metadata content from the UrbanSound8K dataset."""
     
@@ -256,7 +260,9 @@ def compact_urbansound_dataset(dataset_dir, folds = [1,2,3,4,5,6,7,8,9,10], skip
             audios_data_from_csv.append(row)
 
         audio_ids = []
+        #Dictionary (int->list) fold -> audio file info list
         audio_meta = {}
+        #Dictionary (int->list) fold -> raw audio data list
         audio_raw = {}
 
         print("Compacting {} folds ({} files)...".format(len(folds), total_files))
@@ -296,7 +302,6 @@ def compact_urbansound_dataset(dataset_dir, folds = [1,2,3,4,5,6,7,8,9,10], skip
     for fold, meta_data in audio_meta.items():
         pickle_data(meta_data, os.path.join(dataset_dir,"urban_meta_fold_{}.pkl".format(fold)))
 
-
     print("Compacting raw audio...")
     for fold, audio_clips in audio_raw.items():
         audio_raw_stacked = np.vstack(audio_clips)
@@ -316,3 +321,18 @@ if __name__=="__main__":
 
     #for i, audio in enumerate(audio_raw):
     #   print("{}: {}".format(i,audio))
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [3])
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [4])
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [5])
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [6])
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [7])
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [8])
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [9])
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [10])
+    #audio_meta, audio_raw = load_compacted_dataset(DATASET_DIR,folds = [2,3,4,5,6,7,8,9,10])
+    with code_timer("load_compacted_dataset", debug=self.debug_preprocessing):
+        audio_meta, audio_raw = load_compacted_dataset(DATASET_DIR,folds = [2])
+
+    #for i, audio in enumerate(audio_raw):
+    #    print("{}: {}".format(i,audio))
+

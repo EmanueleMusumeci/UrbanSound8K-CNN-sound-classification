@@ -7,6 +7,10 @@ import numpy as np
 import os
 import librosa
 
+from Dataset import SoundDatasetFold
+from DataLoader import DataLoader
+from image_transformations import *
+
 #https://github.com/jaron/deep-listening/blob/master/1-us8k-ffn-extract-explore.ipynb
 def load_sound_files(parent_dir, file_paths):
     raw_sounds = []
@@ -21,37 +25,24 @@ class FeedForwardNetwork(nn.Module):
 
     def __init__(self, input_size, hidden_size):
         super(FeedForwardNetwork, self).__init__()                     # Inherited from the parent class nn.Module
-        
         self.input_size = input_size
         self.hidden_size  = hidden_size
+        self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size)
+        self.relu = torch.nn.ReLU()
+        self.fc2 = torch.nn.Linear(self.hidden_size, 1)
+        self.sigmoid = torch.nn.Sigmoid()
 
-        self.fc1 = nn.Linear(self.input_size, self.hidden_size)
-        self.relu1 = nn.ReLU()
-        self.fc2 = nn.Linear(self.hidden_size, self.hidden_size)
-        self.relu2 = nn.ReLU()
-        #1d perchè lavoro con un array
-        self.drop1 = nn.Dropout(p=0.5)#aggiungi p a init variables?
-        self.fc3 = nn.Linear(self.hidden_size, 1)
-        self.relu3 = nn.ReLU()
-        self.drop2 = nn.Dropout(p=0.5)#aggiungi p a init variables?
-
-        #self.softmax = nn.Softmax(dim = 1)
 
     def forward(self, x):
-        out = self.fc1(x)
-        out = self.relu1(out)
-        out = self.fc2(out)
-        out = self.relu2(out)
-        out = self.drop1(out)
-        out = self.fc3(out)
-        out = self.relu3(out)
-        out = self.drop2(out)
+        hidden = self.fc1(x)
+        relu = self.relu(hidden)
+        output = self.fc2(relu)
+        output = self.sigmoid(output)
+        return output
 
-        #out = self.softmax(out)
-        return out
-    
 
 if __name__ == "__main__":
+    '''
     ##Softmax
     
     m = nn.Softmax(dim = 1)
@@ -89,7 +80,7 @@ if __name__ == "__main__":
 
     print("Load data: ")
     base_dir = os.path.dirname(os.path.realpath(__file__))
-    fold1_dir = os.path.join(base_dir,"data\\UrbanSound8K\\audio\\fold1")
+    fold1_dir = os.path.join(base_dir,"data\\UrbanSound8K\\audio\\fold1\\")
     #urban = os.path.join(fold1_dir,
    
     
@@ -100,7 +91,46 @@ if __name__ == "__main__":
     print("fold1_dir: ",fold1_dir)
     print("raw: "+raw_sound)
     #raw_sounds = load_sound_files(parent_dir, sound_file_paths)
+    '''
+    base_dir = os.path.dirname(os.path.realpath(__file__))
+    DATASET_DIR = os.path.join(base_dir,"data")
+    DATASET_NAME = "UrbanSound8K"
+    
+    spectrogram_frames_per_segment = 41
+    spectrogram_bands = 60
 
+    CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment)
+
+    right_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9)
+    left_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, left=True)
+    random_side_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, random_side=True)
+
+    background_noise_transformation = SpectrogramAddGaussNoise(input_size=CNN_INPUT_SIZE,prob_to_have_noise=0.55)
+
+    dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
+                                folds = [1], shuffle_dataset = True, 
+                                generate_spectrograms = False, 
+                                shift_transformation = right_shift_transformation, 
+                                background_noise_transformation = background_noise_transformation, 
+                                audio_augmentation_pipeline = [], 
+                                spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
+                                spectrogram_bands = spectrogram_bands, 
+                                compute_deltas=True, 
+                                compute_delta_deltas=True, 
+                                test = False, 
+                                progress_bar = False
+                                )
+
+    dataloader = DataLoader(dataset, batch_size=2, shuffle=False)
+
+    batch = next(iter(dataloader))
+    #input_size , hidden_size
+    nn = FeedForwardNetwork(154, 256)
+    #fai spacchetto , usa cat e dai inpasto.
+    print(batch)
+    #output = nn(batch)
+
+    #print(output)
 
 
 
