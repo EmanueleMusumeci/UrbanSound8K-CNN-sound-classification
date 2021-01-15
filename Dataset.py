@@ -150,7 +150,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     "meta_data" : None
                     }]
 
-    #@function_timer
+    @function_timer
     def __getitem__(self, index):
         debug = False
         #Decidere come salvare dati -> estrarre sample
@@ -189,8 +189,8 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             if debug: print(" Returned samples: "+str(len(returned_samples)))
             return returned_samples
         else:
-            print("getitem -> entrato in else:")
-            print(sound)
+            #print("getitem -> entrato in else:")
+            #print(sound)
             mfccs, chroma, mel, contrast, tonnetz = self.preprocess(sound, spectrogram=False)
             if debug: print(" Returned samples: "+str(1))
             return [{
@@ -199,8 +199,8 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     "mel" : mel, 
                     "contrast" : contrast, 
                     "tonnetz" : tonnetz, 
-                    "class_ids" : class_id, 
-                    "class_names" : class_name, 
+                    "class_id" : class_id, 
+                    "class_name" : class_name, 
                     "meta_data" : meta_data
                     }]
     
@@ -230,7 +230,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             progress_bar.close()
                 
 #TODO implement the FFN data preprocessing
-    #@function_timer
+    @function_timer
     def preprocess(self, audio_clip, spectrogram=True, debug = False):
         print(audio_clip)
         def overlapping_segments_generator(step_size, window_size, total_frames, drop_last = True):
@@ -242,18 +242,18 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             #If true, the last segment will be dropped if its length is lower than the segment size
             if not drop_last:
                 yield start, total_frames-1
-        """
+        
         if self.normalize_audio:
-            print("normalize -> audio_clip: ", audio_clip)
+            #print("normalize -> audio_clip: ", audio_clip)
             normalization_factor = 1 / np.max(np.abs(audio_clip)) 
             audio_clip = audio_clip * normalization_factor
-        """
+        
 
         if not spectrogram:
             #extract_feature
             if debug: print("Features :"+str(len(audio_clip))+"sampled at "+str(sample_rate)+"hz")
             #Short-time Fourier transform(STFT)
-            print("preprocess -> audio_clip: ",audio_clip)
+            #print("preprocess -> audio_clip: ",audio_clip)
 
             stft = np.abs(librosa.stft(audio_clip))
             if debug: print("stft:\n"+str(stft))
