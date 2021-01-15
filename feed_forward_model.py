@@ -22,76 +22,38 @@ def load_sound_files(parent_dir, file_paths):
 #   https://github.com/jaron/deep-listening/blob/master/2-us8k-ffn-train-predict.ipynb
 
 class FeedForwardNetwork(nn.Module):
-
+    
     def __init__(self, input_size, hidden_size):
         super(FeedForwardNetwork, self).__init__()                     # Inherited from the parent class nn.Module
+        
         self.input_size = input_size
         self.hidden_size  = hidden_size
-        self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size)
-        self.relu = torch.nn.ReLU()
-        self.fc2 = torch.nn.Linear(self.hidden_size, 1)
-        self.sigmoid = torch.nn.Sigmoid()
+        self.fc1 = nn.Linear(self.input_size, self.hidden_size)
+        self.relu1 = nn.ReLU()
+        self.fc2 = nn.Linear(self.hidden_size, self.hidden_size)
+        self.relu2 = nn.ReLU()
+        #1d perchè lavoro con un array
+        self.drop1 = nn.Dropout(p=0.5)#aggiungi p a init variables?
+        self.fc3 = nn.Linear(self.hidden_size, 1)
+        self.relu3 = nn.ReLU()
+        self.drop2 = nn.Dropout(p=0.5)#aggiungi p a init variables?
 
 
     def forward(self, x):
-        hidden = self.fc1(x)
-        relu = self.relu(hidden)
-        output = self.fc2(relu)
-        output = self.sigmoid(output)
-        return output
+        out = self.fc1(x)
+        out = self.relu1(out)
+        out = self.fc2(out)
+        out = self.relu2(out)
+        out = self.drop1(out)
+        out = self.fc3(out)
+        out = self.relu3(out)
+        out = self.drop2(out)
+
+        return out
 
 
 if __name__ == "__main__":
-    '''
-    ##Softmax
-    
-    m = nn.Softmax(dim = 1)
-    input = torch.randn(2,3)
-    #print("input softmax: ", input)
-    output = m(input)
-    #in output avrò per ognuna delle due row del tensore
-    #la somma delle celle pari a 1
-    #print("output softmax: ",output)
-    ## Dropout
-    ###randomly zeroes some of the elements of the input tensor with probability p 
-    m = nn.Dropout(p=0.2)
-    input = torch.randn(20, 16)
-    #print("input dropout: ", input)
-    output = m(input)
-    ## CrossEntropyLoss
-    loss = nn.CrossEntropyLoss()
-    input = torch.randn(3, 5, requires_grad=True)
-    #print("input loss: ", input)
-    target = torch.empty(3, dtype=torch.long).random_(5)
-    output = loss(input, target)
-    #print("output loss: ",output)
-
-    output.backward()
-    #print("output dropout: ",output)
-    #print("Test FFN: ")
-
-
-    net = FeedForwardNetwork(2, 10)
-    criterion = torch.nn.BCELoss()
-    #optimizer = torch.optim.SGD(net.parameters(), lr = 0.01)
-    #optimizer = torch.optim
-    print(net)
-    #print(optimizer)
-
-    print("Load data: ")
-    base_dir = os.path.dirname(os.path.realpath(__file__))
-    fold1_dir = os.path.join(base_dir,"data\\UrbanSound8K\\audio\\fold1\\")
-    #urban = os.path.join(fold1_dir,
-   
-    
-    sound_file_paths =  ["7061-6-0-0.wav","7383-3-0-0.wav","7383-3-0-1.wav","7383-3-1-0.wav","9031-3-1-0.wav","9031-3-2-0.wav","9031-3-3-0.wav","9031-3-4-0.wav"]
-    raw_sound = load_sound_files(fold1_dir, sound_file_paths)
-        
-    print("base dir: ",base_dir)
-    print("fold1_dir: ",fold1_dir)
-    print("raw: "+raw_sound)
-    #raw_sounds = load_sound_files(parent_dir, sound_file_paths)
-    '''
+ 
     base_dir = os.path.dirname(os.path.realpath(__file__))
     DATASET_DIR = os.path.join(base_dir,"data")
     DATASET_NAME = "UrbanSound8K"
@@ -122,16 +84,37 @@ if __name__ == "__main__":
                                 )
 
     dataloader = DataLoader(dataset, batch_size=2, shuffle=False)
-
+    
+    batch_size = 2
     batch = next(iter(dataloader))
     #input_size , hidden_size
-    nn = FeedForwardNetwork(154, 256)
-    #fai spacchetto , usa cat e dai inpasto.
-    print(batch)
+    nn = FeedForwardNetwork(153, 256)
+    #fai spacchetto , usa cat e dai in pasto.
+    print(batch.keys())
     #output = nn(batch)
 
-    #print(output)
+    mfccs = batch["mfccs"]
+    chroma = batch["chroma"]
+    mel = batch["mel"]
+    contrast = batch["contrast"]
+    tonnetz = batch["tonnetz"]
+    print("mfccs: ",mfccs,"\n",chroma,"\n",mel,"\n",contrast,"\n",tonnetz,"\n")
+    cat1_tensor = torch.cat([chroma,mel,contrast,tonnetz],1)
+    print("third_tensor\n",cat1_tensor)
+    print(cat1_tensor.shape)
+    
+    empty_tensor = torch.empty([2,153])
+    print("empty:\n",empty_tensor)
+    print(empty_tensor.shape)
 
+    cat0_tensor = torch.cat((cat1_tensor,empty_tensor),0)
+    print("cat0:\n",cat0_tensor)
+    print(cat0_tensor.shape)
+
+    output = nn(cat0_tensor)
+    print("output_net: ",output)
+    print(output.shape)
+    
 
 
 
