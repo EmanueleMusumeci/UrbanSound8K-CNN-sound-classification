@@ -41,7 +41,10 @@ from utils import function_timer, code_timer, print_code_stats, display_heatmap,
 class SoundDatasetFold(torch.utils.data.IterableDataset):
     def __init__(self, dataset_dir, dataset_name, 
                 folds = [], 
-                shuffle_dataset = False, 
+                shuffle = False, 
+                
+                selected_classes = [0,1,2,3,4,5,6,7,8,9],
+
                 generate_spectrograms = True, 
 
                 shift_transformation = None,
@@ -72,14 +75,21 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         self.dataset_name = dataset_name
         self.folds = folds
 
+        self.selected_classes = selected_classes
+        self.num_classes = len(selected_classes)
+
         self.load_compacted = load_compacted
         if self.load_compacted:
-            self.audio_meta, self.audio_raw = load_compacted_dataset(dataset_dir, folds=self.folds) 
-            self.sample_ids = np.arange(0, len(self.audio_meta))
+            #Load from compacted dataset files, returning only sample_ids whose class id is among the selected ones (so the dataset will ignore the other ones)
+            self.audio_meta, self.audio_raw = load_compacted_dataset(dataset_dir, folds=self.folds)
         else:
-            self.audio_meta, self.sample_ids = self.load_dataset_index(dataset_dir, folds=self.folds) 
+            #Load dataset index (the audio files will be loaded one by one therefore training will be up to 10x slower!!!), 
+            # returning only the sample_ids whose class_id is among the selected ones
+            self.audio_meta = self.load_dataset_index(dataset_dir, folds=self.folds)
 
-        self.shuffle_dataset = shuffle_dataset
+        self.sample_ids = self.select_sample_ids_given_class_ids(self.selected_classes)        
+
+        self.shuffle = shuffle
 
         self.generate_spectrograms = generate_spectrograms
 
@@ -110,6 +120,53 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         self.progress_bar = progress_bar
 
         self.debug_preprocessing_time = debug_preprocessing_time
+
+        class_id_to_name, name_to_class_id, class_id_to_sample_ids = self.index_dataset()
+        self.class_id_to_name = class_id_to_name
+        self.name_to_class_id = name_to_class_id
+        self.class_id_to_sample_ids = class_id_to_sample_ids
+
+        self.class_distribution = self.compute_dataset_distribution()
+        
+# TODO MICHELE
+    # Per ogni classe , numero di istanze 
+    def compute_dataset_distribution(self):
+        class_distribution = {}
+        for class_id, samples in self.class_id_to_sample_ids.items():
+            class_distribution[class_id] = len(samples)
+        return class_distribution
+
+    def index_dataset(self):
+        class_id_to_name = {}
+        name_to_class_id = {}
+        
+        class_id_to_sample_ids = {}
+        for class_id in self.selected_classes:
+            class_id_to_sample_ids[class_id] = []
+
+        for index, sample_meta in enumerate(self.audio_meta):
+            sample_meta = self.audio_meta[index]
+            sample_class_id = int(sample_meta["class_id"])
+            sample_class_name = sample_meta["class_name"]
+
+            if sample_class_id not in class_id_to_name:
+                class_id_to_name[sample_class_id] = sample_class_name
+                name_to_class_id[sample_class_id] = sample_class_id
+            
+            if sample_class_id in self.selected_classes:
+                class_id_to_sample_ids[sample_class_id].append(index)
+
+        return class_id_to_name, name_to_class_id, class_id_to_sample_ids
+    
+    def select_sample_ids_given_class_ids(self, selected_classes):
+        sample_ids = []
+        for index, sample_meta in enumerate(self.audio_meta):
+            if int(sample_meta["class_id"]) in selected_classes:
+                sample_ids.append(index)
+        
+        return np.array(sample_ids)
+
+    def get_num_classes(self): return self.num_classes
 
     def get_preprocessed_fields(self): 
         if self.generate_spectrograms:
@@ -199,8 +256,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
     #con yield
     #forse spacchetto dati di __getitem__, e.q se due finestre, una alla volta
     def __iter__(self):
-        if self.shuffle_dataset:
-            random.shuffle(self.sample_ids)
+        if self.shuffle: self.shuffle_dataset()
 
         if self.progress_bar:
             progress_bar = tqdm(total=len(self.sample_ids), desc="Sample", position=0)
@@ -251,6 +307,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             if debug: print("before mfccs:\n"+str(stft))
             sample_rate = self.sample_rate
             mfccs = np.mean(librosa.feature.mfcc(S=audio_clip, sr=sample_rate, n_mfcc=40).T,axis=0)
+            mfccs = mfccs[..., np.newaxis]
             if debug: print("mfccs:\n"+str(mfccs))
 
             #Compute a chromagram from a waveform or power spectrogram.
@@ -258,7 +315,12 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             if debug: print("chroma:\n"+str(chroma))
 
             #Compute a mel-scaled spectrogram.
-            mel = np.mean(librosa.feature.melspectrogram(audio_clip, sr=sample_rate).T,axis=0)
+            #SLOWER mel = np.mean(librosa.feature.melspectrogram(audio_clip, sr=sample_rate).T,axis=0)
+            
+            #https://librosa.org/doc/main/generated/librosa.feature.melspectrogram.html
+            #avoid repeating stft computation in mel_spectrogram
+            power_spectrogram = np.abs(stft)**2
+            mel = np.mean(librosa.feature.melspectrogram(S=power_spectrogram, sr=sample_rate).T,axis=0)
             if debug: print("mel:\n"+str(mel))
 
             contrast = np.mean(librosa.feature.spectral_contrast(S=stft, sr=sample_rate).T,axis=0)
@@ -364,8 +426,13 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                             if self.compute_delta_deltas:
                                 shifted_delta_delta_spectrogram, _ = self.shift_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 2], shift_position=shift_position)
                                 preprocessed_spectrograms_with_deltas[i, :, :, 2] = shifted_delta_delta_spectrogram
-                
+            
+
             return original_spectrograms, preprocessed_spectrograms_with_deltas
+
+    def shuffle_dataset(self):
+        p = np.random.permutation(len(self.sample_ids))
+        self.sample_ids = self.sample_ids[p.astype(int)]
 
     #lista data, ogni elemento della lista è
     #un dizionario con campi : filepath,classeId,className,
@@ -396,7 +463,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     }   
                     audiodict = {
                         "file_path": os.path.join(self.dataset_dir, self.dataset_name, "audio", "fold"+str(fold_number), audio[0]),
-                        "class_id":audio[6],
+                        "class_id":int(audio[6]),
                         "class_name":audio[7],
                         "meta_data": metadata
                     }
@@ -417,10 +484,14 @@ if __name__ == "__main__":
     DATASET_DIR = os.path.join(base_dir,"data")
     DATASET_NAME = "UrbanSound8K"
     
+    use_CNN = True
+
     spectrogram_frames_per_segment = 41
     spectrogram_bands = 60
+    in_channels = (3 if use_CNN else 1)
+    selected_classes = [0,1]
 
-    CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment)
+    CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment, in_channels)
    
 
     right_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9)
@@ -432,8 +503,8 @@ if __name__ == "__main__":
     dataset = SoundDatasetFold(
                                 DATASET_DIR, DATASET_NAME,
                                 folds = [1, 2], 
-                                shuffle_dataset = True, 
-                                generate_spectrograms = True, 
+                                shuffle = True, 
+                                generate_spectrograms = False, 
                                 shift_transformation = left_shift_transformation,
                                 background_noise_transformation = background_noise_transformation,
                                 audio_augmentation_pipeline = [],
@@ -443,10 +514,12 @@ if __name__ == "__main__":
                                 compute_delta_deltas=True,
                                 test = False,
                                 progress_bar = True,
-                                debug_preprocessing_time = True
+                                debug_preprocessing_time = True,
+                                selected_classes=selected_classes
                             )
 
     #print("dataset[1]: ",dataset[1])
+    print("distribuzione : ",dataset.class_distribution)
     
     #dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, generate_spectrograms=False,folds=["fold1","fold2","fold3","fold4","fold5","fold6","fold7","fold8", "fold9"])
     #sound, sr = librosa.load(librosa.ex('trumpet'))
@@ -460,7 +533,7 @@ if __name__ == "__main__":
     #plot_sound_spectrogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova", log_scale=True, title="Different hop length", hop_length=2048, sr=22050)
     #plot_periodogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova")
     
-    #print(dataset.audio_meta[0])
+    #print(dataset.audio_meta)
     #print(dataset.audio_raw[0])
     #sample = dataset[0]
     #print(sample)
@@ -478,7 +551,7 @@ if __name__ == "__main__":
     with code_timer("OVERALL"):
         for i, obj in enumerate(dataset):
         #    continue
-            if i>100: 
+            if i>100:
                 break
         #progress_bar.update(1)
     #progress_bar.close()
@@ -488,7 +561,8 @@ if __name__ == "__main__":
     #print("contrast: "+str(sample["contrast"]))
     #print("tonnetz: "+str(sample["tonnetz"]))
 
-    print_code_stats()
+    #print_code_stats()
+    
 
 
     

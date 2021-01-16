@@ -14,7 +14,7 @@ class SpectrogramAddGaussNoise(object):
     def __init__(self, input_size, gaussian_mean=0.0, gaussian_std=None, prob_to_have_noise=1.0):
 
         assert isinstance(input_size, tuple), "Input size must be a tuple (input_width, input_height)"
-        self.input_size = input_size
+        self.input_size = input_size[:2]
         
         if gaussian_std is None:
             self.gaussian_std = gaussian_std
@@ -59,7 +59,7 @@ class SpectrogramShift(object):
         #di cosa sono istanze , posso anche non metterli
 
         assert isinstance(input_size, tuple), "Input size must be a tuple (input_width, input_height)"
-        self.input_size = input_size
+        self.input_size = input_size[:2]
         
         assert isinstance(width_shift_range, int) or isinstance(width_shift_range, float), "width_shift_range must be an int ora a float"
         if isinstance(width_shift_range,int):

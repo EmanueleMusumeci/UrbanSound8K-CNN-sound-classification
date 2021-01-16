@@ -23,7 +23,7 @@ def load_sound_files(parent_dir, file_paths):
 
 class FeedForwardNetwork(nn.Module):
     
-    def __init__(self, input_size, hidden_size):
+    def __init__(self, input_size, hidden_size, output_size):
         super(FeedForwardNetwork, self).__init__()                     # Inherited from the parent class nn.Module
         
         self.input_size = input_size
@@ -34,12 +34,13 @@ class FeedForwardNetwork(nn.Module):
         self.relu2 = nn.ReLU()
         #1d perchè lavoro con un array
         self.drop1 = nn.Dropout(p=0.5)#aggiungi p a init variables?
-        self.fc3 = nn.Linear(self.hidden_size, 1)
+        self.fc3 = nn.Linear(self.hidden_size, output_size)
         self.relu3 = nn.ReLU()
         self.drop2 = nn.Dropout(p=0.5)#aggiungi p a init variables?
 
 
-    def forward(self, x):
+    def forward(self, mfccs, chroma, mel ,contrast, tonnetz):
+        x = torch.cat([mfccs, chroma, mel, contrast, tonnetz],1)
         out = self.fc1(x)
         out = self.relu1(out)
         out = self.fc2(out)
@@ -57,7 +58,9 @@ if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.realpath(__file__))
     DATASET_DIR = os.path.join(base_dir,"data")
     DATASET_NAME = "UrbanSound8K"
-    
+
+    selected_classes = [0,1,2,3,4,5,6,7,8,9]
+
     spectrogram_frames_per_segment = 41
     spectrogram_bands = 60
 
@@ -70,7 +73,8 @@ if __name__ == "__main__":
     background_noise_transformation = SpectrogramAddGaussNoise(input_size=CNN_INPUT_SIZE,prob_to_have_noise=0.55)
 
     dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
-                                folds = [1], shuffle_dataset = True, 
+                                folds = [1], 
+                                shuffle = True, 
                                 generate_spectrograms = False, 
                                 shift_transformation = right_shift_transformation, 
                                 background_noise_transformation = background_noise_transformation, 
@@ -80,28 +84,34 @@ if __name__ == "__main__":
                                 compute_deltas=True, 
                                 compute_delta_deltas=True, 
                                 test = False, 
-                                progress_bar = False
+                                progress_bar = True,
+                                selected_classes=selected_classes
                                 )
 
-    dataloader = DataLoader(dataset, batch_size=2, shuffle=False)
-    
-    batch_size = 2
-    batch = next(iter(dataloader))
-    #input_size , hidden_size
-    nn = FeedForwardNetwork(153, 256)
-    #fai spacchetto , usa cat e dai in pasto.
-    print(batch.keys())
-    #output = nn(batch)
+    batch_size = 128
 
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+    
+    batch = next(iter(dataloader))
+    #input_size, hidden_size
+    nn = FeedForwardNetwork(154, 256, dataset.get_num_classes())
+    #fai spacchetto , usa cat e dai in pasto.
+    #print(batch.keys())
+    #output = nn(batch)
+    
     mfccs = batch["mfccs"]
     chroma = batch["chroma"]
     mel = batch["mel"]
     contrast = batch["contrast"]
     tonnetz = batch["tonnetz"]
+
+    '''
     print("mfccs: ",mfccs,"\n",chroma,"\n",mel,"\n",contrast,"\n",tonnetz,"\n")
-    cat1_tensor = torch.cat([chroma,mel,contrast,tonnetz],1)
+    mfccs = torch.unsqueeze(mfccs, 1)
+    cat1_tensor = torch.cat([mfccs, chroma, mel, contrast, tonnetz],1)
     print("third_tensor\n",cat1_tensor)
     print(cat1_tensor.shape)
+    raise
     
     empty_tensor = torch.empty([2,153])
     print("empty:\n",empty_tensor)
@@ -110,8 +120,9 @@ if __name__ == "__main__":
     cat0_tensor = torch.cat((cat1_tensor,empty_tensor),0)
     print("cat0:\n",cat0_tensor)
     print(cat0_tensor.shape)
+    '''
 
-    output = nn(cat0_tensor)
+    output = nn(mfccs, chroma, mel, contrast, tonnetz)
     print("output_net: ",output)
     print(output.shape)
     

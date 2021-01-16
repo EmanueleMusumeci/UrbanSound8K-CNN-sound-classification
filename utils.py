@@ -10,8 +10,8 @@ from prettytable import PrettyTable
 
 from csv import reader
 
-import pydub
-from pydub.utils import which, mediainfo
+#import pydub
+#from pydub.utils import which, mediainfo
 from tqdm import tqdm
 
 import numpy as np
@@ -212,33 +212,8 @@ def _load_audio_file(path, duration = 4000, sample_rate = 22050):
     return raw, sample_rate
 
 def load_audio_file(path, duration = 4000, sample_rate = 22050, fixed_length = 88200):
-    '''
-    samplerate, data = wavfile.read(path)
-    print("scipy")
-    print(str(data)[:100])
-    print(len(data))
-    print(sample_rate)
-    audio_segment = pydub.AudioSegment.from_file(path)
-    print("pydub")
-    print(str(audio_segment._data)[:100])
-    print(len(audio_segment._data))
-    print(sample_rate)
-    data, samplerate = sf.read(path)
-    print("soundfile")
-    print(str(data)[:100])
-    print(len(data))
-    print(sample_rate)
-    '''
     data, sample_rate = librosa.load(path, sr=sample_rate, mono=True,  dtype=np.float32)
     data = np.concatenate((data, np.zeros(int((fixed_length - len(data))))))
-    #print(data.shape)
-    #if len(data)>88200:
-    #    print("librosa")
-    #    print(str(data)[:100])
-    #    print(len(data))
-    #    print(sample_rate)
-    #    print(data)
-        #play_sound(data)
     return data, sample_rate
 
 #from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
@@ -279,7 +254,7 @@ def compact_urbansound_dataset(dataset_dir, folds = [1,2,3,4,5,6,7,8,9,10], skip
                 }   
                 audiodict = {
                     "file_path": os.path.join(dataset_dir, "UrbanSound8K", "audio", "fold"+str(fold_number), audio[0]),
-                    "class_id":audio[6],
+                    "class_id":int(audio[6]),
                     "class_name":audio[7],
                     "meta_data": metadata,
                 }
@@ -289,10 +264,7 @@ def compact_urbansound_dataset(dataset_dir, folds = [1,2,3,4,5,6,7,8,9,10], skip
                     audio_raw[fold_number] = []
 
                 audio_file, sr = load_audio_file(audiodict["file_path"], 4000)
-                #progress_bar.update(1)
 
-                #continue
-                #print(len(audio_file))
                 audiodict["sampling_rate"] = sr
                 audio_meta[fold_number].append(audiodict)
                 audio_raw[fold_number].append(audio_file)

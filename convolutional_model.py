@@ -101,17 +101,15 @@ class DenseLayer(nn.Module):
 ##Modello nuovo usando classe ConvolutionalLayer:
 #per figura dell' architettura vedere https://github.com/mariostrbac/environmental-sound-classification sezione CNN Model
 class ConvolutionalNetwork(nn.Module):
-    def __init__(self, in_channels, use_ReLU=True, use_batch_normalization=True, dropout_p=0.5):
+    def __init__(self, input_size, use_ReLU=True, use_batch_normalization=True, dropout_p=0.5):
         super(ConvolutionalNetwork, self).__init__()
         
-        self.in_channels = in_channels
+        self.in_channels = input_size[-1]
 
         self.use_ReLU = use_ReLU
         self.use_batch_normalization = use_batch_normalization
 
         self.dropout_p = dropout_p
-
-
         
         #Conv 1:
         #in_channels =1
@@ -158,9 +156,7 @@ class ConvolutionalNetwork(nn.Module):
 
         return x
 
-
 if __name__ == "__main__":
     
-
     net = ConvolutionalNetwork(1)
     print(net)
