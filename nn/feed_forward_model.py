@@ -112,16 +112,7 @@ if __name__ == "__main__":
     print("third_tensor\n",cat1_tensor)
     print(cat1_tensor.shape)
     raise
-    
-    empty_tensor = torch.empty([2,153])
-    print("empty:\n",empty_tensor)
-    print(empty_tensor.shape)
-
-    cat0_tensor = torch.cat((cat1_tensor,empty_tensor),0)
-    print("cat0:\n",cat0_tensor)
-    print(cat0_tensor.shape)
     '''
-
     output = nn(mfccs, chroma, mel, contrast, tonnetz)
     print("output_net: ",output)
     print(output.shape)

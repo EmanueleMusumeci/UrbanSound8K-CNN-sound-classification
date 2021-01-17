@@ -1,17 +1,20 @@
 import os, threading
 
+import dill
+
 import torch
 from torch import optim, nn
 
 from Dataset import SoundDatasetFold
 from DataLoader import DataLoader
 
-from utils import *
 from image_transformations import *
 from audio_transformations import *
 
-from feed_forward_model import *
-from convolutional_model import *
+from nn.feed_forward_model import FeedForwardNetwork
+from nn.convolutional_model import ConvolutionalNetwork
+
+from utils.evaluation_utils import *
 
 class Trainer:
     def __init__(
@@ -80,12 +83,18 @@ class Trainer:
 
         print("Beginning training process: ")
 
-        for epoch in range(self.last_epoch,self.last_epoch+epochs):
-            
+        for epoch in range(self.last_epoch,self.last_epoch+epochs):       
             self.model.train()
 
             first_batch = True
-            #progress_bar = tqdm(total=len(self.train_loader), desc='Epoch: '+str(epoch), position=0)
+            #if total_batches>0:
+            #    progress_bar = tqdm(total=len(total_batches), desc='Epoch: '+str(epoch), position=0)
+            #else:
+            #    progress_bar = None
+            total_batches = 0     
+            total_samples = 0
+            running_loss = 0
+            batch_losses = []
             for batch in self.train_loader:
                 
                 self.optimizer.zero_grad()
@@ -119,20 +128,30 @@ class Trainer:
                 self.optimizer.step()
 
 #TODO Emanuele
-                #Loss computation
-                self.all_losses.append(loss.tolist())
-                #progress_bar.update(1)
+                #Save total batch losses
+                batch_loss = loss.item() * len(batch)
+                batch_losses.append(batch_loss) 
+                running_loss += batch_loss
+                total_samples += len(batch)
+                total_batches += 1
+
+                #if progress_bar is not None:
+                #    progress_bar.update(1)
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
 
-            #progress_bar.close()
+            #if progress_bar is not None:
+            #    progress_bar.close()
 
             #Batch scores computation
-            average_loss = np.sum(self.all_losses)/self.batch_size
-            
+            #Average loss per sample
+            average_sample_loss = running_loss/total_samples
+            #Average loss per batch (loss.item() returns the average sample loss for a batch)
+            average_batch_loss = np.sum(batch_losses)/total_batches
+
             #Print epoch stats
-            print('Epoch: {} Classification Loss = {:0.4f}'.format(epoch, average_loss))
+            print('Epoch: {} Classification Loss = {:0.4f}'.format(epoch, average_sample_loss))
             
             #Compute and save epoch scores on test_set
             if save_train_scores_every!=0 and epoch%save_train_scores_every==0:
@@ -140,7 +159,8 @@ class Trainer:
                 results = self.evaluate(log_output_directory=os.path.join(self.checkpoint_path, self.instance_name), train = True)
 
                 #Update loss info of computed scores
-                results["epoch_loss"] = current_loss
+                results["batch_loss"] = average_batch_loss
+                results["loss"] = average_sample_loss
                 if compute_gradient_statistics:
                     results["gradient_stats"] = gradient_stats
 
@@ -157,8 +177,8 @@ class Trainer:
                 results = self.evaluate(log_output_directory=os.path.join(self.checkpoint_path, self.instance_name))
 
                 #Update loss info of computed scores
-                results["epoch_loss"] = current_loss
-                results["loss"] = average_loss
+                results["batch_loss"] = average_batch_loss
+                results["loss"] = average_sample_loss
                 if compute_gradient_statistics:
                     results["gradient_stats"] = gradient_stats
 

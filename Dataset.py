@@ -3,11 +3,6 @@ import os
 import random
 import math
 
-import pydub
-from pydub.utils import which
-#This should fix the ffmpeg decoding errors as in https://github.com/jiaaro/pydub/issues/173
-pydub.AudioSegment.converter = which("ffmpeg")
-
 #import warnings
 #warnings.filterwarnings("once", category=UserWarning)
 
@@ -30,13 +25,12 @@ from csv import reader
 
 from tqdm import tqdm
 
-#from DataLoader import DataLoader
-
 from image_transformations import SpectrogramAddGaussNoise, SpectrogramReshape, SpectrogramShift
 
-from utils import function_timer, code_timer, print_code_stats, display_heatmap, play_sound, load_audio_file, \
-    pickle_data, unpickle_data, \
-    load_compacted_dataset, compact_urbansound_dataset
+from utils.dataset_utils import load_compacted_dataset
+from utils.audio_utils import *
+from utils.spectrogram_utils import *
+from utils.timing import *
 
 class SoundDatasetFold(torch.utils.data.IterableDataset):
     def __init__(self, dataset_dir, dataset_name, 
@@ -358,6 +352,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 if len(original_signal_segment) == math.floor(self.spectrogram_window_size) and segment_end<len(audio_clip): 
                     if debug: print("segment ("+str(segment_start)+", "+str(segment_end)+")")
 
+                    
                     with code_timer("original librosa.feature.melspectrogram", debug=self.debug_preprocessing_time):
                         #Generate log-mel spectrogram spectrogram of original signal segment
                         if original_mel_spectrogram is None:
@@ -367,6 +362,12 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     with code_timer("original original_log_mel_spectrogram.T.flatten()", debug=self.debug_preprocessing_time):
                         original_log_mel_spectrogram = original_log_mel_spectrogram.T.flatten()[:, np.newaxis].T
                     
+
+                    #original_mel_spectrogram_librosa = generate_mel_spectrogram_librosa(original_signal_segment, self.spectrogram_bands, debug_time_label="original")
+                    #original_mel_spectrogram_essentia = generate_mel_spectrogram_essentia(original_signal_segment, self.spectrogram_bands, self.sample_rate, debug_time_label="original")
+                    #display_heatmap(original_mel_spectrogram_librosa)
+                    #display_heatmap(original_mel_spectrogram_essentia)
+                    #raise
                     with code_timer("drop silent", debug=self.debug_preprocessing_time):
                         #drop silent frames (taken from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb)
                         #ONLY if they aren't the only frame of the audio clip
@@ -383,8 +384,9 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     with code_timer("audio augmentation", debug=self.debug_preprocessing_time):
                         if not self.test_mode:
                             for augmentation in self.audio_augmentation_pipeline:
-                                preprocessed_signal_segment = augmentation(preprocessed_signal_segment)
+                                preprocessed_signal_segment = augmentation(original_signal_segment)
 
+                    
                     #Generate log-mel spectrogram spectrogram of preprocessed signal segment
                     with code_timer("preprocessed librosa.feature.melspectrogram", debug=self.debug_preprocessing_time):
                         preprocessed_mel_spectrogram = librosa.feature.melspectrogram(preprocessed_signal_segment, n_mels = self.spectrogram_bands)
@@ -392,8 +394,12 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                         preprocessed_log_mel_spectrogram = librosa.amplitude_to_db(preprocessed_mel_spectrogram)
                     with code_timer("preprocessed original_log_mel_spectrogram.T.flatten()", debug=self.debug_preprocessing_time):
                         preprocessed_log_mel_spectrogram = preprocessed_log_mel_spectrogram.T.flatten()[:, np.newaxis].T
-                                            
-                        preprocessed_spectrograms.append(preprocessed_log_mel_spectrogram)
+                    
+
+                    #preprocessed_log_mel_spectrogram = generate_mel_spectrogram_librosa(preprocessed_signal_segment, self.spectrogram_bands, debug_time_label="original")
+                    #original_mel_spectrogram = generate_mel_spectrogram_essentia(preprocessed_signal_segment, self.spectrogram_bands, self.sample_rate, debug_time_label="original")
+
+                    preprocessed_spectrograms.append(preprocessed_log_mel_spectrogram)
             
             with code_timer("original spectrogram reshape", debug=self.debug_preprocessing_time):
             #Reshape the spectrograms from [N_AUDIO_SEGMENT, N_BANDS, N_FRAMES] to [N_AUDIO_SEGMENT, N_BANDS, N_FRAMES, 1]
@@ -494,19 +500,29 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
     #    return len(self.data)
 
 if __name__ == "__main__":
+    
+    INSTANCE_NAME = "PROVA"
+    BATCH_SIZE = 128
+    USE_CNN = True
+
+    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     base_dir = os.path.dirname(os.path.realpath(__file__))
     DATASET_DIR = os.path.join(base_dir,"data")
     DATASET_NAME = "UrbanSound8K"
-    
-    use_CNN = True
+
+    DATASET_PERCENTAGE = 1.0
+
+    MODEL_DIR = os.path.join(base_dir,"model")
+
+    selected_classes = [0,1,2,3,4,5,6,7,8,9]
 
     spectrogram_frames_per_segment = 128
     spectrogram_bands = 128
-    in_channels = (3 if use_CNN else 1)
-    selected_classes = [0,1]
+    in_channels = (3 if USE_CNN else 1)
 
     CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment, in_channels)
-   
+    FFN_INPUT_SIZE = 154
 
     right_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9)
     left_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, left=True)
@@ -514,52 +530,22 @@ if __name__ == "__main__":
 
     background_noise_transformation = SpectrogramAddGaussNoise(input_size=CNN_INPUT_SIZE,prob_to_have_noise=0.55)
 
-    dataset = SoundDatasetFold(
-                                DATASET_DIR, DATASET_NAME,
-                                folds = [1, 2], 
+    train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
+                                folds = [1], 
                                 shuffle = True, 
-                                generate_spectrograms = True, 
-                                shift_transformation = left_shift_transformation,
-                                background_noise_transformation = background_noise_transformation,
-                                audio_augmentation_pipeline = [],
-                                spectrogram_frames_per_segment = spectrogram_frames_per_segment,
-                                spectrogram_bands = spectrogram_bands,
-                                compute_deltas=True,
-                                compute_delta_deltas=True,
-                                test = False,
+                                generate_spectrograms = USE_CNN, 
+                                shift_transformation = right_shift_transformation, 
+                                background_noise_transformation = background_noise_transformation, 
+                                audio_augmentation_pipeline = [], 
+                                spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
+                                spectrogram_bands = spectrogram_bands, 
+                                compute_deltas=True, 
+                                compute_delta_deltas=True, 
+                                test = False, 
                                 progress_bar = True,
-                                debug_preprocessing_time = True,
-                                selected_classes=selected_classes
-                            )
-
-    #print("dataset[1]: ",dataset[1])
-    print("distribuzione : ",dataset.class_distribution)
-    
-    #dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, generate_spectrograms=False,folds=["fold1","fold2","fold3","fold4","fold5","fold6","fold7","fold8", "fold9"])
-    #sound, sr = librosa.load(librosa.ex('trumpet'))
-    #abs_path = "C:/Users/mikec/Desktop/NN/workspace/UrbanSound8K-CNN-sound-classification/data/UrbanSound8K/audio/fold10/2937-1-0-0.wav"
-    #sound, sr = librosa.load(abs_path)
-    
-    #play_sound(sound,sr)
-    #plot_sound_waves(sound, sound_file_name="file.wav", show=True, sound_class="Prova")
-    #plot_sound_spectrogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova", log_scale=False)
-    #plot_sound_spectrogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova", log_scale=True)
-    #plot_sound_spectrogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova", log_scale=True, title="Different hop length", hop_length=2048, sr=22050)
-    #plot_periodogram(sound, sound_file_name="file.wav", show=True, sound_class="Prova")
-    
-    #print(dataset.audio_meta)
-    #print(dataset.audio_raw[0])
-    #sample = dataset[0]
-    #print(sample)
-
-    #sample = sample[0]
-    #display_heatmap(sample["original_spectrogram"][:,:,0])
-    #print(sample["preprocessed_spectrogram"].shape)
-    #display_heatmap(sample["preprocessed_spectrogram"][:,:,0])
-    #display_heatmap(sample["preprocessed_spectrogram"][:,:,1])
-    #display_heatmap(sample["preprocessed_spectrogram"][:,:,2])
-    #play_sound(load_audio_file(dataset.data[0]["file_path"])[0])
-    #play_sound(dataset.audio_raw[0])
+                                selected_classes=selected_classes,
+                                select_percentage_of_dataset=DATASET_PERCENTAGE
+                                )   
 
     #progress_bar = tqdm(total=len(dataset), desc="Sample", position=0)
     with code_timer("OVERALL"):
