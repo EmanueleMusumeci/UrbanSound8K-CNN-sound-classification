@@ -67,18 +67,20 @@ class Trainer:
         Args:
         - epochs: number of training epochs.
         OPTIONAL:
-        - save_dev_scores_every: number of epochs intercurring between two evaluations on dev set
         - save_test_scores_every: number of epochs intercurring between two evaluations on test set
         - save_model_every: number of epochs intercurring between two model checkpoints
         """
+        
+        try:
+            self.current_loss = self.scores["audio_classification"]["loss"]
+        except:
+            pass
         
         self.save_model_structure()
 
         print("Beginning training process: ")
 
         for epoch in range(self.last_epoch,self.last_epoch+epochs):
-
-            current_loss = 0.0
             
             self.model.train()
 
@@ -116,8 +118,9 @@ class Trainer:
 
                 self.optimizer.step()
 
+#TODO Emanuele
                 #Loss computation
-                current_loss += (loss.tolist())/2
+                self.all_losses.append(loss.tolist())
                 #progress_bar.update(1)
 
             if self.lr_scheduler is not None:
@@ -126,7 +129,7 @@ class Trainer:
             #progress_bar.close()
 
             #Batch scores computation
-            average_loss = current_loss/self.batch_size
+            average_loss = np.sum(self.all_losses)/self.batch_size
             
             #Print epoch stats
             print('Epoch: {} Classification Loss = {:0.4f}'.format(epoch, average_loss))
@@ -137,7 +140,7 @@ class Trainer:
                 results = self.evaluate(log_output_directory=os.path.join(self.checkpoint_path, self.instance_name), train = True)
 
                 #Update loss info of computed scores
-                results["loss"] = average_loss
+                results["epoch_loss"] = current_loss
                 if compute_gradient_statistics:
                     results["gradient_stats"] = gradient_stats
 
@@ -154,6 +157,7 @@ class Trainer:
                 results = self.evaluate(log_output_directory=os.path.join(self.checkpoint_path, self.instance_name))
 
                 #Update loss info of computed scores
+                results["epoch_loss"] = current_loss
                 results["loss"] = average_loss
                 if compute_gradient_statistics:
                     results["gradient_stats"] = gradient_stats
@@ -238,7 +242,6 @@ class Trainer:
         if print_scores: print(audio_classification_table)
         #if print_scores: print_confusion_matrix(audio_classification_results)
         if print_scores: print(audio_classification_distribution)
-
 
         if log_output_directory is not None:
             ResultsWriterThread(all_class_predictions, all_class_labels, "audio_classification", 
@@ -471,7 +474,7 @@ class Trainer:
 
         layers = [layer_name for layer_name, _ in gradient_magnitudes.items()]
         max_grads = [entry["max_grad"] for layer_name, entry in gradient_magnitudes.items()]
-        min_grads = [entry["min_grad"] for layer_name, entry in gradient_magnitudes.items()]
+        #min_grads = [entry["min_grad"] for layer_name, entry in gradient_magnitudes.items()]
         avg_grads = [entry["avg_grad"] for layer_name, entry in gradient_magnitudes.items()]
 
         plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
@@ -499,7 +502,7 @@ class ResultsWriterThread(threading.Thread):
     '''Creates a small "preview" of the scores for a certain epoch
     '''
     def __init__(self, predictions, gold, key, results, directory, filename, 
-                epoch=None, overwrite=True, verbose=False, task_2=False):
+                epoch=None, overwrite=True, verbose=False):
         threading.Thread.__init__(self)
         self.predictions = predictions
         self.gold = gold
@@ -585,7 +588,7 @@ if __name__ == "__main__":
                                 compute_deltas=True, 
                                 compute_delta_deltas=True, 
                                 test = True, 
-                                progress_bar = False,
+                                progress_bar = True,
                                 selected_classes=selected_classes,
                                 select_percentage_of_dataset=DATASET_PERCENTAGE
                                 )
@@ -599,7 +602,7 @@ if __name__ == "__main__":
     else:
         model = FeedForwardNetwork(FFN_INPUT_SIZE, 256, train_dataset.get_num_classes())
     
-    num_classes = len(train_dataset.class_distribution.keys())
+    num_classes = train_dataset.get_num_classes()
     print("Number of classes: ", train_dataset.get_num_classes())
     print("Class names: ",train_dataset.class_distribution.keys())
 
@@ -607,21 +610,21 @@ if __name__ == "__main__":
 
     optimizer = optim.Adam(model.parameters())
     #optimizer = optim.SGD(model.parameters(), lr=0.001)
-    lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
+    #lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
     trainer = Trainer(
-                    INSTANCE_NAME,
-                    BATCH_SIZE,
-                    train_loader,
-                    test_loader,
-                    train_dataset.get_id_to_class(),
-                    model,
-                    loss_function,
-                    optimizer,
-                    DEVICE,
-                    MODEL_DIR,
-                    lr_scheduler=None,
-                    cnn = USE_CNN
-                )
+                        INSTANCE_NAME,
+                        BATCH_SIZE,
+                        train_loader,
+                        test_loader,
+                        train_dataset.get_id_to_class(),
+                        model,
+                        loss_function,
+                        optimizer,
+                        DEVICE,
+                        MODEL_DIR,
+                        lr_scheduler=None,
+                        cnn = USE_CNN
+                    )
     
     trainer.train(30, save_test_scores_every=1, save_train_scores_every=1, save_model_every=1, compute_gradient_statistics=True)

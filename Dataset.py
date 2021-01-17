@@ -292,7 +292,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 
 #TODO implement the FFN data preprocessing
     #@function_timer
-    def preprocess(self, audio_clip, spectrogram=True, debug = True, original_mel_spectrogram = None):
+    def preprocess(self, audio_clip, spectrogram=True, debug = False, original_mel_spectrogram = None):
         def overlapping_segments_generator(step_size, window_size, total_frames, drop_last = True):
 
             start = 0

@@ -298,7 +298,10 @@ def _load_audio_file(path, duration = 4000, sample_rate = 22050):
 
 def load_audio_file(path, duration = 4000, sample_rate = 22050, fixed_length = 88200):
     data, sample_rate = librosa.load(path, sr=sample_rate, mono=True,  dtype=np.float32)
-    data = np.concatenate((data, np.zeros(int((fixed_length - len(data))))))
+    if len(data)>fixed_length:
+        data = data[:fixed_length]
+    else:
+        data = np.concatenate((data, np.zeros(int(fixed_length - len(data)))))
     return data, sample_rate
 
 #from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
@@ -355,6 +358,8 @@ def compact_urbansound_dataset(dataset_dir, folds = [1,2,3,4,5,6,7,8,9,10], skip
                 audio_raw[fold_number].append(audio_file)
                 progress_bar.update(1)
 
+    progress_bar.close()
+
     print("Saving meta-data...")
     for fold, meta_data in audio_meta.items():
         pickle_data(meta_data, os.path.join(dataset_dir,"urban_meta_fold_{}.pkl".format(fold)))
@@ -378,16 +383,16 @@ if __name__=="__main__":
 
     #for i, audio in enumerate(audio_raw):
     #   print("{}: {}".format(i,audio))
-    audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [1])
-    audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [2])
-    audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [3])
-    audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [4])
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [1])
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [2])
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [3])
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [4])
     audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [5])
-    audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [6])
-    audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [7])
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [6])
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [7])
     audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [8])
-    audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [9])
-    audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [10])
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [9])
+    #audio_meta, mm = compact_urbansound_dataset(DATASET_DIR,folds = [10])
     #audio_meta, audio_raw = load_compacted_dataset(DATASET_DIR,folds = [2,3,4,5,6,7,8,9,10])
     #with code_timer("load_compacted_dataset", debug=self.debug_preprocessing):
     #    audio_meta, audio_raw = load_compacted_dataset(DATASET_DIR,folds = [2])
