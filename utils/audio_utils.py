@@ -4,6 +4,8 @@ from pydub.utils import which
 #This should fix the ffmpeg decoding errors as in https://github.com/jiaaro/pydub/issues/173
 pydub.AudioSegment.converter = which("ffmpeg")
 
+import numpy as np
+
 import sounddevice as sd
 
 def play_sound(sound, sr = 22050, blocking=True):

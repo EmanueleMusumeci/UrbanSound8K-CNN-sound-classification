@@ -4,6 +4,8 @@ import time
 import functools
 import contextlib
 
+from prettytable import PrettyTable
+
 code_timer_stats = {}
 
 #Code block timer used as a "with" block (taken from https://stackoverflow.com/questions/30433910/decorator-to-time-specific-lines-of-the-code-instead-of-whole-method)

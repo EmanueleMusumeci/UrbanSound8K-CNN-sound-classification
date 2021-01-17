@@ -2,8 +2,11 @@ import os
 
 import numpy as np
 
-from utils.timing import function_timer, code_timer
-from utils.model_utils import unpickle_data
+try:
+    from utils.timing import function_timer, code_timer
+    from utils.model_utils import unpickle_data
+except:
+    pass 
 
 #from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
 @function_timer

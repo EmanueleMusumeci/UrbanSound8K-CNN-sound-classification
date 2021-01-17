@@ -3,6 +3,8 @@ import os
 import random
 import math
 
+import copy
+
 #import warnings
 #warnings.filterwarnings("once", category=UserWarning)
 
@@ -25,12 +27,17 @@ from csv import reader
 
 from tqdm import tqdm
 
-from image_transformations import SpectrogramAddGaussNoise, SpectrogramReshape, SpectrogramShift
+try:
+    from data_augmentation.image_transformations import *
+    from data_augmentation.audio_transformations import *
 
-from utils.dataset_utils import load_compacted_dataset
-from utils.audio_utils import *
-from utils.spectrogram_utils import *
-from utils.timing import *
+    from utils.dataset_utils import load_compacted_dataset
+    from utils.audio_utils import *
+    from utils.spectrogram_utils import *
+    from utils.timing import *
+except:
+    pass
+
 
 class SoundDatasetFold(torch.utils.data.IterableDataset):
     def __init__(self, dataset_dir, dataset_name, 
@@ -43,8 +50,9 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
 
                 shift_transformation = None,
                 background_noise_transformation = None,
-
-                audio_augmentation_pipeline = [],
+                
+                time_stretch_transformation = None,
+                pitch_shift_transformation = None,
 
                 audio_clip_duration = 4000,
                 sample_rate = 22050,
@@ -94,7 +102,8 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         self.shift_transformation = shift_transformation
         self.background_noise_transformation = background_noise_transformation
 
-        self.audio_augmentation_pipeline = audio_augmentation_pipeline
+        self.time_stretch_transformation = time_stretch_transformation
+        self.pitch_shift_transformation = pitch_shift_transformation
 
         self.audio_clip_duration = audio_clip_duration
         self.sample_rate = sample_rate
@@ -341,6 +350,12 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             
             return mfccs, chroma, mel, contrast, tonnetz
         else:
+            
+            if self.time_stretch_transformation is not None:
+                if not self.test_mode:
+                    with code_timer("audio time stretch", debug=self.debug_preprocessing_time):
+                        audio_clip = self.time_stretch_transformation(audio_clip)
+
             original_spectrograms = []
             preprocessed_spectrograms = []
             if debug: print("segments: "+str(list(overlapping_segments_generator(self.spectrogram_window_step_size, self.spectrogram_window_size, len(audio_clip), self.drop_last_spectrogram_frame))))
@@ -352,19 +367,9 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 if len(original_signal_segment) == math.floor(self.spectrogram_window_size) and segment_end<len(audio_clip): 
                     if debug: print("segment ("+str(segment_start)+", "+str(segment_end)+")")
 
-                    
-                    with code_timer("original librosa.feature.melspectrogram", debug=self.debug_preprocessing_time):
-                        #Generate log-mel spectrogram spectrogram of original signal segment
-                        if original_mel_spectrogram is None:
-                            original_mel_spectrogram = librosa.feature.melspectrogram(original_signal_segment, n_mels = self.spectrogram_bands)
-                    with code_timer("original librosa.amplitude_to_db", debug=self.debug_preprocessing_time):
-                        original_log_mel_spectrogram = librosa.amplitude_to_db(original_mel_spectrogram)
-                    with code_timer("original original_log_mel_spectrogram.T.flatten()", debug=self.debug_preprocessing_time):
-                        original_log_mel_spectrogram = original_log_mel_spectrogram.T.flatten()[:, np.newaxis].T
-                    
+                    original_log_mel_spectrogram = generate_mel_spectrogram_librosa(original_signal_segment, self.spectrogram_bands, debug_time_label=("original" if self.debug_preprocessing_time else ""))
 
-                    #original_mel_spectrogram_librosa = generate_mel_spectrogram_librosa(original_signal_segment, self.spectrogram_bands, debug_time_label="original")
-                    #original_mel_spectrogram_essentia = generate_mel_spectrogram_essentia(original_signal_segment, self.spectrogram_bands, self.sample_rate, debug_time_label="original")
+                    #original_mel_spectrogram_essentia = generate_mel_spectrogram_essentia(original_signal_segment, self.spectrogram_bands, self.sample_rate, debug_time_label=("original" if self.debug_preprocessing_time else None))
                     #display_heatmap(original_mel_spectrogram_librosa)
                     #display_heatmap(original_mel_spectrogram_essentia)
                     #raise
@@ -381,23 +386,15 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     #Apply all audio augmentations, in sequence
                     preprocessed_signal_segment = original_signal_segment
 
-                    with code_timer("audio augmentation", debug=self.debug_preprocessing_time):
+                    if self.pitch_shift_transformation is not None:
                         if not self.test_mode:
-                            for augmentation in self.audio_augmentation_pipeline:
-                                preprocessed_signal_segment = augmentation(original_signal_segment)
+                            with code_timer("audio pitch shift", debug=self.debug_preprocessing_time):
+                                preprocessed_signal_segment = self.pitch_shift_transformation(preprocessed_signal_segment)
+                            
 
-                    
-                    #Generate log-mel spectrogram spectrogram of preprocessed signal segment
-                    with code_timer("preprocessed librosa.feature.melspectrogram", debug=self.debug_preprocessing_time):
-                        preprocessed_mel_spectrogram = librosa.feature.melspectrogram(preprocessed_signal_segment, n_mels = self.spectrogram_bands)
-                    with code_timer("preprocessed librosa.amplitude_to_db", debug=self.debug_preprocessing_time):
-                        preprocessed_log_mel_spectrogram = librosa.amplitude_to_db(preprocessed_mel_spectrogram)
-                    with code_timer("preprocessed original_log_mel_spectrogram.T.flatten()", debug=self.debug_preprocessing_time):
-                        preprocessed_log_mel_spectrogram = preprocessed_log_mel_spectrogram.T.flatten()[:, np.newaxis].T
-                    
 
-                    #preprocessed_log_mel_spectrogram = generate_mel_spectrogram_librosa(preprocessed_signal_segment, self.spectrogram_bands, debug_time_label="original")
-                    #original_mel_spectrogram = generate_mel_spectrogram_essentia(preprocessed_signal_segment, self.spectrogram_bands, self.sample_rate, debug_time_label="original")
+                    preprocessed_log_mel_spectrogram = generate_mel_spectrogram_librosa(preprocessed_signal_segment, self.spectrogram_bands, debug_time_label=("preprocessed" if self.debug_preprocessing_time else ""))
+                    #original_mel_spectrogram = generate_mel_spectrogram_essentia(preprocessed_signal_segment, self.spectrogram_bands, self.sample_rate, debug_time_label=("preprocessed" if self.debug_preprocessing_time else None))
 
                     preprocessed_spectrograms.append(preprocessed_log_mel_spectrogram)
             
@@ -414,7 +411,6 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     preprocessed_spectrograms_with_deltas = np.concatenate((preprocessed_spectrograms, np.zeros(np.shape(preprocessed_spectrograms))), axis = 3)
                     if self.compute_delta_deltas:
                         preprocessed_spectrograms_with_deltas = np.concatenate((preprocessed_spectrograms_with_deltas, np.zeros(np.shape(preprocessed_spectrograms))), axis = 3)
-
 
                     for i in range(len(preprocessed_spectrograms_with_deltas)):
                         preprocessed_spectrograms_with_deltas[i, :, :, 1] = librosa.feature.delta(preprocessed_spectrograms_with_deltas[i, :, :, 0])
@@ -504,6 +500,8 @@ if __name__ == "__main__":
     INSTANCE_NAME = "PROVA"
     BATCH_SIZE = 128
     USE_CNN = True
+    APPLY_IMAGE_AUGMENTATIONS = True
+    APPLY_AUDIO_AUGMENTATIONS = True
 
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -524,11 +522,25 @@ if __name__ == "__main__":
     CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment, in_channels)
     FFN_INPUT_SIZE = 154
 
-    right_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9)
-    left_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, left=True)
-    random_side_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, random_side=True)
+    #Image augmentations
+    if APPLY_IMAGE_AUGMENTATIONS:
+        right_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9)
+        left_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, left=True)
+        random_side_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, random_side=True)
+        background_noise_transformation = SpectrogramAddGaussNoise(input_size=CNN_INPUT_SIZE,prob_to_have_noise=0.55)
+    else:
+        right_shift_transformation = None
+        left_shift_transformation = None
+        random_side_shift_transformation = None
+        background_noise_transformation = None
 
-    background_noise_transformation = SpectrogramAddGaussNoise(input_size=CNN_INPUT_SIZE,prob_to_have_noise=0.55)
+    #Audio augmentations
+    if APPLY_AUDIO_AUGMENTATIONS:
+        random_pitch_shift = PitchShift([-3.5, -2.5, 2.5, 3.5])
+        random_time_stretch = TimeStretch([0.81, 0.93, 1.07, 1.23])
+    else:
+        random_pitch_shift = None
+        random_time_stretch = None
 
     train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
                                 folds = [1], 
@@ -536,7 +548,8 @@ if __name__ == "__main__":
                                 generate_spectrograms = USE_CNN, 
                                 shift_transformation = right_shift_transformation, 
                                 background_noise_transformation = background_noise_transformation, 
-                                audio_augmentation_pipeline = [], 
+                                time_stretch_transformation = random_time_stretch,
+                                pitch_shift_transformation = random_pitch_shift, 
                                 spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
                                 spectrogram_bands = spectrogram_bands, 
                                 compute_deltas=True, 
@@ -544,14 +557,29 @@ if __name__ == "__main__":
                                 test = False, 
                                 progress_bar = True,
                                 selected_classes=selected_classes,
-                                select_percentage_of_dataset=DATASET_PERCENTAGE
+                                select_percentage_of_dataset=DATASET_PERCENTAGE,
+                                debug_preprocessing_time=True
                                 )   
+
+    test_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
+                                folds = [2], 
+                                shuffle = False, 
+                                generate_spectrograms = USE_CNN, 
+                                spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
+                                spectrogram_bands = spectrogram_bands, 
+                                compute_deltas=True, 
+                                compute_delta_deltas=True, 
+                                test = True, 
+                                progress_bar = True,
+                                selected_classes=selected_classes,
+                                select_percentage_of_dataset=DATASET_PERCENTAGE
+                                )
 
     #progress_bar = tqdm(total=len(dataset), desc="Sample", position=0)
     with code_timer("OVERALL"):
-        for i, obj in enumerate(dataset):
+        for i, obj in enumerate(train_dataset):
         #    continue
-            if i>100:
+            if i>25:
                 break
         #progress_bar.update(1)
     #progress_bar.close()
@@ -561,7 +589,7 @@ if __name__ == "__main__":
     #print("contrast: "+str(sample["contrast"]))
     #print("tonnetz: "+str(sample["tonnetz"]))
 
-    #print_code_stats()
+    print_code_stats()
     
 
 

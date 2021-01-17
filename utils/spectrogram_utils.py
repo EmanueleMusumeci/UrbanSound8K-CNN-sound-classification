@@ -1,13 +1,20 @@
+import numpy as np
+
 import librosa
 from matplotlib import pyplot as plt
+
+try:
+    from utils.timing import *
+except:
+    pass
 
 def display_heatmap(data):
     plt.imshow(data, cmap="hot", interpolation='nearest')
     plt.show()
 
-def generate_mel_spectrogram_librosa(signal, spectrogram_bands, log_mel=True, debug_time_label=None):
+def generate_mel_spectrogram_librosa(signal, spectrogram_bands, log_mel=True, debug_time_label=""):
 
-    debug_time = debug_time_label is not None
+    debug_time = len(debug_time_label)>0
 
     #Generate log-mel spectrogram spectrogram of preprocessed signal segment
     with code_timer(debug_time_label+"librosa.feature.melspectrogram", debug = debug_time):
@@ -29,9 +36,9 @@ essentia_spectrum_algo = Spectrum()  # FFT() would return the complex FFT, here 
 essentia_log_spectrum_algo = LogSpectrum()  # FFT() would return the complex FFT, here we just want the magnitude spectrum
 essentia_mfcc_algo = MFCC()
 
-def generate_mel_spectrogram_essentia(signal, spectrogram_bands, sample_rate, log_mel=True, debug_time_label=None):
+def generate_mel_spectrogram_essentia(signal, spectrogram_bands, sample_rate, log_mel=True, debug_time_label=""):
 
-    debug_time = debug_time_label is not None
+    debug_time = len(debug_time_label)>0
 
     if log_mel:
         with code_timer(debug_time_label+"essentia.LogSpectrum", debug = debug_time):

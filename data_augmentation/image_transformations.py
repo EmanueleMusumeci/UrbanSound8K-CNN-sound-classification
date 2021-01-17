@@ -4,9 +4,6 @@ import copy
 from torchvision import transforms
 import numpy as np
 
-#DATA AUGMENTATION per spettrogrammes
-#Legenda:
-#   TBC: To Be Canceled
 class SpectrogramAddGaussNoise(object):
     """Aggiunge rumore Gaussiano al vettore dello spettogramma"""
     #costruttore
@@ -50,8 +47,6 @@ class SpectrogramAddGaussNoise(object):
 
 class SpectrogramShift(object):
     """Calcola il vettore dell' immagine dello spettrogramma shiftato"""
-    #costruttore
-    #TBC: input_size è il numero fisso dello spettrogramma (vedi 1 Feature Extraction)
     def __init__(self, input_size, width_shift_range, shift_prob=1.0, left = False, random_side = False):
         #checko che questi siano veri,altrimenti triggero subito errore
 
@@ -129,7 +124,6 @@ def SpectrogramReshape(object):
 
 
 if __name__ == "__main__":
-    #TBC: vedi 1:Feature Extraction
     #https://github.com/mariostrbac/environmental-sound-classification/blob/main/notebooks/data_preprocessing.ipynb
     # build transformation pipelines for data augmentation for training phase and testing phase
     """

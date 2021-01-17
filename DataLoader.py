@@ -4,8 +4,11 @@ import math
 import numpy as np
 import torch
 
-from Dataset import SoundDatasetFold
-from image_transformations import SpectrogramAddGaussNoise, SpectrogramReshape, SpectrogramShift
+try:
+  from Dataset import SoundDatasetFold
+  from data_augmentation.image_transformations import SpectrogramAddGaussNoise, SpectrogramReshape, SpectrogramShift
+except:
+  pass
 
 class DataLoader():
     def __init__(self,
@@ -93,7 +96,15 @@ class DataLoader():
             j+=1
 
         except StopIteration:
-            break
+          if len(samples)>0:
+            batch = self.collate_fn(samples)
+            batch = self.preprocess_batch(batch)
+            
+            yield batch
+          else:
+            yield None
+
+          break
         
 
     def collate_fn(self, samples):

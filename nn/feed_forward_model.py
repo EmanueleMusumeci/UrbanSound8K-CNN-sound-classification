@@ -7,9 +7,12 @@ import numpy as np
 import os
 import librosa
 
-from Dataset import SoundDatasetFold
-from DataLoader import DataLoader
-from image_transformations import *
+try:
+    from Dataset import SoundDatasetFold
+    from DataLoader import DataLoader
+    from data_augmentation.image_transformations import *
+except:
+    pass
 
 #https://github.com/jaron/deep-listening/blob/master/1-us8k-ffn-extract-explore.ipynb
 def load_sound_files(parent_dir, file_paths):

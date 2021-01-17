@@ -5,16 +5,19 @@ import dill
 import torch
 from torch import optim, nn
 
-from Dataset import SoundDatasetFold
-from DataLoader import DataLoader
+try:
+    from Dataset import SoundDatasetFold
+    from DataLoader import DataLoader
 
-from image_transformations import *
-from audio_transformations import *
+    from data_augmentation.image_transformations import *
+    from data_augmentation.image_transformations import *
 
-from nn.feed_forward_model import FeedForwardNetwork
-from nn.convolutional_model import ConvolutionalNetwork
+    from nn.feed_forward_model import FeedForwardNetwork
+    from nn.convolutional_model import ConvolutionalNetwork
 
-from utils.evaluation_utils import *
+    from utils.evaluation_utils import *
+except:
+    pass
 
 class Trainer:
     def __init__(
@@ -73,12 +76,7 @@ class Trainer:
         - save_test_scores_every: number of epochs intercurring between two evaluations on test set
         - save_model_every: number of epochs intercurring between two model checkpoints
         """
-        
-        try:
-            self.current_loss = self.scores["audio_classification"]["loss"]
-        except:
-            pass
-        
+                
         self.save_model_structure()
 
         print("Beginning training process: ")
@@ -95,8 +93,13 @@ class Trainer:
             total_samples = 0
             running_loss = 0
             batch_losses = []
+            
+            self.train_loader.dataset.test_mode = False
+            
             for batch in self.train_loader:
-                
+                if batch is None:
+                    break
+
                 self.optimizer.zero_grad()
 
                 if self.cnn:
@@ -127,7 +130,6 @@ class Trainer:
 
                 self.optimizer.step()
 
-#TODO Emanuele
                 #Save total batch losses
                 batch_loss = loss.item() * len(batch)
                 batch_losses.append(batch_loss) 
@@ -208,6 +210,7 @@ class Trainer:
         '''
 
         if train:
+          self.train_loader.dataset.test_mode = True
           loader = self.train_loader
         else:
           loader = self.test_loader
@@ -549,7 +552,7 @@ class ResultsWriterThread(threading.Thread):
 
 
 if __name__ == "__main__":
- 
+
     INSTANCE_NAME = "PROVA"
     BATCH_SIZE = 128
     USE_CNN = True
