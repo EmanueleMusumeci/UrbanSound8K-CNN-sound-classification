@@ -113,46 +113,97 @@ class ConvolutionalNetwork(nn.Module):
         
         #Conv 1:
         #in_channels =1
-        self.conv_layer_1 = ConvolutionalLayer(self.in_channels, 24, kernel_size=(5,5), kernel_stride=(1,1), ReLU = None, use_batch_normalization = False)
+        self.conv_layer_1 = ConvolutionalLayer(self.in_channels, 30, kernel_size=(3,3), kernel_stride=(1,1), ReLU = None, use_batch_normalization = False)
+        self.conv_layer_2 = ConvolutionalLayer(30, 30, kernel_size=(3,3), kernel_stride=(1,1), ReLU = None, use_batch_normalization = False)
+        self.max_pool1 = nn.MaxPool2d((2,2), stride=(2,2))
+
         #Conv 2:
-        self.conv_layer_2 = ConvolutionalLayer(24, 36, kernel_size=(5,5), kernel_stride=(1,1), ReLU = None, use_batch_normalization = False)
+        self.conv_layer_3 = ConvolutionalLayer(30, 60, kernel_size=(3,3), kernel_stride=(1,1), ReLU = None, use_batch_normalization = False)
+        self.conv_layer_4 = ConvolutionalLayer(60, 60, kernel_size=(3,3), kernel_stride=(1,1), ReLU = None, use_batch_normalization = False)
+        self.max_pool2 = nn.MaxPool2d((2,2), stride=(2,2))
+
         #Conv 3:
-        self.conv_layer_3 = ConvolutionalLayer(36, 48, kernel_size=(5,5), kernel_stride=(1,1), ReLU = None, use_batch_normalization = False)
+        self.conv_layer_5 = ConvolutionalLayer(60, 90, kernel_size=(3,3), kernel_stride=(1,1), ReLU = None, use_batch_normalization = False)
+        self.conv_layer_6 = ConvolutionalLayer(90, 90, kernel_size=(3,3), kernel_stride=(1,1), ReLU = None, use_batch_normalization = False)
+        self.max_pool3 = nn.MaxPool2d((2,2), stride=(2,2))
+
+        #Conv 3:
+        self.conv_layer_7 = ConvolutionalLayer(90, 120, kernel_size=(3,3), kernel_stride=(1,1), ReLU = None, use_batch_normalization = False)
+        self.conv_layer_8 = ConvolutionalLayer(120, 120, kernel_size=(3,3), kernel_stride=(1,1), ReLU = None, use_batch_normalization = False)
+        self.max_pool4 = nn.MaxPool2d((2,2), stride=(2,2))
+
+        self.flatten = nn.Flatten()
 
         #Linear 1:
-
-        self.dense_1 = DenseLayer(48,60)
+        self.dropout_1 = nn.Dropout(p=dropout_p)
+        self.dense_1 = DenseLayer(1920,512)
 
         #Linear 2:
+        self.dropout_2 = nn.Dropout(p=dropout_p)
+        self.dense_2 = DenseLayer(512,10)
 
-        self.dense_2 = DenseLayer(60,10)
+    def forward(self, x, debug=False):
+        x = x.permute(0, 3, 1, 2) 
 
-    def forward(self, x):
         # cnn layer-1
         x = self.conv_layer_1(x)
-        x = F.max_pool2d(x, kernel_size=(3,3), stride=3)
-        x = F.relu(x)
+        if debug: print(x.shape)
+
+        x = self.conv_layer_2(x)
+        if debug: print(x.shape)
+
+        x = self.max_pool1(x)
+        if debug: print(x.shape)
+        
 
         # cnn layer-2
-        x = self.conv_layer_2(x)
-        x = F.max_pool2d(x, kernel_size=(2,2), stride=2)
-        x = F.relu(x)
-
-        # cnn layer-3
         x = self.conv_layer_3(x)
-        x = F.relu(x)
+        if debug: print(x.shape)
+        x = self.conv_layer_4(x)
+        if debug: print(x.shape)
+        
+        x = self.max_pool2(x)
+        if debug: print(x.shape)
+        
+        # cnn layer-3
+        x = self.conv_layer_5(x)
+        if debug: print(x.shape)
+        x = self.conv_layer_6(x)
+        if debug: print(x.shape)
+        
+        x = self.max_pool3(x)
+        if debug: print(x.shape)
+        
+        # cnn layer-3
+        x = self.conv_layer_7(x)
+        if debug: print(x.shape)
+        x = self.conv_layer_8(x)
+        if debug: print(x.shape)
+        
+        x = self.max_pool4(x)
+        if debug: print(x.shape)
 
-        # global average pooling 2D
-        x = F.avg_pool2d(x, kernel_size=x.size()[2:])
-        x = x.view(-1, 48)
+
+        #Dense
+        x = self.flatten(x)
+        if debug: print(x.shape)
+        
 
         # dense layer-1
+        x = self.dropout_1(x)
+        if debug: print(x.shape)
+        
         x = self.dense_1(x)
-        x = F.relu(x)
-        x = F.dropout(x, p=0.5)
+        if debug: print(x.shape)
+        
 
         # dense output layer
+        x = self.dropout_2(x)
+        if debug: print(x.shape)
+        
         x = self.dense_2(x)
+        if debug: print(x.shape)
+        
 
         return x
 

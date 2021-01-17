@@ -142,8 +142,10 @@ class DataLoader():
 
           #Convert to numpy arrays 
           try:
-            if field=="original_spectrogram" or field=="preprocessed_spectrogram":
-                array = np.asarray(value, dtype=np.int64)
+            if field=="class_id":
+                array = np.asarray(value, dtype=np.int32)
+            elif field=="original_spectrogram" or field=="preprocessed_spectrogram":
+                array = np.asarray(value, dtype=np.float32)
             else:
                 array = np.asarray(value)
           except Exception as e:
@@ -155,7 +157,7 @@ class DataLoader():
 
           #Convert to tensors
           try:        
-            if field=="original_spectrogram" or field=="preprocessed_spectrogram": 
+            if field=="class_id": 
               current_batch[field] = torch.autograd.Variable(
                   torch.from_numpy(array)).type(torch.LongTensor).cpu()
             else:

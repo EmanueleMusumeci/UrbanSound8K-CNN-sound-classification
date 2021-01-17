@@ -68,6 +68,8 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 progress_bar = False,
                 debug_preprocessing_time = False,
 
+                select_percentage_of_dataset = 1.0,
+
                 load_compacted = True
                 ):
         super(SoundDatasetFold).__init__()
@@ -78,6 +80,8 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         self.selected_classes = selected_classes
         self.num_classes = len(selected_classes)
 
+        self.test_mode = test
+
         self.load_compacted = load_compacted
         if self.load_compacted:
             #Load from compacted dataset files, returning only sample_ids whose class id is among the selected ones (so the dataset will ignore the other ones)
@@ -86,8 +90,8 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             #Load dataset index (the audio files will be loaded one by one therefore training will be up to 10x slower!!!), 
             # returning only the sample_ids whose class_id is among the selected ones
             self.audio_meta = self.load_dataset_index(dataset_dir, folds=self.folds)
-
-        self.sample_ids = self.select_sample_ids_given_class_ids(self.selected_classes)        
+        
+        self.sample_ids = self.select_sample_ids(self.selected_classes, select_percentage = select_percentage_of_dataset)        
 
         self.shuffle = shuffle
 
@@ -158,15 +162,25 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
 
         return class_id_to_name, name_to_class_id, class_id_to_sample_ids
     
-    def select_sample_ids_given_class_ids(self, selected_classes):
+    '''
+    Selects the "legal" samples based on various criteria:
+    1) Select only samples of the selecte classes
+    2) Select only a certain percentage of the datase samples (if specified)
+    '''
+    def select_sample_ids(self, selected_classes, select_percentage = 1.0):
+        assert select_percentage<=1 and select_percentage>=0, "Please specify a percentage in range [0,1]"
         sample_ids = []
+        select_n_samples = int(len(self.audio_meta) * select_percentage)
         for index, sample_meta in enumerate(self.audio_meta):
+            if index > select_n_samples: 
+                break
             if int(sample_meta["class_id"]) in selected_classes:
                 sample_ids.append(index)
         
         return np.array(sample_ids)
 
     def get_num_classes(self): return self.num_classes
+    def get_id_to_class(self): return self.class_id_to_name
 
     def get_preprocessed_fields(self): 
         if self.generate_spectrograms:
@@ -174,8 +188,8 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         else:
             return ["mfccs", "chroma", "mel", "contrast", "tonnetz"]
 
-    def get_unpreprocessed_fields(self): return ["class_id", "class_name", "meta_data"]
-    def get_gold_fields(self): return []
+    def get_unpreprocessed_fields(self): return ["class_name", "meta_data"]
+    def get_gold_fields(self): return ["class_id"]
 
     def __call__(self, sound, sample_rate=22050):
         if self.generate_spectrograms:
@@ -278,7 +292,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 
 #TODO implement the FFN data preprocessing
     #@function_timer
-    def preprocess(self, audio_clip, spectrogram=True, debug = False, original_mel_spectrogram = None):
+    def preprocess(self, audio_clip, spectrogram=True, debug = True, original_mel_spectrogram = None):
         def overlapping_segments_generator(step_size, window_size, total_frames, drop_last = True):
 
             start = 0
@@ -296,6 +310,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         
 
         if not spectrogram:
+            sample_rate = self.sample_rate
             #extract_feature
             if debug: print("Features :"+str(len(audio_clip))+"sampled at "+str(sample_rate)+"hz")
             #Short-time Fourier transform(STFT)
@@ -305,7 +320,6 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             if debug: print("stft:\n"+str(stft))
             #Mel-frequency cepstral coefficients (MFCCs)
             if debug: print("before mfccs:\n"+str(stft))
-            sample_rate = self.sample_rate
             mfccs = np.mean(librosa.feature.mfcc(S=audio_clip, sr=sample_rate, n_mfcc=40).T,axis=0)
             mfccs = mfccs[..., np.newaxis]
             if debug: print("mfccs:\n"+str(mfccs))
@@ -367,9 +381,9 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     preprocessed_signal_segment = original_signal_segment
 
                     with code_timer("audio augmentation", debug=self.debug_preprocessing_time):
-    #TODO Try to use transforms.Compose also for audio segments (might work if we respect the class structure!)
-                        for augmentation in self.audio_augmentation_pipeline:
-                            preprocessed_signal_segment = augmentation(preprocessed_signal_segment)
+                        if not self.test_mode:
+                            for augmentation in self.audio_augmentation_pipeline:
+                                preprocessed_signal_segment = augmentation(preprocessed_signal_segment)
 
                     #Generate log-mel spectrogram spectrogram of preprocessed signal segment
                     with code_timer("preprocessed librosa.feature.melspectrogram", debug=self.debug_preprocessing_time):
@@ -407,25 +421,25 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
 
 
             with code_timer("image augmentation", debug=self.debug_preprocessing_time):
-#TODO Testare image transformations
-                #Spectrogram image transformation
-                for i in range(len(preprocessed_spectrograms_with_deltas)):
-                    #Background noise transformations should not be applied to deltas
-                    if self.background_noise_transformation is not None:
-                        preprocessed_spectrogram, noise_mask = self.background_noise_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 0])
-                        preprocessed_spectrograms_with_deltas[i, :, :, 0] = preprocessed_spectrogram
+                if not self.test_mode:
+                    #Spectrogram image transformation
+                    for i in range(len(preprocessed_spectrograms_with_deltas)):
+                        #Background noise transformations should not be applied to deltas
+                        if self.background_noise_transformation is not None:
+                            preprocessed_spectrogram, noise_mask = self.background_noise_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 0])
+                            preprocessed_spectrograms_with_deltas[i, :, :, 0] = preprocessed_spectrogram
 
-                    if self.shift_transformation is not None:
-                        shifted_spectrogram, shift_position = self.shift_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 0])
-                        preprocessed_spectrograms_with_deltas[i, :, :, 0] = shifted_spectrogram
+                        if self.shift_transformation is not None:
+                            shifted_spectrogram, shift_position = self.shift_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 0])
+                            preprocessed_spectrograms_with_deltas[i, :, :, 0] = shifted_spectrogram
 
-                        #Spectrogram shift transformations can be applied to delta and delta-delta histograms as well
-                        if self.compute_deltas:
-                            shifted_delta_spectrogram, _ = self.shift_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 1], shift_position=shift_position)
-                            preprocessed_spectrograms_with_deltas[i, :, :, 1] = shifted_delta_spectrogram
-                            if self.compute_delta_deltas:
-                                shifted_delta_delta_spectrogram, _ = self.shift_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 2], shift_position=shift_position)
-                                preprocessed_spectrograms_with_deltas[i, :, :, 2] = shifted_delta_delta_spectrogram
+                            #Spectrogram shift transformations can be applied to delta and delta-delta histograms as well
+                            if self.compute_deltas:
+                                shifted_delta_spectrogram, _ = self.shift_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 1], shift_position=shift_position)
+                                preprocessed_spectrograms_with_deltas[i, :, :, 1] = shifted_delta_spectrogram
+                                if self.compute_delta_deltas:
+                                    shifted_delta_delta_spectrogram, _ = self.shift_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 2], shift_position=shift_position)
+                                    preprocessed_spectrograms_with_deltas[i, :, :, 2] = shifted_delta_delta_spectrogram
             
 
             return original_spectrograms, preprocessed_spectrograms_with_deltas
@@ -486,8 +500,8 @@ if __name__ == "__main__":
     
     use_CNN = True
 
-    spectrogram_frames_per_segment = 41
-    spectrogram_bands = 60
+    spectrogram_frames_per_segment = 128
+    spectrogram_bands = 128
     in_channels = (3 if use_CNN else 1)
     selected_classes = [0,1]
 
@@ -504,7 +518,7 @@ if __name__ == "__main__":
                                 DATASET_DIR, DATASET_NAME,
                                 folds = [1, 2], 
                                 shuffle = True, 
-                                generate_spectrograms = False, 
+                                generate_spectrograms = True, 
                                 shift_transformation = left_shift_transformation,
                                 background_noise_transformation = background_noise_transformation,
                                 audio_augmentation_pipeline = [],
