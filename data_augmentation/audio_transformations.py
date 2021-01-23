@@ -60,6 +60,19 @@ class TimeStretch(object):
 
 
 if __name__ == "__main__":
+
+    import sounddevice as sd
+    def play_sound(sound, sr = 22050, blocking=True):
+        sd.play(sound, sr, blocking=True)
+
+        
+    def load_audio_file(path, duration = 4000, sample_rate = 22050, fixed_length = 88200):
+        data, sample_rate = librosa.load(path, sr=sample_rate, mono=True,  dtype=np.float32)
+        if len(data)>fixed_length:
+            data = data[:fixed_length]
+        else:
+            data = np.concatenate((data, np.zeros(int(fixed_length - len(data)))))
+        return data, sample_rate
     
     base_dir = os.path.dirname(os.path.realpath(__file__))
     DATASET_DIR = os.path.join(base_dir,"data")
@@ -68,8 +81,10 @@ if __name__ == "__main__":
     name_file = "7061-6-0-0"
     type_file = ".wav"
     
-    file_to_test = os.path.join(DATASET_DIR,"UrbanSound8K","audio","fold1",name_file+type_file)
-    print(file_to_test)
+    sound_file = os.path.join(DATASET_DIR,"UrbanSound8K","audio","fold1",name_file+type_file)
+    noise_file = os.path.join(DATASET_DIR,"UrbanSound8K-JAMS","background_noise","150993__saphe__street-scene-1.wav")
+    print(sound_file)
+    print(noise_file)
 
     #y, sr = load_audio_file(file_to_test)
     
@@ -117,14 +132,15 @@ if __name__ == "__main__":
    
     #from pydub import AudioSegment
     #file_to_test.replace("data_augmentation\\","")
-    file_to_test = file_to_test.replace("data_augmentation\\","")
+    sound_file = sound_file.replace("data_augmentation\\","")
+    noise_file = noise_file.replace("data_augmentation\\","")
 
     import librosa
     import librosa.display
     import IPython as ip
 
-    y1, sample_rate1 = librosa.load(file_to_test, mono=True)
-    y2, sample_rate2 = librosa.load(file_to_test, mono=True)
+    y1, sample_rate1 = load_audio_file(sound_file)
+    y2, sample_rate2 = load_audio_file(noise_file)
 
     y3 = (y1+y2)/2
 
