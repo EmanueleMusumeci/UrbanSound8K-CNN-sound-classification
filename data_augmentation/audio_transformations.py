@@ -37,7 +37,12 @@ class PitchShift(object):
         with code_timer("PitchShift librosa", debug=self.debug_time):
             y_changed = librosa.effects.pitch_shift(y, sr, n_steps=semitones)
         return y_changed
-
+    
+    def get_value_labels(self):
+        labels = []
+        for value in self.values:
+            labels.append(str(value))
+        return labels
 
 class TimeStretch(object):
     def __init__(self, values, debug_time = False):
@@ -52,6 +57,12 @@ class TimeStretch(object):
         with code_timer("TimeStretch librosa", debug=self.debug_time):
             y_changed = librosa.effects.time_stretch(y, factor)
         return y_changed
+
+    def get_value_labels(self):
+        labels = []
+        for value in self.values:
+            labels.append(str(value))
+        return labels
 
 #TODO Michele
 #DRC
