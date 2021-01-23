@@ -57,7 +57,10 @@ class TimeStretch(object):
 #DRC
 #BG
 
+
+
 if __name__ == "__main__":
+    """
     base_dir = os.path.dirname(os.path.realpath(__file__))
     DATASET_DIR = os.path.join(base_dir,"data")
     print(librosa.__version__)
@@ -102,7 +105,23 @@ if __name__ == "__main__":
 
     #file_to_write = os.path.join(ts,name_file+"_factor_"+str(stretching_factor)+type_file)
     #write_audio_file(file_to_write,audio_with_time_stretching,sr)
+
+    #test background noise from stackoverflow:
+    #   https://stackoverflow.com/questions/4039158/mixing-two-audio-files-together-with-python
+    """
+    import numpy as np
+    from scikits.audiolab import wavread
+    """
+    data1, fs1, enc1 = wavread("file1.wav")
+    data2, fs2, enc2 = wavread("file2.wav")
+
+    assert fs1 == fs2
+    assert enc1 == enc2
+    result = 0.5 * data1 + 0.5 * data2
+    """
     
+
+
     
 
 
