@@ -28,7 +28,7 @@ if __name__=="__main__":
     #audio_meta, audio_raw_mm, spectro_mm = compact_urbansound_dataset(DATASET_DIR, folds = [9])
     #audio_meta, audio_raw_mm, spectro_mm = compact_urbansound_dataset(DATASET_DIR, folds = [10], spectrogram_bands=128)
 
-    #audio_meta, audio_raw_mm, spectro_mm = generate_compacted_fold_spectrograms(DATASET_DIR, folds = [1], spectrogram_bands=128)
+    audio_meta, audio_raw_mm, spectro_mm = generate_compacted_fold_spectrograms(DATASET_DIR, folds = [1], spectrogram_bands=128)
     #audio_meta, audio_raw_mm, spectro_mm = generate_compacted_fold_spectrograms(DATASET_DIR, folds = [2], spectrogram_bands=128)
     #audio_meta, audio_raw_mm, spectro_mm = generate_compacted_fold_spectrograms(DATASET_DIR, folds = [3], spectrogram_bands=128)
     #audio_meta, audio_raw_mm, spectro_mm = generate_compacted_fold_spectrograms(DATASET_DIR, folds = [4], spectrogram_bands=128)
