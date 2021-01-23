@@ -57,32 +57,78 @@ def normalize_clip(self, audio_clip):
     return audio_clip
 
 class MultipleWindowSelector:
-    def __init__(self, step_size, window_size, drop_last = True):
-        self.step_size = step_size
-        self.window_size = window_size
+    def __init__(self, window_size_seconds, sampling_rate, overlap=None, spectrogram_hop_length = None, random_location=False, drop_last = True):
+        self.window_size_seconds = window_size_seconds
+        self.sampling_rate = sampling_rate
+        
+        self.window_size = window_size_seconds * sampling_rate
+
+        if overlap is not None:
+            assert isinstance(float, overlap) and overlap > 0 and overlap < 1, "overlap should be a number between 0 and 1"
+            self.step_size = int(math.floor(self.window_size * (1-overlap)))
+        else:
+            self.step_size = self.window_size
+
+        self.spectrogram_hop_length = spectrogram_hop_length
+        if self.spectrogram_hop_length is not None:
+            self.spectrogram_window_size = int(math.floor(self.window_size/spectrogram_hop_length))
+            if overlap is not None:
+                self.spectrogram_step_size = int(math.floor(self.spectrogram_window_size * (1-overlap)))
+
         self.drop_last = drop_last
+
+        #If random_location is True, the step size will be chosen randomly using the computed step size as an upper bound
+        self.random_location = random_location
     
-    def __call__(self, clip):
-        total_frams = len(clip)
-        start = 0
-        while start < total_frames:
-            yield start, start + self.window_size
-            start += self.step_size
+    def __call__(self, clip, spectrogram=None):
+        total_clip_frames = len(clip)
+        total_spectrogram_frames = len(spectrogram)
+        begin = 0
+        while begin < total_clip_frames:
+            if spectrogram is not None:
+                assert self.spectrogram_hop_length is not None, "Please specify a hop length for the spectrogram"
+                spectrogram_begin = int(math.floor(begin/self.spectrogram_hop_length))
+                yield begin, begin + self.window_size, spectrogram_begin, spectrogram_begin + self.spectrogram_window_size
+            else:
+                yield begin, begin + self.window_size
+            if self.random_location:
+                random_value = np.random.rand()
+                #compute random step_size (remapping 0 to 1 in case the random value is 0)
+                random_step_size = int(math.floor((random_value if random_value>0 else 1) * self.step_size))
+                begin += random_step_size
+            else:
+                begin += self.step_size
         #If true, the last segment will be dropped if its length is lower than the segment size
         if not self.drop_last:
-            yield start, total_frames-1
+            if spectrogram is not None:
+                yield begin, total_clip_frames-1, spectrogram_begin, total_spectrogram_frames-1
+            else:
+                yield begin, total_clip_frames-1
 
 class SingleWindowSelector:
     #if random_location is False, selects a window from the beginning of the clip,
     #else selects from a random location
-    def __init__(self, window_size, random_location = True):
-        self.window_size = window_size
+    def __init__(self, window_size_seconds, sampling_rate, spectrogram_hop_length=None, random_location = True):
+        self.window_size_seconds = window_size_seconds
+        self.sampling_rate = sampling_rate
+
+        self.window_size = window_size_seconds * sampling_rate
+
+        self.spectrogram_hop_length = spectrogram_hop_length
+        if self.spectrogram_hop_length is not None:
+            self.spectrogram_window_size = int(math.floor(self.window_size/spectrogram_hop_length))
+
         self.random_location = random_location
 
-    def __call__(self, clip):
-        assert len(clip) > self.window_size
+    def __call__(self, clip, spectrogram=None):
+        assert len(clip) > self.window_size, "Window size is bigger than audio clip length"
         if self.random_location:
             begin = np.random.randint(0, len(clip)-self.window_size)
         else:
             begin = 0
-        return (begin, begin+self.window_size)
+        if spectrogram is not None:
+            assert self.spectrogram_hop_length is not None, "Please specify a hop length for the spectrogram"
+            spectrogram_begin = int(math.floor(begin/self.spectrogram_hop_length))
+            return begin, begin+self.window_size, spectrogram_begin, spectrogram_begin+self.spectrogram_window_size
+        else:
+            return begin, begin+self.window_size

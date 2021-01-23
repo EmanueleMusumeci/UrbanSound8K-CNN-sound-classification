@@ -42,6 +42,8 @@ if __name__ == "__main__":
     print(muda.__version__)
 
     pitch = muda.deformers.LinearPitchShift(n_samples=5, lower=-1, upper=1)
+
+    #background = muda.deformers.
     
     for i, jam_out in enumerate(pitch.transform(j_orig)):
         muda.save('output_{:02d}.ogg'.format(i),'output_{:02d}.jams'.format(i),jam_out)

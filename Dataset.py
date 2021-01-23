@@ -112,14 +112,14 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         self.sample_rate = sample_rate
         
         #as in https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
-        self.spectrogram_frames_per_segment = spectrogram_frames_per_segment
-        self.spectrogram_hop_length = spectrogram_hop_length
-        self.spectrogram_window_size = self.spectrogram_hop_length * (spectrogram_frames_per_segment-1)
-        assert spectrogram_window_overlap > 0 and spectrogram_window_overlap < 1, "spectrogram_window_overlap should be between 0 and 1"
-        self.spectrogram_window_overlap = spectrogram_window_overlap
-        self.spectrogram_window_step_size = math.floor(self.spectrogram_window_size * (1-spectrogram_window_overlap))
-        self.spectrogram_bands = spectrogram_bands
-        self.drop_last_spectrogram_frame = drop_last_spectrogram_frame
+        #self.spectrogram_frames_per_segment = spectrogram_frames_per_segment
+        #self.spectrogram_hop_length = spectrogram_hop_length
+        #self.spectrogram_window_size = self.spectrogram_hop_length * (spectrogram_frames_per_segment-1)
+        #assert spectrogram_window_overlap > 0 and spectrogram_window_overlap < 1, "spectrogram_window_overlap should be between 0 and 1"
+        #self.spectrogram_window_overlap = spectrogram_window_overlap
+        #self.spectrogram_window_step_size = math.floor(self.spectrogram_window_size * (1-spectrogram_window_overlap))
+        #self.spectrogram_bands = spectrogram_bands
+        #self.drop_last_spectrogram_frame = drop_last_spectrogram_frame
 
         #If no audio segment selector is specified, a SingleWindowSelector will be constructed to return the whole clip 
         if audio_segment_selector is None:
@@ -363,7 +363,9 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 
         original_spectrograms = []
         preprocessed_spectrograms = []
+        
         if debug: print("segments: "+str(list(self.audio_segment_selector(self.spectrogram_window_step_size, self.spectrogram_window_size, len(audio_clip), self.drop_last_spectrogram_frame))))
+        
         for i, (segment_start, segment_end) in enumerate(self.audio_segment_selector(self.spectrogram_window_step_size, self.spectrogram_window_size, len(audio_clip), self.drop_last_spectrogram_frame)):
             original_signal_segment = audio_clip[segment_start:segment_end]
             #Only accept audio clip segments that are:
