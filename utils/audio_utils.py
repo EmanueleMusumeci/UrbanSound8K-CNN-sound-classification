@@ -50,3 +50,39 @@ def _load_audio_file(path, duration = 4000, sample_rate = 22050):
         print("Audio segment {} has duration {} and array length {}".format(path, audio_segment.duration_seconds,len(raw)))
 
     return raw, sample_rate
+
+def normalize_clip(self, audio_clip):
+    normalization_factor = 1 / np.max(np.abs(audio_clip)) 
+    audio_clip = audio_clip * normalization_factor
+    return audio_clip
+
+class MultipleWindowSelector:
+    def __init__(self, step_size, window_size, drop_last = True):
+        self.step_size = step_size
+        self.window_size = window_size
+        self.drop_last = drop_last
+    
+    def __call__(self, clip):
+        total_frams = len(clip)
+        start = 0
+        while start < total_frames:
+            yield start, start + self.window_size
+            start += self.step_size
+        #If true, the last segment will be dropped if its length is lower than the segment size
+        if not self.drop_last:
+            yield start, total_frames-1
+
+class SingleWindowSelector:
+    #if random_location is False, selects a window from the beginning of the clip,
+    #else selects from a random location
+    def __init__(self, window_size, random_location = True):
+        self.window_size = window_size
+        self.random_location = random_location
+
+    def __call__(self, clip):
+        assert len(clip) > self.window_size
+        if self.random_location:
+            begin = np.random.randint(0, len(clip)-self.window_size)
+        else:
+            begin = 0
+        return (begin, begin+self.window_size)

@@ -30,6 +30,7 @@ except:
   base_dir = os.path.dirname(os.path.realpath(__file__))
   DATASET_DIR = os.path.join(base_dir,"data")
 
+DATASET_NAME = "UrbanSound8K"
 DATASET_PERCENTAGE = 1.0
 
 MODEL_DIR = os.path.join(base_dir,"model")

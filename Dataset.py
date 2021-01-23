@@ -46,7 +46,9 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 
                 selected_classes = [0,1,2,3,4,5,6,7,8,9],
 
-                generate_spectrograms = True, 
+                use_spectrograms = True, 
+
+                audio_segment_selector = None,
 
                 shift_transformation = None,
                 background_noise_transformation = None,
@@ -58,6 +60,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 sample_rate = 22050,
 
                 spectrogram_bands = 60,
+                spectrogram_hop_length = 512,
                 spectrogram_frames_per_segment = 41,
                 spectrogram_window_overlap = 0.5,
                 drop_last_spectrogram_frame = True,
@@ -87,7 +90,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         self.load_compacted = load_compacted
         if self.load_compacted:
             #Load from compacted dataset files, returning only sample_ids whose class id is among the selected ones (so the dataset will ignore the other ones)
-            self.audio_meta, self.audio_raw = load_compacted_dataset(dataset_dir, folds=self.folds)
+            self.audio_meta, self.audio_raw, self.audio_spectrograms = load_compacted_dataset(dataset_dir, folds=self.folds)
         else:
             #Load dataset index (the audio files will be loaded one by one therefore training will be up to 10x slower!!!), 
             # returning only the sample_ids whose class_id is among the selected ones
@@ -97,7 +100,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
 
         self.shuffle = shuffle
 
-        self.generate_spectrograms = generate_spectrograms
+        self.use_spectrograms = use_spectrograms
 
         self.shift_transformation = shift_transformation
         self.background_noise_transformation = background_noise_transformation
@@ -110,12 +113,21 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         
         #as in https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
         self.spectrogram_frames_per_segment = spectrogram_frames_per_segment
-        self.spectrogram_window_size = 512 * (spectrogram_frames_per_segment-1)
+        self.spectrogram_hop_length = spectrogram_hop_length
+        self.spectrogram_window_size = self.spectrogram_hop_length * (spectrogram_frames_per_segment-1)
         assert spectrogram_window_overlap > 0 and spectrogram_window_overlap < 1, "spectrogram_window_overlap should be between 0 and 1"
         self.spectrogram_window_overlap = spectrogram_window_overlap
         self.spectrogram_window_step_size = math.floor(self.spectrogram_window_size * (1-spectrogram_window_overlap))
         self.spectrogram_bands = spectrogram_bands
         self.drop_last_spectrogram_frame = drop_last_spectrogram_frame
+
+        #If no audio segment selector is specified, a SingleWindowSelector will be constructed to return the whole clip 
+        if audio_segment_selector is None:
+            self.audio_segment_selector = SingleWindowSelector(4000, random_location=False)
+        else:
+            assert isinstance(audio_segment_selector, SingleWindowSelector) or isinstance(audio_segment_selector, MultipleWindowSelector), \
+                "The audio_segment_selector should be a utils.audio_utils.SingleWindowSelector or utils.audio_utils.MultipleWindowSelector"
+            self.audio_segment_selector = audio_segment_selector
 
         self.silent_clip_cutoff_dB = silent_clip_cutoff_dB
 
@@ -186,7 +198,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
     def get_id_to_class(self): return self.class_id_to_name
 
     def get_preprocessed_fields(self): 
-        if self.generate_spectrograms:
+        if self.use_spectrograms:
             return ["original_spectrogram", "preprocessed_spectrogram"]
         else:
             return ["mfccs", "chroma", "mel", "contrast", "tonnetz"]
@@ -195,7 +207,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
     def get_gold_fields(self): return ["class_id"]
 
     def __call__(self, sound, sample_rate=22050):
-        if self.generate_spectrograms:
+        if self.use_spectrograms:
             original_spectrograms, preprocessed_spectrograms = self.preprocess(sound,spectrograms=True)
             returned_samples = []
             for orig_spec, prep_spec in zip(original_spectrograms, preprocessed_spectrograms):
@@ -240,8 +252,12 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             except:
                 raise e
 
-        if self.generate_spectrograms:
-            original_spectrograms, preprocessed_spectrograms = self.preprocess(sound, spectrogram=True)
+        compacted_spectrogram = None
+        if self.audio_spectrograms is not None:
+            compacted_spectrogram = self.audio_spectrograms[index]
+
+        if self.use_spectrograms:
+            original_spectrograms, preprocessed_spectrograms = self.preprocess_convolutional(sound, original_log_mel_spectrogram=compacted_spectrogram)
             returned_samples = []
             for orig_spec, prep_spec in zip(original_spectrograms, preprocessed_spectrograms):
 
@@ -256,7 +272,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             if debug: print(" Returned samples: "+str(len(returned_samples)))
             return returned_samples
         else:
-            mfccs, chroma, mel, contrast, tonnetz = self.preprocess(sound, spectrogram=False)
+            mfccs, chroma, mel, contrast, tonnetz = self.preprocess_feed_forward(sound)
             if debug: print(" Returned samples: "+str(1))
             return [{
                     "mfccs" : mfccs, 
@@ -292,159 +308,146 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
 
         if self.progress_bar:
             progress_bar.close()
-                
-#TODO implement the FFN data preprocessing
-    #@function_timer
-    def preprocess(self, audio_clip, spectrogram=True, debug = False, original_mel_spectrogram = None):
-        def overlapping_segments_generator(step_size, window_size, total_frames, drop_last = True):
 
-            start = 0
-            while start < total_frames:
-                yield start, start + window_size
-                start += step_size
-            #If true, the last segment will be dropped if its length is lower than the segment size
-            if not drop_last:
-                yield start, total_frames-1
+    def preprocess_feed_forward(self, audio_clip, debug=False):
+    
+        sample_rate = self.sample_rate
+
+        if self.normalize_audio:
+            audio_clip = normalize_clip(audio_clip)
+
+        if debug: print("Features :"+str(len(audio_clip))+"sampled at "+str(sample_rate)+"hz")
+        #Short-time Fourier transform(STFT)
+
+        stft = np.abs(librosa.stft(audio_clip))
+        if debug: print("stft:\n"+str(stft))
+        #Mel-frequency cepstral coefficients (MFCCs)
+        if debug: print("before mfccs:\n"+str(stft))
+        mfccs = np.mean(librosa.feature.mfcc(S=audio_clip, sr=sample_rate, n_mfcc=40).T,axis=0)
+        mfccs = mfccs[..., np.newaxis]
+        if debug: print("mfccs:\n"+str(mfccs))
+
+        #Compute a chromagram from a waveform or power spectrogram.
+        chroma = np.mean(librosa.feature.chroma_stft(S=stft, sr=sample_rate).T,axis=0)
+        if debug: print("chroma:\n"+str(chroma))
+
+        #Compute a mel-scaled spectrogram.
+        #SLOWER mel = np.mean(librosa.feature.melspectrogram(audio_clip, sr=sample_rate).T,axis=0)
+        
+        #https://librosa.org/doc/main/generated/librosa.feature.melspectrogram.html
+        #avoid repeating stft computation in mel_spectrogram
+        power_spectrogram = np.abs(stft)**2
+        mel = np.mean(librosa.feature.melspectrogram(S=power_spectrogram, sr=sample_rate).T,axis=0)
+        if debug: print("mel:\n"+str(mel))
+
+        contrast = np.mean(librosa.feature.spectral_contrast(S=stft, sr=sample_rate).T,axis=0)
+        if debug: print("contrast:\n"+str(contrast))
+
+        #The warning is triggered by this problem: https://github.com/librosa/librosa/issues/1214
+        #Computes the tonal centroid features (tonnetz)
+        tonnetz = np.mean(librosa.feature.tonnetz(y=librosa.effects.harmonic(audio_clip), sr=sample_rate).T,axis=0)
+        if debug: print("tonnetz:\n"+str(tonnetz))
+        
+        return mfccs, chroma, mel, contrast, tonnetz
+
+    #@function_timer
+    def preprocess_convolutional(self, audio_clip, debug = False, original_log_mel_spectrogram = None):
         
         if self.normalize_audio:
-            #print("normalize -> audio_clip: ", audio_clip)
-            normalization_factor = 1 / np.max(np.abs(audio_clip)) 
-            audio_clip = audio_clip * normalization_factor
+            audio_clip = normalize_clip(audio_clip)
+        
+        if self.time_stretch_transformation is not None:
+            if not self.test_mode:
+                with code_timer("audio time stretch", debug=self.debug_preprocessing_time):
+                    audio_clip = self.time_stretch_transformation(audio_clip)
+                
+        original_spectrograms = []
+        preprocessed_spectrograms = []
+        if debug: print("segments: "+str(list(self.audio_segment_selector(self.spectrogram_window_step_size, self.spectrogram_window_size, len(audio_clip), self.drop_last_spectrogram_frame))))
+        for i, (segment_start, segment_end) in enumerate(self.audio_segment_selector(self.spectrogram_window_step_size, self.spectrogram_window_size, len(audio_clip), self.drop_last_spectrogram_frame)):
+            original_signal_segment = audio_clip[segment_start:segment_end]
+            #Only accept audio clip segments that are:
+            #1) Of a fixed window size (self.spectrogram_window_size)
+            #2) Fully contained in the audio clip (segments that go "out of bounds" wrt the audio clip are not considered)
+            if len(original_signal_segment) == math.floor(self.spectrogram_window_size) and segment_end<len(audio_clip): 
+                if debug: print("segment ("+str(segment_start)+", "+str(segment_end)+")")
+
+                if original_log_mel_spectrogram is None:
+                    original_log_mel_spectrogram = generate_mel_spectrogram_librosa(original_signal_segment, self.spectrogram_bands, debug_time_label=("original" if self.debug_preprocessing_time else ""), show=self.debug_spectrograms)
+                #original_mel_spectrogram_essentia = generate_mel_spectrogram_essentia(original_signal_segment, self.spectrogram_bands, self.sample_rate, debug_time_label=("original" if self.debug_preprocessing_time else None))
+                #display_heatmap(original_mel_spectrogram_librosa)
+                #display_heatmap(original_mel_spectrogram_essentia)
+                #raise
+                with code_timer("drop silent", debug=self.debug_preprocessing_time):
+                    #drop silent frames (taken from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb)
+                    #ONLY if they aren't the only frame of the audio clip
+                    if debug: print("Mean dB value:" +str(np.mean(original_log_mel_spectrogram)))
+                    if i>0 and np.mean(original_log_mel_spectrogram) <= self.silent_clip_cutoff_dB:
+                        if debug: print("Silent segment dropped")
+                        continue
+                
+                original_spectrograms.append(original_log_mel_spectrogram)
+
+                #Apply all audio augmentations, in sequence
+                preprocessed_signal_segment = original_signal_segment
+
+                if self.pitch_shift_transformation is not None:
+                    if not self.test_mode:
+                        with code_timer("audio pitch shift", debug=self.debug_preprocessing_time):
+                            preprocessed_signal_segment = self.pitch_shift_transformation(preprocessed_signal_segment)
+                        
+                preprocessed_log_mel_spectrogram = generate_mel_spectrogram_librosa(preprocessed_signal_segment, self.spectrogram_bands, debug_time_label=("preprocessed" if self.debug_preprocessing_time else ""), show=self.debug_spectrograms)
+                #original_mel_spectrogram = generate_mel_spectrogram_essentia(preprocessed_signal_segment, self.spectrogram_bands, self.sample_rate, debug_time_label=("preprocessed" if self.debug_preprocessing_time else None))
+
+                preprocessed_spectrograms.append(preprocessed_log_mel_spectrogram)
+        
+        with code_timer("original spectrogram reshape", debug=self.debug_preprocessing_time):
+        #Reshape the spectrograms from [N_AUDIO_SEGMENT, N_BANDS, N_FRAMES] to [N_AUDIO_SEGMENT, N_BANDS, N_FRAMES, 1]
+            original_spectrograms = np.asarray(original_spectrograms).reshape(len(original_spectrograms),self.spectrogram_bands,self.spectrogram_frames_per_segment,1)
+        
+        with code_timer("preprocessed spectrogram reshape", debug=self.debug_preprocessing_time):
+            preprocessed_spectrograms = np.asarray(preprocessed_spectrograms).reshape(len(preprocessed_spectrograms),self.spectrogram_bands,self.spectrogram_frames_per_segment,1)
+        
+        with code_timer("deltas", debug=self.debug_preprocessing_time):
+            if self.compute_deltas:
+                #Make space for the delta features
+                preprocessed_spectrograms_with_deltas = np.concatenate((preprocessed_spectrograms, np.zeros(np.shape(preprocessed_spectrograms))), axis = 3)
+                if self.compute_delta_deltas:
+                    preprocessed_spectrograms_with_deltas = np.concatenate((preprocessed_spectrograms_with_deltas, np.zeros(np.shape(preprocessed_spectrograms))), axis = 3)
+
+                for i in range(len(preprocessed_spectrograms_with_deltas)):
+                    preprocessed_spectrograms_with_deltas[i, :, :, 1] = librosa.feature.delta(preprocessed_spectrograms_with_deltas[i, :, :, 0])
+                    
+                    if self.compute_delta_deltas:
+                        preprocessed_spectrograms_with_deltas[i, :, :, 2] = librosa.feature.delta(preprocessed_spectrograms_with_deltas[i, :, :, 1])
+
+        #preprocessed_spectrograms_with_deltas is the preprocessed output with shape [N_AUDIO_SEGMENTS, N_BANDS, N_FRAMES, N_FEATURES] where
+        #N_FEATURES is 1, 2 or 3 depending on our choice of computing delta and delta-delta spectrograms
+
+
+        with code_timer("image augmentation", debug=self.debug_preprocessing_time):
+            if not self.test_mode:
+                #Spectrogram image transformation
+                for i in range(len(preprocessed_spectrograms_with_deltas)):
+                    #Background noise transformations should not be applied to deltas
+                    if self.background_noise_transformation is not None:
+                        preprocessed_spectrogram, noise_mask = self.background_noise_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 0])
+                        preprocessed_spectrograms_with_deltas[i, :, :, 0] = preprocessed_spectrogram
+
+                    if self.shift_transformation is not None:
+                        shifted_spectrogram, shift_position = self.shift_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 0])
+                        preprocessed_spectrograms_with_deltas[i, :, :, 0] = shifted_spectrogram
+
+                        #Spectrogram shift transformations can be applied to delta and delta-delta histograms as well
+                        if self.compute_deltas:
+                            shifted_delta_spectrogram, _ = self.shift_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 1], shift_position=shift_position)
+                            preprocessed_spectrograms_with_deltas[i, :, :, 1] = shifted_delta_spectrogram
+                            if self.compute_delta_deltas:
+                                shifted_delta_delta_spectrogram, _ = self.shift_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 2], shift_position=shift_position)
+                                preprocessed_spectrograms_with_deltas[i, :, :, 2] = shifted_delta_delta_spectrogram
         
 
-        if not spectrogram:
-            sample_rate = self.sample_rate
-            #extract_feature
-            if debug: print("Features :"+str(len(audio_clip))+"sampled at "+str(sample_rate)+"hz")
-            #Short-time Fourier transform(STFT)
-            #print("preprocess -> audio_clip: ",audio_clip)
-
-            stft = np.abs(librosa.stft(audio_clip))
-            if debug: print("stft:\n"+str(stft))
-            #Mel-frequency cepstral coefficients (MFCCs)
-            if debug: print("before mfccs:\n"+str(stft))
-            mfccs = np.mean(librosa.feature.mfcc(S=audio_clip, sr=sample_rate, n_mfcc=40).T,axis=0)
-            mfccs = mfccs[..., np.newaxis]
-            if debug: print("mfccs:\n"+str(mfccs))
-
-            #Compute a chromagram from a waveform or power spectrogram.
-            chroma = np.mean(librosa.feature.chroma_stft(S=stft, sr=sample_rate).T,axis=0)
-            if debug: print("chroma:\n"+str(chroma))
-
-            #Compute a mel-scaled spectrogram.
-            #SLOWER mel = np.mean(librosa.feature.melspectrogram(audio_clip, sr=sample_rate).T,axis=0)
-            
-            #https://librosa.org/doc/main/generated/librosa.feature.melspectrogram.html
-            #avoid repeating stft computation in mel_spectrogram
-            power_spectrogram = np.abs(stft)**2
-            mel = np.mean(librosa.feature.melspectrogram(S=power_spectrogram, sr=sample_rate).T,axis=0)
-            if debug: print("mel:\n"+str(mel))
-
-            contrast = np.mean(librosa.feature.spectral_contrast(S=stft, sr=sample_rate).T,axis=0)
-            if debug: print("contrast:\n"+str(contrast))
-
-            #The warning is triggered by this problem: https://github.com/librosa/librosa/issues/1214
-            #Computes the tonal centroid features (tonnetz)
-            tonnetz = np.mean(librosa.feature.tonnetz(y=librosa.effects.harmonic(audio_clip), sr=sample_rate).T,axis=0)
-            if debug: print("tonnetz:\n"+str(tonnetz))
-            
-            return mfccs, chroma, mel, contrast, tonnetz
-        else:
-            
-            if self.time_stretch_transformation is not None:
-                if not self.test_mode:
-                    with code_timer("audio time stretch", debug=self.debug_preprocessing_time):
-                        audio_clip = self.time_stretch_transformation(audio_clip)
-
-            original_spectrograms = []
-            preprocessed_spectrograms = []
-            if debug: print("segments: "+str(list(overlapping_segments_generator(self.spectrogram_window_step_size, self.spectrogram_window_size, len(audio_clip), self.drop_last_spectrogram_frame))))
-            for i, (segment_start, segment_end) in enumerate(overlapping_segments_generator(self.spectrogram_window_step_size, self.spectrogram_window_size, len(audio_clip), self.drop_last_spectrogram_frame)):
-                original_signal_segment = audio_clip[segment_start:segment_end]
-                #Only accept audio clip segments that are:
-                #1) Of a fixed window size (self.spectrogram_window_size)
-                #2) Fully contained in the audio clip (segments that go "out of bounds" wrt the audio clip are not considered)
-                if len(original_signal_segment) == math.floor(self.spectrogram_window_size) and segment_end<len(audio_clip): 
-                    if debug: print("segment ("+str(segment_start)+", "+str(segment_end)+")")
-
-                    original_log_mel_spectrogram = generate_mel_spectrogram_librosa(original_signal_segment, self.spectrogram_bands, debug_time_label=("original" if self.debug_preprocessing_time else ""))
-
-                    #original_mel_spectrogram_essentia = generate_mel_spectrogram_essentia(original_signal_segment, self.spectrogram_bands, self.sample_rate, debug_time_label=("original" if self.debug_preprocessing_time else None))
-                    #display_heatmap(original_mel_spectrogram_librosa)
-                    #display_heatmap(original_mel_spectrogram_essentia)
-                    #raise
-                    with code_timer("drop silent", debug=self.debug_preprocessing_time):
-                        #drop silent frames (taken from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb)
-                        #ONLY if they aren't the only frame of the audio clip
-                        if debug: print("Mean dB value:" +str(np.mean(original_log_mel_spectrogram)))
-                        if i>0 and np.mean(original_log_mel_spectrogram) <= self.silent_clip_cutoff_dB:
-                            if debug: print("Silent segment dropped")
-                            continue
-                    
-                    original_spectrograms.append(original_log_mel_spectrogram)
-
-                    #Apply all audio augmentations, in sequence
-                    preprocessed_signal_segment = original_signal_segment
-
-                    if self.pitch_shift_transformation is not None:
-                        if not self.test_mode:
-                            with code_timer("audio pitch shift", debug=self.debug_preprocessing_time):
-                                preprocessed_signal_segment = self.pitch_shift_transformation(preprocessed_signal_segment)
-                            
-
-
-                    preprocessed_log_mel_spectrogram = generate_mel_spectrogram_librosa(preprocessed_signal_segment, self.spectrogram_bands, debug_time_label=("preprocessed" if self.debug_preprocessing_time else ""))
-                    #original_mel_spectrogram = generate_mel_spectrogram_essentia(preprocessed_signal_segment, self.spectrogram_bands, self.sample_rate, debug_time_label=("preprocessed" if self.debug_preprocessing_time else None))
-
-                    preprocessed_spectrograms.append(preprocessed_log_mel_spectrogram)
-            
-            with code_timer("original spectrogram reshape", debug=self.debug_preprocessing_time):
-            #Reshape the spectrograms from [N_AUDIO_SEGMENT, N_BANDS, N_FRAMES] to [N_AUDIO_SEGMENT, N_BANDS, N_FRAMES, 1]
-                original_spectrograms = np.asarray(original_spectrograms).reshape(len(original_spectrograms),self.spectrogram_bands,self.spectrogram_frames_per_segment,1)
-            
-            with code_timer("preprocessed spectrogram reshape", debug=self.debug_preprocessing_time):
-                preprocessed_spectrograms = np.asarray(preprocessed_spectrograms).reshape(len(preprocessed_spectrograms),self.spectrogram_bands,self.spectrogram_frames_per_segment,1)
-            
-            with code_timer("deltas", debug=self.debug_preprocessing_time):
-                if self.compute_deltas:
-                    #Make space for the delta features
-                    preprocessed_spectrograms_with_deltas = np.concatenate((preprocessed_spectrograms, np.zeros(np.shape(preprocessed_spectrograms))), axis = 3)
-                    if self.compute_delta_deltas:
-                        preprocessed_spectrograms_with_deltas = np.concatenate((preprocessed_spectrograms_with_deltas, np.zeros(np.shape(preprocessed_spectrograms))), axis = 3)
-
-                    for i in range(len(preprocessed_spectrograms_with_deltas)):
-                        preprocessed_spectrograms_with_deltas[i, :, :, 1] = librosa.feature.delta(preprocessed_spectrograms_with_deltas[i, :, :, 0])
-                        
-                        if self.compute_delta_deltas:
-                            preprocessed_spectrograms_with_deltas[i, :, :, 2] = librosa.feature.delta(preprocessed_spectrograms_with_deltas[i, :, :, 1])
-
-            #preprocessed_spectrograms_with_deltas is the preprocessed output with shape [N_AUDIO_SEGMENTS, N_BANDS, N_FRAMES, N_FEATURES] where
-            #N_FEATURES is 1, 2 or 3 depending on our choice of computing delta and delta-delta spectrograms
-
-
-            with code_timer("image augmentation", debug=self.debug_preprocessing_time):
-                if not self.test_mode:
-                    #Spectrogram image transformation
-                    for i in range(len(preprocessed_spectrograms_with_deltas)):
-                        #Background noise transformations should not be applied to deltas
-                        if self.background_noise_transformation is not None:
-                            preprocessed_spectrogram, noise_mask = self.background_noise_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 0])
-                            preprocessed_spectrograms_with_deltas[i, :, :, 0] = preprocessed_spectrogram
-
-                        if self.shift_transformation is not None:
-                            shifted_spectrogram, shift_position = self.shift_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 0])
-                            preprocessed_spectrograms_with_deltas[i, :, :, 0] = shifted_spectrogram
-
-                            #Spectrogram shift transformations can be applied to delta and delta-delta histograms as well
-                            if self.compute_deltas:
-                                shifted_delta_spectrogram, _ = self.shift_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 1], shift_position=shift_position)
-                                preprocessed_spectrograms_with_deltas[i, :, :, 1] = shifted_delta_spectrogram
-                                if self.compute_delta_deltas:
-                                    shifted_delta_delta_spectrogram, _ = self.shift_transformation(preprocessed_spectrograms_with_deltas[i, :, :, 2], shift_position=shift_position)
-                                    preprocessed_spectrograms_with_deltas[i, :, :, 2] = shifted_delta_delta_spectrogram
-            
-
-            return original_spectrograms, preprocessed_spectrograms_with_deltas
+        return original_spectrograms, preprocessed_spectrograms_with_deltas
 
     def shuffle_dataset(self):
         p = np.random.permutation(len(self.sample_ids))
@@ -490,7 +493,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         return audio_meta, audio_ids     
             
     #def __len__(self):
-    #    #if self.generate_spectrograms:
+    #    #if self.use_spectrograms:
     #    #    return len(self.data) * self.fixed_segment_size
     #    #else:
     #    return len(self.data)
@@ -545,7 +548,7 @@ if __name__ == "__main__":
     train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
                                 folds = [1], 
                                 shuffle = True, 
-                                generate_spectrograms = USE_CNN, 
+                                use_spectrograms = USE_CNN, 
                                 shift_transformation = right_shift_transformation, 
                                 background_noise_transformation = background_noise_transformation, 
                                 time_stretch_transformation = random_time_stretch,
@@ -564,7 +567,7 @@ if __name__ == "__main__":
     test_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
                                 folds = [2], 
                                 shuffle = False, 
-                                generate_spectrograms = USE_CNN, 
+                                use_spectrograms = USE_CNN, 
                                 spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
                                 spectrogram_bands = spectrogram_bands, 
                                 compute_deltas=True, 
