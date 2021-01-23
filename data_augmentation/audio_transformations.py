@@ -1,7 +1,8 @@
 import librosa
 import soundfile as sf
 import os
-
+import os.path
+import random
 import numpy as np
 
 try:
@@ -57,6 +58,30 @@ class TimeStretch(object):
 #DRC
 #BG
 
+
+class BackgroundNoise(object):
+    def __init__(self,sound_file,files):
+        self.sound_file = sound_file
+        self.files = files
+        print("BackgroundNoise")
+    
+    def __call__(self, index_file,weight=None):
+        #files : lista di Strinche con i path dei noises
+        #index : indice del noise scelto
+        if weight != None:
+            assert weight <= 1.0 and weight >= 0.0
+        else:
+            print("--- random")
+            weight = random.uniform(0.0, 0.5)
+            print("--- weight random: ",weight)
+        print("NOISE : ",self.files[index_file])
+        y1, sample_rate1 = load_audio_file(self.sound_file)
+        y2, sample_rate2 = load_audio_file(self.files[index_file])
+        y3 = (          ((1-weight)*y1)  +   (weight*y2))/2
+        sr=int((sample_rate1+sample_rate2)/2)
+
+        play_sound(y3)
+        return y3
 
 
 if __name__ == "__main__":
@@ -146,8 +171,29 @@ if __name__ == "__main__":
 
     sr=int((sample_rate1+sample_rate2)/2)
 
-    play_sound(y3)
+    #play_sound(y3)
+
+    from os import listdir
+    from os.path import isfile, join
+    #print(base_dir)
+    base_dir = base_dir.replace("data_augmentation","")
+    #print(base_dir)
+    noises_path = os.path.join(base_dir,"data","UrbanSound8K-JAMS","background_noise")
+    #print(noises_path)
+    onlyfiles = [f for f in listdir(noises_path) if isfile(join(noises_path, f))]
+    onlyfiles = onlyfiles[:-1]
+    #print(onlyfiles)
+    new_only_files = []
+    for i in onlyfiles:
+        i = noises_path+ "\\" + i
+        new_only_files.append(i)
     
+    print(new_only_files)
+    bn = BackgroundNoise(sound_file,new_only_files)
+
+    background_noise = bn(2)
+
+    print(background_noise)
    
 
 
