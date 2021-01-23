@@ -17,7 +17,7 @@ except Exception as e:
 
 #from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
 @function_timer
-def load_compacted_dataset(dataset_dir, folds = [], spectrogram_bands = None, log_mel=True, sample_rate = 22050, hop_length = 512, seconds = 4):
+def load_compacted_dataset(dataset_dir, folds = [], spectrogram_bands = 128, log_mel=True, sample_rate = 22050, hop_length = 512, seconds = 4):
     """Load raw audio and metadata content from the UrbanSound8K dataset."""
     
     audio_meta = []
