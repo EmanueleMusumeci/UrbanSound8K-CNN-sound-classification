@@ -33,10 +33,10 @@ class PitchShift(object):
     def __call__(self,y,sr=22050,semitones=None):
         
         if semitones is None:
-            with code_timer("PitchShift np.random.choice", debug=self.debug_time):
-                semitones = np.random.choice(self.values)
-        with code_timer("PitchShift librosa", debug=self.debug_time):
-            y_changed = librosa.effects.pitch_shift(y, sr, n_steps=semitones)
+            #with code_timer("PitchShift np.random.choice", debug=self.debug_time):
+            semitones = np.random.choice(self.values)
+        #with code_timer("PitchShift librosa", debug=self.debug_time):
+        y_changed = librosa.effects.pitch_shift(y, sr, n_steps=semitones)
         return y_changed
 
 
@@ -48,35 +48,76 @@ class TimeStretch(object):
         #print("Instance of TimeStretch created")
     def __call__(self,y, factor = None):
         if factor is None:
-            with code_timer("TimeStretch np.random.choice", debug=self.debug_time):
-                factor = np.random.choice(self.values)
-        with code_timer("TimeStretch librosa", debug=self.debug_time):
-            y_changed = librosa.effects.time_stretch(y, factor)
+            #with code_timer("TimeStretch np.random.choice", debug=self.debug_time):
+            factor = np.random.choice(self.values)
+        #with code_timer("TimeStretch librosa", debug=self.debug_time):
+        y_changed = librosa.effects.time_stretch(y, factor)
         return y_changed
 
-#TODO Michele
-#DRC
-#BG
+
+#DONT delete this
+"""
+Parameterizations from Dolby E Standard:
+
+- Music Standard
+    Max Boost: 12 dB (below -55 dB)
+    Boost Range: -55 dB to -31 dB (2:1 ratio)
+    Null Band Width: 5 dB (-31 dB to -26 dB)
+    Early Cut Range: -26 dB to -16 dB (2:1 ratio)
+    Cut Range: -16 dB to +4 dB (20:1 ratio) 
+
+- Film Standard
+    Max Boost: 6 dB (below -43 dB)
+    Boost Range: -43 dB to -31 dB (2:1 ratio)
+    Null Band Width: 5 dB (-31 dB to -26 dB)
+    Early Cut Range: -26 dB to -16 dB (2:1 ratio)
+    Cut Range: -16 dB to +4 dB (20:1 ratio) 
+
+- Speech
+    Max Boost: 15 dB (below -50 dB)
+    Boost Range: -50 dB to -31 dB (5:1 ratio)
+    Null Band Width: 5 dB (-31 dB to -26 dB)
+    Early Cut Range: -26 dB to -16 dB (2:1 ratio)
+    Cut Range: -16 dB to +4 dB (20:1 ratio) 
+
+Parameterizations from icecast: see https://icecast.imux.net/viewtopic.php?t=3462
+
+
+"""
+class DynamicRangeCompression(object):
+    def __init__(self,sound_file,min_dB,max_dB):
+        self.sound_file = sound_file
+        self.min_dB = min_dB
+        self.max_dB = max_dB
+    
+    def __call__(self):
+        #librosa.load return a time series representing amplitude not in db
+        y1_db = librosa.amplitude_to_db(self.sound_file)
+        #clip is done on decibel, but then must be translated back to amplitude
+        t1_db = np.clip(y1_db, a_min = self.min_dB,a_max=self.max_dB)
+        #back to amplitude
+        t1 = librosa.db_to_amplitude(t1_db)
+
+        return t1
+
 
 
 class BackgroundNoise(object):
-    def __init__(self,sound_file,files):
+    def __init__(self,sound_file,loaded_audio_files):
         self.sound_file = sound_file
-        self.files = files
-        print("BackgroundNoise")
+        self.loaded_audio_files = loaded_audio_files
     
     def __call__(self, index_file,weight=None):
-        #files : lista di Strinche con i path dei noises
+        #files : lista di Stringhe con i path dei noises
         #index : indice del noise scelto
         if weight != None:
             assert weight <= 1.0 and weight >= 0.0
         else:
-            print("--- random")
             weight = random.uniform(0.0, 0.5)
             print("--- weight random: ",weight)
-        print("NOISE : ",self.files[index_file])
+        #print("NOISE : ",self.loaded_audio_files[index_file])
         y1, sample_rate1 = load_audio_file(self.sound_file)
-        y2, sample_rate2 = load_audio_file(self.files[index_file])
+        y2, sample_rate2 = self.loaded_audio_files[index_file]
         y3 = (          ((1-weight)*y1)  +   (weight*y2))/2
         sr=int((sample_rate1+sample_rate2)/2)
 
@@ -87,6 +128,14 @@ class BackgroundNoise(object):
 if __name__ == "__main__":
 
     import sounddevice as sd
+
+    import librosa
+    import librosa.display
+    import IPython as ip
+
+    from os import listdir
+    from os.path import isfile, join
+
     def play_sound(sound, sr = 22050, blocking=True):
         sd.play(sound, sr, blocking=True)
 
@@ -108,96 +157,91 @@ if __name__ == "__main__":
     
     sound_file = os.path.join(DATASET_DIR,"UrbanSound8K","audio","fold1",name_file+type_file)
     noise_file = os.path.join(DATASET_DIR,"UrbanSound8K-JAMS","background_noise","150993__saphe__street-scene-1.wav")
-    print(sound_file)
-    print(noise_file)
-
-    #y, sr = load_audio_file(file_to_test)
-    
-    #aug = os.path.join(DATASET_DIR,"augmentation")
-    #if not os.path.exists(aug): os.mkdir(aug)
-    #test PitchShifting
-
-    #ps = os.path.join(aug, "pitch")
-    #if not os.path.exists(ps): os.mkdir(ps)
-
+    print("sound_file: ",sound_file)
+    print("noise_file: ",noise_file)
 
     #set it to generate the corresponding shift ( in article :steps (semitones) PS1 = {-2,-1,1,2} , PS2 = {-3.5,-2.5, 2.5,3.5} )
-    #semitone = 3.5
-    """
-    play_sound(y)
-    pitch_shifting = PitchShift([-3.5, -2.5, 2.5, 3.5])
-    audio_with_pitch_shifting = pitch_shifting(y,sr)
-    play_sound(audio_with_pitch_shifting)
-    """
-    #file_to_write = os.path.join(ps,name_file+"_"+str(semitone)+"sem"+type_file)
-    #write_audio_file(file_to_write,audio_with_pitch_shifting,sr)
-    
-    #test TimeStretching
+    sound_file = sound_file.replace("data_augmentation\\","")
+    y1, sample_rate1 = load_audio_file(sound_file)
 
-    #ts = os.path.join(aug, "time_stretching")
-    #if not os.path.exists(ts): os.mkdir(ts)
+    ############################################################################################## test PitchShift
+
+    print("-------- original sound")
+
+    play_sound(y1)
+    #( in article :steps (semitones) PS1 = {-2,-1,1,2} , PS2 = {-3.5,-2.5, 2.5,3.5} )
+    pitch_shifting = PitchShift([-3.5, -2.5, 2.5, 3.5])
+    audio_with_pitch_shifting = pitch_shifting(y1,sample_rate1)
+    print("-------- PitchShifting:")
+    play_sound(audio_with_pitch_shifting)
     
+    
+    ############################################################################################## test TimeStretching
+
+
     #set to generate the corresponding stretch  ( in article: {0.81, 0.93, 1.07, 1.23})
     #stretching_factor = 1.07
-    """
-    play_sound(y)
+    print("-------- original sound")
+    play_sound(y1)
     time_stretching = TimeStretch([0.81, 0.93, 1.07, 1.23])
-    audio_with_time_stretching = time_stretching(y)
+    audio_with_time_stretching = time_stretching(y1)
+    print("-------- TimeStretching:")
     play_sound(audio_with_time_stretching)
-    """
-    #file_to_write = os.path.join(ts,name_file+"_factor_"+str(stretching_factor)+type_file)
-    #write_audio_file(file_to_write,audio_with_time_stretching,sr)
-
-    #test background noise from stackoverflow:
-    #   https://stackoverflow.com/questions/4039158/mixing-two-audio-files-together-with-python
     
-    #import numpy as np
-    #from scikits.audiolab import wavread
+    ############################################################################################## test BackGroundNoise
 
-   
-    #from pydub import AudioSegment
-    #file_to_test.replace("data_augmentation\\","")
-    sound_file = sound_file.replace("data_augmentation\\","")
     noise_file = noise_file.replace("data_augmentation\\","")
 
-    import librosa
-    import librosa.display
-    import IPython as ip
-
     y1, sample_rate1 = load_audio_file(sound_file)
-    y2, sample_rate2 = load_audio_file(noise_file)
-
-    y3 = (y1+y2)/2
-
-    sr=int((sample_rate1+sample_rate2)/2)
-
-    #play_sound(y3)
-
-    from os import listdir
-    from os.path import isfile, join
-    #print(base_dir)
+    print("-------- original sound")
+    play_sound(y1)
+    #lista dei file noises TODO Michele funzione più ordinata
     base_dir = base_dir.replace("data_augmentation","")
-    #print(base_dir)
     noises_path = os.path.join(base_dir,"data","UrbanSound8K-JAMS","background_noise")
-    #print(noises_path)
     onlyfiles = [f for f in listdir(noises_path) if isfile(join(noises_path, f))]
     onlyfiles = onlyfiles[:-1]
-    #print(onlyfiles)
     new_only_files = []
     for i in onlyfiles:
         i = noises_path+ "\\" + i
         new_only_files.append(i)
+    #print("noises files: ",new_only_files)
     
-    print(new_only_files)
-    bn = BackgroundNoise(sound_file,new_only_files)
+    loaded_audio_files = []
+    for i in range(4):
+        loaded_audio_files.append(load_audio_file(new_only_files[i]))
+    
+    print("-------- BackGroundNoise:")
 
-    background_noise = bn(2)
+    bn = BackgroundNoise(sound_file,loaded_audio_files)
 
+    background_noise = bn(2,0.5)
+    play_sound(background_noise)
     print(background_noise)
-   
-
+    
+    ############################################################################################## test DRC
 
     
+    y1, sample_rate1 = load_audio_file(sound_file)
+    print("-------- original sound")
+    play_sound(y1)
+    #Music Standard  -> Max Boost: 12 dB (below -55 dB)
+    drc_music_standard = DynamicRangeCompression(y1,min_dB = -55, max_dB = 12)
 
+    #Film Standard -> Max Boost: 6 dB (below -43 dB)
+    drc_film_standard = DynamicRangeCompression(y1, min_dB = -43, max_dB = 6)
+
+    #Speech Standard   -> Max Boost: 15 dB (below -50 dB)
+    drc_speech_standard = DynamicRangeCompression(y1,min_dB = -50, max_dB = 15)
+    print("-------- DRC:")
+    drc1 = drc_music_standard()
+    play_sound(drc1)
+    print("drc1: ",drc1)
+    drc2 = drc_film_standard()
+    play_sound(drc2)
+    print("drc2: ",drc2)
+    drc3 = drc_speech_standard()
+    play_sound(drc3)
+    print("drc3: ",drc3)
+    
 
 
