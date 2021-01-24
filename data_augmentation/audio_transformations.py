@@ -59,12 +59,6 @@ class TimeStretch(object):
             y_changed = librosa.effects.time_stretch(y, factor)
         return y_changed
 
-    def get_value_labels(self):
-        labels = []
-        for value in self.values:
-            labels.append(str(value))
-        return labels
-
 #TODO Michele
 #DRC
 #BG
@@ -76,19 +70,19 @@ class BackgroundNoise(object):
         self.files = files
         print("BackgroundNoise")
     
-    def __call__(self, index_file,weight=None):
+    def __call__(self, index_file,weight=None, debug=False):
         #files : lista di Strinche con i path dei noises
         #index : indice del noise scelto
-        if weight != None:
+        if weight is not None:
             assert weight <= 1.0 and weight >= 0.0
         else:
             print("--- random")
             weight = random.uniform(0.0, 0.5)
             print("--- weight random: ",weight)
-        print("NOISE : ",self.files[index_file])
+        if debug: print("NOISE : ",self.files[index_file])
         y1, sample_rate1 = load_audio_file(self.sound_file)
         y2, sample_rate2 = load_audio_file(self.files[index_file])
-        y3 = (          ((1-weight)*y1)  +   (weight*y2))/2
+        y3 = (((1-weight)*y1)  +   (weight*y2))/2
         sr=int((sample_rate1+sample_rate2)/2)
 
         play_sound(y3)

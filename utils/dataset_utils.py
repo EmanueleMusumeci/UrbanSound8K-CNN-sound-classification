@@ -4,6 +4,7 @@ import math
 import numpy as np
 
 import csv 
+import json
 
 from tqdm import tqdm
 try:
@@ -15,62 +16,145 @@ except Exception as e:
     raise e
     pass 
 
+def save_compacted_data(data, file_name, shape):
+    mm = np.memmap(file_name, dtype='float32', mode='w+', shape=shape)
+    mm[:] = data[:]
+    mm.flush()
+
+    return mm
+
+def load_compacted_data(file_name, shape):
+    mm = np.memmap(file_name, dtype="float32", mode="r", shape=shape)
+    return mm
+
+
 #from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
 @function_timer
-def load_compacted_dataset(dataset_dir, folds = [], spectrogram_bands = 128, log_mel=True, sample_rate = 22050, hop_length = 512, seconds = 4, preprocessing_name=None):
+def load_raw_compacted_dataset(dataset_dir, folds = [], spectrogram_bands = 128, log_mel=True, sample_rate = 22050, hop_length = 512, seconds = 4):
     """Load raw audio and metadata content from the UrbanSound8K dataset."""
     
+    spectro_frames = compute_spectrogram_frames(seconds, sample_rate, hop_length)
+
     audio_meta = []
     audio_raw = []
-    audio_spectrograms = []
-    audio_preprocessed = {}
-    spectro_frames = compute_spectrogram_frames(seconds, sample_rate, hop_length)
-    for fold in folds:
-        if os.path.isfile(os.path.join(dataset_dir,'urban_meta_fold_{}.pkl'.format(fold))) and os.path.isfile(os.path.join(dataset_dir,'urban_audio_fold_{}.dat'.format(fold))):
-            
-            fold_meta = unpickle_data(os.path.join(dataset_dir,'urban_meta_fold_{}.pkl'.format(fold)))
-            fold_raw = np.memmap(os.path.join(dataset_dir,'urban_audio_fold_{}.dat'.format(fold)), dtype='float32', mode='r', shape=(len(fold_meta), 88200))
-            audio_meta = np.concatenate((audio_meta,fold_meta))
-            audio_raw.append(fold_raw)
+    audio_spectrograms_raw = []
+    
+    #Look for a index.json file, that should have already been generated upon compacting the dataset
+    assert os.path.exists(os.path.join(dataset_dir,"index.json")), "Please compact dataset first to generate the index.json file"
+    
+    #This dictionary will be used to index the preprocessed files
+    with open(os.path.join(dataset_dir,"index.json"), mode="r") as f:
+        json_index = json.load(f)
+        
+    for fold_number in folds:
+        #1) Check that fold has already been compacted
+        assert "fold_"+str(fold_number) in json_index.keys(), "Fold {} not yet compacted".format(fold_number)
+        assert "raw" in json_index["fold_"+str(fold_number)].keys(), "Fold {} not yet compacted".format(fold_number)
 
-            spectro_file_name = "urban_meta_fold_{}_spectrograms_{}_seconds_{}_bands_{}_sr_{}_hop{}.dat".format(fold, seconds, spectrogram_bands, sample_rate, hop_length, ("_log_mel" if log_mel else ""))
-            if spectrogram_bands is not None and os.path.isfile(os.path.join(dataset_dir,spectro_file_name)):
-                audio_spec = np.memmap(os.path.join(dataset_dir,spectro_file_name), dtype="float32", mode = "r", shape=(len(fold_meta), spectrogram_bands, spectro_frames))
-                audio_spectrograms.append(audio_spec)
-            
-            if preprocessing_name is not None:
-                assert os.path.exists(os.path.join(dataset_dir, "preprocessed", preprocessing_name, "preprocessing_values.json"))
-#TODO Read JSON containing all preprocessing values with the respective filename 
-                assert os.path.exists(os.path.join(dataset_dir, "preprocessed", preprocessing_name)), "Specified preprocessed path does not exist"
-                preprocessed_file_names = []
-                for filename is os.listdir(os.path.join(dataset_dir, "preprocessed", preprocessing_name)):
-                    if filename.endswith(preprocessing_name+".dat"):
-                        preprocessed_file_names.append(filename)
-                        #audio_preprocessed
-#TODO Finire la parte che 1) Carica ogni singolo file di tracce preprocessed e 2) le aggrega in audio_preprocessed, una lista (tracce) di liste (una traccia per ogni preprocessing value)
-                else:
-                    raise FileNotFoundError
-#TODO sostituire ad audio_spec gli spettrogrammi preprocessati se preprocessing_name is not None
+        #2) Load fold meta-data
+        assert "meta_data_file_name" in json_index["fold_"+str(fold_number)].keys(), "Meta-data not found for fold {}".format(fold_number)
+        print(json_index["fold_"+str(fold_number)]["meta_data_file_name"])
+        fold_meta = unpickle_data(json_index["fold_"+str(fold_number)]["meta_data_file_name"])
+        audio_meta = np.concatenate((audio_meta,fold_meta))
 
-        else:
-            raise FileNotFoundError
+        #3) Load fold audio data
+        #Load audio data
+        audio_length = json_index["fold_"+str(fold_number)]["raw"]["audio_length"]
+        fold_raw = np.memmap(json_index["fold_"+str(fold_number)]["raw"]["audio_file_name"], dtype='float32', mode='r', shape=(len(fold_meta), audio_length))
+        audio_raw.append(fold_raw)
+
+        #Load spectrograms (if they exist)
+        if "spectrograms" in json_index["fold_"+str(fold_number)]["raw"].keys():
+            audio_spec_file_name = json_index["fold_"+str(fold_number)]["raw"]["spectrograms"]["file_name"]
+            audio_spec_bands = json_index["fold_"+str(fold_number)]["raw"]["spectrograms"]["bands"]
+            audio_spec_frames = json_index["fold_"+str(fold_number)]["raw"]["spectrograms"]["frames"]
+
+            audio_spec = np.memmap(audio_spec_file_name, dtype="float32", mode = "r", shape=(len(fold_meta), audio_spec_bands, audio_spec_frames))
+            audio_spectrograms_raw.append(audio_spec)
 
     audio_raw = np.vstack(audio_raw)
-    if spectrogram_bands is not None:
-        audio_spectrograms = np.vstack(audio_spectrograms)
-    return audio_meta, audio_raw, audio_spectrograms
 
+    if len(audio_spectrograms_raw)>0:
+        audio_spectrograms_raw = np.vstack(audio_spectrograms_raw)
+
+    return audio_meta, audio_raw, audio_spectrograms_raw
 
 #from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
-def compact_urbansound_dataset(dataset_dir, folds = [1,2,3,4,5,6,7,8,9,10], resample_to = 22050, skip_first_line = True, 
-                                spectrogram_bands = None, log_mel=True, sample_rate=22050, hop_length=512, seconds = 4):
-    """Load raw audio and metadata content from the UrbanSound8K dataset and generate a .dat file"""
-    DURATION = seconds * 1000
-
-    total_files = 0
-    for fold in folds:
-        total_files += len([name for name in os.listdir(os.path.join(dataset_dir, "UrbanSound8K", "audio", "fold"+str(fold))) if os.path.isfile(os.path.join(dataset_dir, "UrbanSound8K", "audio", "fold"+str(fold),name))])
+@function_timer
+def load_preprocessed_compacted_dataset(dataset_dir, preprocessing_name, folds = [], spectrogram_bands = 128, log_mel=True, sample_rate = 22050, hop_length = 512, seconds = 4):
+    """Load raw audio and metadata content from the UrbanSound8K dataset."""
     
+    spectro_frames = compute_spectrogram_frames(seconds, sample_rate, hop_length)
+
+    audio_meta = []
+    audio_preprocessed = {}
+    audio_spectrograms_preprocessed = {}
+    
+    assert isinstance(preprocessing_name, str), "Preprocessing name should be a string"
+
+    #Look for a index.json file, that should have already been generated upon compacting the dataset
+    assert os.path.exists(os.path.join(dataset_dir,"index.json")), "Please compact dataset first to generate the index.json file"
+    
+    #This dictionary will be used to index the preprocessed files
+    with open(os.path.join(dataset_dir,"index.json"), mode="r") as f:
+        json_index = json.load(f)
+
+    for fold_number in folds:
+        #1) Check that fold has already been compacted
+        assert "fold_"+str(fold_number) in json_index.keys(), "Fold {} not yet compacted".format(fold_number)
+        assert "preprocessed" in json_index["fold_"+str(fold_number)].keys(), "Fold {} not yet preprocessed".format(fold_number)
+        assert preprocessing_name in json_index["fold_"+str(fold_number)]["preprocessed"].keys(), "Fold {} not yet preprocessed with preprocessing '{}'".format(fold_number, preprocessing_name)
+
+        #2) Load fold meta-data
+        assert "meta_data_file_name" in json_index["fold_"+str(fold_number)].keys(), "Meta-data not found for fold {}".format(fold_number)
+        fold_meta = unpickle_data(json_index["fold_"+str(fold_number)]["meta_data_file_name"])
+        audio_meta = np.concatenate((audio_meta,fold_meta))
+
+        #3) Load fold audio data
+        #Load preprocessed audio data and spectrograms (if they exist)
+        for entry in json_index["fold_"+str(fold_number)]["preprocessed"][preprocessing_name]:
+            preprocessing_value = entry["value"]
+            file_name = entry["audio_file_name"]
+            audio_length = entry["audio_length"]
+            
+            assert os.path.exists(file_name), "Could not find preprocessed fold {}".format(file_name)
+
+            fold_preprocessed = np.memmap(file_name, dtype='float32', mode='r', shape=(len(fold_meta), audio_length))
+            
+            if preprocessing_value not in audio_preprocessed.keys():
+                audio_preprocessed[preprocessing_value] = []
+
+            audio_preprocessed[preprocessing_value].append(fold_preprocessed)
+
+            if "spectrograms" in entry.keys():
+                audio_spec_preprocessed_file_name = entry["spectrograms"]["file_name"]
+                audio_spec_preprocessed_bands = entry["spectrograms"]["bands"]
+                audio_spec_preprocessed_frames = entry["spectrograms"]["frames"]
+
+                audio_spec_preprocessed = np.memmap(audio_spec_preprocessed_file_name, dtype="float32", mode = "r", shape=(len(fold_meta), audio_spec_bands, audio_spec_preprocessed_frames))
+                
+                if preprocessing_value not in audio_preprocessed.keys():
+                    audio_spectrograms_preprocessed[preprocessing_value] = []
+                
+                audio_spectrograms_preprocessed[preprocessing_value].append(audio_spec_preprocessed)
+
+    for preprocessing_value, preprocessed_clips in audio_preprocessed.items():
+        preprocessed_clips = np.vstack(preprocessed_clips)
+
+    for preprocessing_value, preprocessed_spectrograms in audio_spectrograms_preprocessed.items():
+        preprocessed_spectrograms = np.vstack(preprocessed_spectrograms)
+    
+    return audio_meta, audio_preprocessed, audio_spectrograms_preprocessed
+
+#from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
+def compact_raw_fold(dataset_dir, fold_number, resample_to = 22050, skip_first_line = True, duration_seconds = 4):
+    """Load raw audio and metadata content from the UrbanSound8K dataset and generate a .dat file"""
+    DURATION = duration_seconds * 1000
+
+    #Count files in fold
+    total_files = len([name for name in os.listdir(os.path.join(dataset_dir, "UrbanSound8K", "audio", "fold"+str(fold_number))) if os.path.isfile(os.path.join(dataset_dir, "UrbanSound8K", "audio", "fold"+str(fold_number),name))])
+    
+    #Parse the csv dataset index
     with open(os.path.join(dataset_dir,'UrbanSound8K','metadata','UrbanSound8K.csv'), 'r') as read_obj:
         csv_reader = csv.reader(read_obj)
         
@@ -84,16 +168,15 @@ def compact_urbansound_dataset(dataset_dir, folds = [1,2,3,4,5,6,7,8,9,10], resa
 
         audio_ids = []
         #Dictionary (int->list) fold -> audio file info list
-        audio_meta = {}
+        audio_meta = []
         #Dictionary (int->list) fold -> raw audio data list
-        audio_raw = {}
-        audio_spectro = {}
+        audio_raw = []
 
-        print("Compacting {} folds ({} files)...".format(len(folds), total_files))
+        print("Compacting fold {} ({} files)...".format(fold_number, total_files))
         progress_bar = tqdm(total=total_files, desc="Sample", position=0)
         for i, audio in enumerate(audios_data_from_csv):
-            fold_number = int(audio[5])
-            if fold_number in folds:
+            if i>100: break
+            if int(audio[5]) == fold_number:
                 
                 metadata = {
                     "fsID":audio[1],
@@ -108,11 +191,6 @@ def compact_urbansound_dataset(dataset_dir, folds = [1,2,3,4,5,6,7,8,9,10], resa
                     "meta_data": metadata,
                 }
                 
-                if fold_number not in audio_meta.keys():
-                    audio_meta[fold_number] = []    
-                    audio_raw[fold_number] = []    
-                    audio_spectro[fold_number] = []
-
                 audio_file, sr = load_audio_file(audiodict["file_path"], duration = DURATION)
                 
                 if sr!=resample_to:
@@ -120,142 +198,250 @@ def compact_urbansound_dataset(dataset_dir, folds = [1,2,3,4,5,6,7,8,9,10], resa
                     audio_file = librosa.resample(audio_file, orig_sr=sr, target_sr=resample_to)
 
                 audiodict["sampling_rate"] = sr
-
-                if spectrogram_bands is not None:
-                    audio_spectrogram = np.array(generate_mel_spectrogram_librosa(audio_file, spectrogram_bands, log_mel = log_mel, debug_time_label=""))
-                    #display_heatmap(audio_spectrogram)
-                    audio_spectro[fold_number].append(audio_spectrogram)
                 
-                audio_meta[fold_number].append(audiodict)
-                audio_raw[fold_number].append(audio_file)
+                audio_meta.append(audiodict)
+                audio_raw.append(audio_file)
                 progress_bar.update(1)
 
     progress_bar.close()
+    
+    if not os.path.exists(os.path.join(dataset_dir, "raw")):
+        os.makedirs(os.path.join(dataset_dir, "raw"))
 
+    #Pickle meta-data
     print("Saving meta-data...")
-    for fold, meta_data in audio_meta.items():
-        pickle_data(meta_data, os.path.join(dataset_dir,"urban_meta_fold_{}.pkl".format(fold)))
+    meta_data_file_name = os.path.join(dataset_dir,"raw","urban_meta_fold_{}.pkl".format(fold_number))
+    pickle_data(audio_meta, meta_data_file_name)
 
+    #Save compacted audio
     print("Compacting raw audio...")
-    for fold, audio_clips in audio_raw.items():
-        audio_raw_stacked = np.vstack(audio_clips)
-        spectrograms_mm = np.memmap(os.path.join(dataset_dir,'urban_audio_fold_{}.dat'.format(fold)), dtype='float32', mode='w+', shape=(len(audio_raw_stacked), 88200))
-        spectrograms_mm[:] = audio_raw_stacked[:]
-    spectrograms_mm.flush()
+    audio_raw_stacked = np.vstack(audio_raw)
+
+    audio_file_name = os.path.join(dataset_dir,"raw",'urban_audio_fold_{}.dat'.format(fold_number))
+    audio_mm = save_compacted_data(audio_raw_stacked, audio_file_name, shape=(len(audio_raw_stacked), 88200))
+
+    #Free up unused memory
     del audio_raw
 
-    if spectrogram_bands is not None:
-        print("Compacting spectrograms...")
-        for fold, audio_spectrograms in audio_spectro.items():
-            audio_spectro_stacked = np.array(audio_spectrograms)
-
-            spectrogram_name = "urban_meta_fold_{}_spectrograms_{}_seconds_{}_bands_{}_sr_{}_hop{}.dat".format(fold, seconds, spectrogram_bands, sample_rate, hop_length, ("_log_mel" if log_mel else ""))
-
-            audio_mm = np.memmap(os.path.join(dataset_dir,spectrogram_name), dtype='float32', mode='w+', shape=(len(audio_spectro_stacked),audio_spectro_stacked.shape[1],audio_spectro_stacked.shape[2]))
-            audio_mm[:] = audio_spectro_stacked[:]
+    #Load index.json or create it if it does not exist
+    if os.path.exists(os.path.join(dataset_dir, "index.json")):
+        try:
+            with open(os.path.join(dataset_dir, "index.json"), "r") as f:
+                json_index = json.load(f)
+            print("Updating index.json ...")
+        except:
+            json_index = {}
+            print("Creating index.json ...")
+    else:
+        json_index = {}
+    
+    #Update index.json
+    json_index["fold_"+str(fold_number)] = {"meta_data_file_name": meta_data_file_name}
+    json_index["fold_"+str(fold_number)]["raw"] = {"audio_file_name" : audio_file_name, "audio_length" : 88200}
         
-        audio_mm.flush()
-        del audio_spectrograms
-    return audio_meta, audio_mm, spectrograms_mm
+    #Save the updated index.json
+    with open(os.path.join(dataset_dir,"index.json"), mode="w") as f:
+        json.dump(json_index, f, indent=4)
 
-def generate_compacted_fold_spectrograms(dataset_dir, folds = [1,2,3,4,5,6,7,8,9,10], spectrogram_bands = None, log_mel=True, 
+    print("Finished compacting fold {}!".format(fold_number))
+    return audio_meta, audio_mm
+
+def generate_fold_spectrograms(fold_meta, fold_audio, spectrogram_bands = 128, log_mel=True, 
+                                sample_rate=22050, hop_length=512, seconds = 4):
+    
+    spectrograms = []
+    progress_bar = tqdm(total=len(fold_meta), desc="Sample", position=0)
+    for i, audio_raw in enumerate(fold_audio):
+        spectro = np.array(generate_mel_spectrogram_librosa(audio_raw, spectrogram_bands, log_mel = log_mel, debug_time_label=""))
+        spectrograms.append(spectro)
+        progress_bar.update(1)
+    progress_bar.close()
+
+    #Ensures that the big bulk of data is removed from memory
+    del audio_raw
+
+    return spectrograms
+
+def generate_compacted_fold_spectrograms(dataset_dir, fold_number, spectrogram_bands = 128, log_mel=True, 
                                          sample_rate=22050, hop_length=512, seconds = 4, preprocessing_name=None):
-    """Load raw audio and metadata content from the UrbanSound8K dataset and generate a .dat file"""
-    DURATION = seconds * 1000
-
-    audio_spectro = {}
 
     spectro_frames = compute_spectrogram_frames(seconds, sample_rate, hop_length)
-    for fold in folds:
 
-        audio_spectro[fold] = []
+    if preprocessing_name is not None:
+        assert isinstance(preprocessing_name, str), "Preprocessing name should be a string"
 
-        print("Loading fold {}...".format(fold))
-        if os.path.isfile(os.path.join(dataset_dir,'urban_meta_fold_{}.pkl'.format(fold))) and os.path.isfile(os.path.join(dataset_dir,'urban_audio_fold_{}.dat'.format(fold))):
-            fold_meta = unpickle_data(os.path.join(dataset_dir,'urban_meta_fold_{}.pkl'.format(fold)))
-            if preprocessing_name is None:
-                fold_filename = os.path.join(dataset_dir,'urban_audio_fold_{}.dat'.format(fold))
-            else:
-                assert isinstance(preprocessing_name, str)
-                fold_filename = os.path.join(dataset_dir,'urban_audio_fold_{}_{}.dat'.format(fold))
+    #Look for a index.json file, that should have already been generated upon compacting the dataset
+    assert os.path.exists(os.path.join(dataset_dir,"index.json")), "Please compact dataset first to generate the index.json file"
+    
+    #This dictionary will be used to index the preprocessed files
+    with open(os.path.join(dataset_dir,"index.json"), mode="r") as f:
+        json_index = json.load(f)
+
+    #1) Check that fold has already been compacted
+    assert "fold_"+str(fold_number) in json_index.keys(), "Compact fold {} before generating spectrograms".format(fold_number)
+
+    #2) Load fold meta-data
+    assert "meta_data_file_name" in json_index["fold_"+str(fold_number)].keys(), "Meta-data not found for fold {}".format(fold_number)
+    fold_meta = unpickle_data(json_index["fold_"+str(fold_number)]["meta_data_file_name"])
+    
+    if preprocessing_name is not None:
+        #3) Check that fold has already been preprocessed with this preprocessing before 
+        assert "preprocessed" in json_index["fold_"+str(fold_number)].keys() \
+            and preprocessing_name in json_index["fold_"+str(fold_number)]["preprocessed"].keys(),\
+                 "Preprocess compacted fold {} with preprocessing '{}' before generating spectrograms".format(fold_number, preprocessing_name) 
             
-            fold_raw = np.memmap(fold_filename, dtype='float32', mode='r', shape=(len(fold_meta), 88200))
-            print("Loaded fold: {}".format(fold_filename))
+        print("Generating spectrograms for fold {} ({} files) preprocessed with {}...".format(fold_number, len(fold_meta), preprocessing_name))
+        
+        #4) Extract all preprocessing values applied for this preprocessing
+        preprocessing_values = []
+        preprocessed_file_names = []
+        for entry in json_index["fold_"+str(fold_number)]["preprocessed"][preprocessing_name]:
+            preprocessing_value = entry["value"]
+            preprocessed_file_names = entry["audio_file_name"]
 
-            print("Generating spectrograms for fold ({} files)...".format(len(folds), len(fold_meta)))
-            progress_bar = tqdm(total=len(fold_meta), desc="Sample", position=0)
-            for i, (audio_meta, audio_raw) in enumerate(zip(fold_meta,fold_raw)):
-                audio_spectrogram = np.array(generate_mel_spectrogram_librosa(audio_raw, spectrogram_bands, log_mel = log_mel, debug_time_label=""))
-                audio_spectro[fold].append(audio_spectrogram)
-                progress_bar.update(1)
-            progress_bar.close()
-        else:
-            raise FileNotFoundError
-
-        print("Compacting spectrograms...")
-        for fold, audio_spectrograms in audio_spectro.items():
-            print("Compacting spectrograms for fold {}...".format(fold))
-            audio_spectro_stacked = np.array(audio_spectrograms)        
-            spectrogram_name = "urban_spectrograms_fold_{}_{}_seconds_{}_bands_{}_sr_{}_hop{}.dat".format(fold, seconds, spectrogram_bands, sample_rate, hop_length, ("_log_mel" if log_mel else ""))
+            print("\tPreprocessing value: {}".format(preprocessing_value))
+            #5) For each preprocessing value load the preprocessed fold, generate spectrograms from it and then save them
             
-            print(audio_spectro_stacked.shape)
+            #Load fold
+            fold_audio = load_compacted_data(file_name, shape=(len(fold_meta), spectrogram_bands, spectro_frames))
+
+            #Generate spectrograms from this fold
+            fold_spectrograms = generate_fold_spectrograms(fold_meta, fold_audio)
+
+            #3) TODO Compact and save generated spectrograms
+            print("\t\tCompacting...")
+            fold_spectrograms = np.array(fold_spectrograms)
+            print("\t\tSpectrograms shape: {}".format(fold_spectrograms.shape))
             
-            spectrograms_mm = np.memmap(os.path.join(dataset_dir,spectrogram_name), dtype='float32', mode='w+', shape=(len(audio_spectro_stacked),audio_spectro_stacked.shape[1],audio_spectro_stacked.shape[2]))
-            spectrograms_mm[:] = audio_spectro_stacked[:]
-        spectrograms_mm.flush()
-        del audio_spectrograms
-    return audio_meta, audio_raw, audio_spectro 
+            file_name = os.path.join(dataset_dir,"preprocessed",preprocessing_name,"urban_spectrograms_fold_{}_seconds_{}_bands_{}_sr_{}_hop_{}{}_preprocessed_{}_{}.dat".format(fold, seconds, spectrogram_bands, sample_rate, hop_length, ("_log_mel" if log_mel else ""), preprocessing_name, str(preprocessing_value).replace(".","_")))    
+            entry["spectrograms"] = {"file_name": file_name, "bands" : spectrogram_bands, "seconds": seconds, "frames" : spectro_frames, "hop_length" : hop_length, "sample_rate" : sample_rate}
+            
+            fold_spectrograms = save_compacted_data(fold_spectrograms, file_name, shape=(fold_spectrograms.shape[0],fold_spectrograms.shape[1],fold_spectrograms.shape[2]))   
 
-def generate_compacted_preprocessed_fold(dataset_dir, preprocessing_name, preprocessor, folds = [1,2,3,4,5,6,7,8,9,10]):
-    DURATION = seconds * 1000
+            #write out the new entry to preprocessing_index.json
+            with open(os.path.join(dataset_dir,"index.json"), mode="w") as f:
+                json.dump(json_index, f, indent=4)
 
-    audio_preprocessed = {}
+    else:
+        #3) Check that fold has already been compacted before 
+        assert "raw" in json_index["fold_"+str(fold_number)].keys(), \
+                "Compact fold {} before generating spectrograms".format(fold_number) 
+            
+        print("Generating spectrograms for fold {} ({} files)...".format(fold_number, len(fold_meta)))
+        
+        #4) Retrieve fold file name
+        fold_file_name = json_index["fold_"+str(fold_number)]["raw"]["audio_file_name"]
+        fold_audio_length = json_index["fold_"+str(fold_number)]["raw"]["audio_length"]
 
+        #5) Load compacted fold and generate spectrograms from it
+        
+        #Load fold
+        fold_audio = load_compacted_data(fold_file_name, shape=(len(fold_meta), fold_audio_length))
+
+        #Generate spectrograms from this fold
+        print(fold_meta)
+        print(fold_audio.shape)
+        fold_spectrograms = generate_fold_spectrograms(fold_meta, fold_audio)
+
+        #6) Compact and save generated spectrograms
+        print("\t\tCompacting...")
+        fold_spectrograms = np.array(fold_spectrograms)
+        print("\t\tSpectrograms shape: {}".format(fold_spectrograms.shape))
+        
+        #Compacted spectrograms file name
+        file_name = os.path.join(dataset_dir,"raw","urban_spectrograms_fold_{}_seconds_{}_bands_{}_sr_{}_hop_{}{}.dat".format(fold_number, seconds, spectrogram_bands, sample_rate, hop_length, ("_log_mel" if log_mel else "")))
+        json_index["fold_"+str(fold_number)]["raw"]["spectrograms"] = {"file_name": file_name, "bands" : spectrogram_bands, "seconds": seconds, "frames" : spectro_frames, "hop_length" : hop_length, "sample_rate" : sample_rate}
+        
+        fold_spectrograms = save_compacted_data(fold_spectrograms, file_name, shape=(fold_spectrograms.shape[0],fold_spectrograms.shape[1],fold_spectrograms.shape[2]))   
+
+        #write out the new entry to preprocessing_index.json
+        with open(os.path.join(dataset_dir,"index.json"), mode="w") as f:
+            json.dump(json_index, f, indent = 4)
+    
+    return fold_spectrograms
+
+'''
+Given metadata and raw audio for a fold, preprocesses it, generating a compacted preprocessed audio fold for each preprocessing factor
+used in the preprocessor 
+(Example: Performing PitchShift using values [-2, -1, 1], then three preprocessed folds will be generated, one for
+each one of these values)
+'''
+def generate_compacted_preprocessed_fold(dataset_dir, fold_number, preprocessing_name, preprocessor):
+
+    spectro_frames = compute_spectrogram_frames(seconds, sample_rate, hop_length)
+    
+    #Extract the used values from the preprocessor
     preprocessing_values = preprocessor.values
 
-    spectro_frames = compute_spectrogram_frames(seconds, sample_rate, hop_length)
-    for fold in folds:
+    #0) Preliminary checks
+    assert isinstance(preprocessing_name, str), "Preprocessing name should be a string"
 
-        audio_preprocessed[fold] = {}
+    #Look for a index.json file, that should have already been generated upon compacting the dataset
+    assert os.path.exists(os.path.join(dataset_dir,"index.json")), "Please compact dataset first to generate the index.json file"
+    
+    #1) Load index.json and perform some more checks
+    #This dictionary will be used to index the preprocessed files
+    with open(os.path.join(dataset_dir,"index.json"), mode="r") as f:
+        json_index = json.load(f)
 
-        print("Loading fold {}...".format(fold))
-        if os.path.isfile(os.path.join(dataset_dir,'urban_meta_fold_{}.pkl'.format(fold))) and os.path.isfile(os.path.join(dataset_dir,'urban_audio_fold_{}.dat'.format(fold))):
-            fold_meta = unpickle_data(os.path.join(dataset_dir,'urban_meta_fold_{}.pkl'.format(fold)))
-            
-            fold_filename = os.path.join(dataset_dir,'urban_audio_fold_{}.dat'.format(fold))
-            fold_raw = np.memmap(fold_filename, dtype='float32', mode='r', shape=(len(fold_meta), 88200))
-            print("Loaded fold: {}".format(fold_filename))
+    #Check that fold has already been compacted
+    assert "fold_"+str(fold_number) in json_index.keys(), "Compact fold {} before generating spectrograms".format(fold_number)
+    assert "raw" in json_index["fold_"+str(fold_number)].keys(), \
+            "Compact fold {} before generating spectrograms".format(fold_number) 
 
-            print("Generating preprocessed clips for fold ({} files)...".format(len(folds), len(fold_meta)))
-            progress_bar = tqdm(total=len(fold_meta), desc="Sample", position=0)
-            for i, (audio_meta, audio_raw) in enumerate(zip(fold_meta,fold_raw)):
-                for i, value in enumerate(preprocessing_values):
-                    preprocessed_clip = preprocessor(audio_raw, value = value)
+    #2) Load fold meta-data
+    assert "meta_data_file_name" in json_index["fold_"+str(fold_number)].keys(), "Meta-data not found for fold {}".format(fold_number)
+    fold_meta = unpickle_data(json_index["fold_"+str(fold_number)]["meta_data_file_name"])
+    
+    #Create or overwrite index entry for this preprocessing pipeline
+    json_index["fold_"+str(fold_number)]["preprocessed"][preprocessing_name] = [] 
 
-                    audio_preprocessed[fold][str(value)].append(preprocessed_clip)
-                progress_bar.update(1)
-            progress_bar.close()
-        else:
-            raise FileNotFoundError
+    print("Preprocessing fold: {}".format(fold_number))
+    
+    #3) Retrieve fold file name
+    fold_file_name = json_index["fold_"+str(fold_number)]["raw"]["audio_file_name"]
+    fold_audio_length = json_index["fold_"+str(fold_number)]["raw"]["audio_length"]
 
-        print("Compacting preprocessed clips...")
-        for fold, preprocessed_clips in audio_preprocessed.items():
-            for i, (preprocessing_value, clips) in enumerate(preprocessed_clips.items()):
-                print("Compacting for fold {}, preprocessing value {}...".format(fold, preprocessing_value))
-                clips_stacked = np.array(clips)        
-                file_name = os.path.join(dataset_dir,"preprocessed","urban_audio_preprocessed_fold_{}_{}_{}.dat".format(fold, preprocessing_name, str(preprocessing_value).replace(".","_")))
-            
-                print(clips_stacked.shape)
-                
-                preprocessed_mm = np.memmap(file_name, dtype='float32', mode='w+', shape=(len(clips_stacked),clips_stacked.shape[1],clips_stacked.shape[2]))
-                preprocessed_mm[:] = clips_stacked[:]
-            preprocessed_mm.flush()
+    #4) Load compacted fold and generate spectrograms from it
+    #Load fold
+    fold_audio = load_compacted_data(fold_file_name, shape=(len(fold_meta), fold_audio_length))
 
-#TODO Creare JSON in os.path.join(dataset_dir, "preprocessed", preprocessing_name, "preprocessing_values.json") contenente
-# il filename del file contenente un determinato preprocessing e il preprocessing value corrispondente 
-# 
+    preprocessed_clips = []
+    #Preprocess all raw audio clips in current fold
+    for i, value in enumerate(preprocessing_values):
+        progress_bar = tqdm(total=len(fold_meta)*len(preprocessing_values), desc="Preprocessing samples (value: {})".format(value), position=0)
+        print("Generating preprocessed clips for fold ({} files) with preprocessing '{}' (value: {})".format(len(fold_meta), preprocessing_name, value))
+        for i, (audio_meta, audio_raw) in enumerate(zip(fold_meta,fold_raw)):
+
+            prep_clip = preprocessor(audio_raw, value = value)
+            preprocessed_clips.append(prep_clip)
+
+            progress_bar.update(1)
+        progress_bar.close()
+
+        print("Compacting...")
+
+        preprocessed_clips = np.array(preprocessed_clips)
+        print("Stacked shape: {}".format(preprocessed_clips.shape))
+        
+        file_name = os.path.join(dataset_dir, "preprocessed", preprocessing_name, "urban_audio_preprocessed_fold_{}_{}_{}.dat".format(fold, preprocessing_name, str(i)))
+        
+        preprocessed_clips = save_compacted_data(preprocessed_clips, file_name, shape=(len(preprocessed_clips),preprocessed_clips.shape[1]))
+
+        #Generate an entry for the JSON index file
+        json_index["fold_"+str(fold_number)]["preprocessed"][preprocessing_name].append({"value": preprocessing_value, "audio_file_name": file_name, "audio_length": preprocessed_clips.shape[1]})
+    
+        #write out the new entry to preprocessing_index.json
+        with open(os.path.join(dataset_dir,"index.json"), mode="w") as f:
+            json.dump(json_index, f, indent = 4)
+        
+        #Ensures that the big bulk of data is removed from memory
+        del audio_meta
+        del audio_raw
+
+    return preprocessed_clips
+        
 #TODO nel dataset: scelta casuale dell'augmentation 
-    return audio_preprocessed
 
 #TODO metodo che, per ogni fold: 
 # 1) genera i file del fold e gli spettrogrammi (non preprocessati) 
