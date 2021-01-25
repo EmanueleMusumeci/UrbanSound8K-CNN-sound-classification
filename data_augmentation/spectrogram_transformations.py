@@ -170,13 +170,10 @@ if __name__ == "__main__":
     print("Time warp")
 
     #bug to fix
+    # warping problem with fastai and pytorch version
     def test_time_warp():
         tensor_to_img(time_warp(spectro))
-    #tensor_to_img(spectro)    
-    #test_time_warp()
-    #tensor_to_img(time_warp(spectro))
-    #tensor_to_img(spectro)    
-    #test_time_warp()
+   
     
     def test_freq_mask():
         spectrogram_freq_mask = FrequencyMaskSpectrogram()
