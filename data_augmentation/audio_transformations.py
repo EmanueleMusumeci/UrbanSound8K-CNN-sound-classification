@@ -68,7 +68,7 @@ Parameterizations from Dolby E Standard:
 
 - Music Standard
     Max Boost: 12 dB (below -55 dB)
-    Boost Range: -55 dB to -31 dB (2:1 ratio)
+    Boost Range: -55 dB to -31 dB (2:1 ratio)//guadagno
     Null Band Width: 5 dB (-31 dB to -26 dB)
     Early Cut Range: -26 dB to -16 dB (2:1 ratio)
     Cut Range: -16 dB to +4 dB (20:1 ratio) 
@@ -87,6 +87,13 @@ Parameterizations from Dolby E Standard:
     Early Cut Range: -26 dB to -16 dB (2:1 ratio)
     Cut Range: -16 dB to +4 dB (20:1 ratio) 
 
+- Film Light
+    Max Boost: 6 dB (below -53 dB)
+    Boost Range: -53 dB to -41 dB (2:1 ratio)
+    Null Band Width: 20 dB (-41 dB to -21 dB)
+    Early Cut Range: -26 dB to -11 dB (2:1 ratio)
+    Cut Range: -11 dB to +4 dB (20:1 ratio) 
+
 Parameterizations from icecast: see https://icecast.imux.net/viewtopic.php?t=3462
 
 
@@ -102,7 +109,7 @@ class DynamicRangeCompression(object):
         #librosa.load return a time series representing amplitude not in db
         y1_db = librosa.amplitude_to_db(self.sound_file)
         #clip is done on decibel, but then must be translated back to amplitude
-        t1_db = np.clip(y1_db, a_min = self.min_dB,a_max=self.max_dB)
+        t1_db = np.clip(y1_db, a_min = self.min_dB, a_max=self.max_dB)
         #back to amplitude
         t1 = librosa.db_to_amplitude(t1_db)
 

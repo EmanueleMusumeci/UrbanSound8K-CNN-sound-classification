@@ -102,214 +102,212 @@ def plot_scores(model_name, model_dir, tasks={"audio_classification" : "Audio cl
                 from_epoch=0, to_epoch=0, epochs_skip=0, save_to_file=False,
                 xticks_step=0, combine_tasks=False, increase_epoch_labels_by_one=False, 
                 title_prefix=None, color = None):
-  '''
-  Plots the requested performance metrics from the score history of the current model
-  (used to generate the graphs in the report)
-  Args:
-    - model_name: name of the model that generated the scores to be plotted
-    - model_dir: directory containing the models
-    OPTIONAL
-    - tasks: dictionary containing tasks whose score is going to be plotted and
-             the name to print on the plot
-    - plot_confusion_matrix: (default: True)
-    - from_epoch: plot scores starting from a certain episode (default: 0)
-    - to_epoch: plot scores starting until a certain episode (default: 0, plot all scores)
-    - epochs_skip: allows skipping n epochs every plotted point (if scores where saved
-                   every n epochs) (default: 0)
-    - save_to_file: save plots to file (default: False)
-    - xticks_step: used to print a "tick" on the graph x axis every n ticks 
-      (with a value of 5 we would have 0,5,10... on the x axis)
-    - combine_tasks: allows plotting scores for all tasks on the same plot (False)
-  '''
+    '''
+    Plots the requested performance metrics from the score history of the current model
+    (used to generate the graphs in the report)
+    Args:
+        - model_name: name of the model that generated the scores to be plotted
+        - model_dir: directory containing the models
+        OPTIONAL
+        - tasks: dictionary containing tasks whose score is going to be plotted and
+                the name to print on the plot
+        - plot_confusion_matrix: (default: True)
+        - from_epoch: plot scores starting from a certain episode (default: 0)
+        - to_epoch: plot scores starting until a certain episode (default: 0, plot all scores)
+        - epochs_skip: allows skipping n epochs every plotted point (if scores where saved
+                    every n epochs) (default: 0)
+        - save_to_file: save plots to file (default: False)
+        - xticks_step: used to print a "tick" on the graph x axis every n ticks 
+        (with a value of 5 we would have 0,5,10... on the x axis)
+        - combine_tasks: allows plotting scores for all tasks on the same plot (False)
+    '''
 
-  plt.close("all")
-
-  #1) Load scores
-  scores_directory = os.path.join(model_dir,model_name)
-  scores_directory = os.path.join(model_dir,model_name)
-  if os.path.exists(os.path.join(scores_directory,"scores_on_train")):
-    scores_directory = os.path.join(scores_directory,"scores_on_train")
-  else:
-    scores_directory = os.path.join(scores_directory,"scores_on_test")
+    #1) Load scores
+    scores_directory = os.path.join(model_dir,model_name)
+    scores_directory = os.path.join(model_dir,model_name)
+    if os.path.exists(os.path.join(scores_directory,"scores_on_train")):
+        scores_directory = os.path.join(scores_directory,"scores_on_train")
+    else:
+        scores_directory = os.path.join(scores_directory,"scores_on_test")
 
 
-  losses = {}
-  scores = {}
-  epochs_list = []
-  
-  best_epoch = 0 #Find best epoch based on f1 score
-  best_f1 = 0
+    losses = {}
+    scores = {}
+    epochs_list = []
+    
+    best_epoch = 0 #Find best epoch based on f1 score
+    best_f1 = 0
 
   #read files in alphabetical order
-  for filename in natsorted(os.listdir(scores_directory)):
-    if not os.path.isfile(os.path.join(scores_directory,filename)):
-      continue
-    elif filename.endswith(".scores"):
-      scores_path = os.path.join(scores_directory, filename)
-      with open(scores_path, "rb") as f:
-        scores_entry = dill.load(f)
-
-        if scores_entry["Epoch"] < from_epoch:
-          continue
-        elif to_epoch>0 and scores_entry["Epoch"] > to_epoch:
-          break
-        else:
-          if epochs_skip>0 and (scores_entry["Epoch"]-from_epoch)%epochs_skip!=0:
+    for filename in natsorted(os.listdir(scores_directory)):
+        if not os.path.isfile(os.path.join(scores_directory,filename)):
             continue
-        epochs_list.append(scores_entry["Epoch"])
-        for key, value in scores_entry.items():
-          if key=="Epoch": continue
-          else:
-            if key not in scores.keys():
-              scores[key] = {}
-            if scores_entry[key] is None: continue
-            for score_name, score_value in scores_entry[key].items():
-              if score_name=="confusion matrix":
-                  if scores_entry[key]["f1"] >= best_f1:
-                    best_epoch = scores_entry["Epoch"]
-                    best_f1 = scores_entry[key]["f1"]
-                    scores[key]["confusion matrix"] = score_value
-              elif score_name=="distribution":
-                  if scores_entry[key]["f1"] >= best_f1:
-                    best_epoch = scores_entry["Epoch"]
-                    best_f1 = scores_entry[key]["f1"]
-                    scores[key]["distribution"] = score_value
-              else:
-                if score_name not in scores[key].keys():
-                  scores[key][score_name] = {}
-                scores[key][score_name][scores_entry["Epoch"]] = scores_entry[key][score_name]
+        elif filename.endswith(".scores"):
+            scores_path = os.path.join(scores_directory, filename)
+            with open(scores_path, "rb") as f:
+                scores_entry = dill.load(f)
+
+                if scores_entry["Epoch"] < from_epoch:
+                    continue
+                elif to_epoch>0 and scores_entry["Epoch"] > to_epoch:
+                    break
+                else:
+                    if epochs_skip>0 and (scores_entry["Epoch"]-from_epoch)%epochs_skip!=0:
+                        continue
+                epochs_list.append(scores_entry["Epoch"])
+                for key, value in scores_entry.items():
+                    if key=="Epoch": continue
+                    else:
+                        if key not in scores.keys():
+                            scores[key] = {}
+                        if scores_entry[key] is None: continue
+                        for score_name, score_value in scores_entry[key].items():
+                            if score_name=="confusion matrix":
+                                if scores_entry[key]["f1"] >= best_f1:
+                                    best_epoch = scores_entry["Epoch"]
+                                    best_f1 = scores_entry[key]["f1"]
+                                    scores[key]["confusion matrix"] = score_value
+                            elif score_name=="distribution":
+                                if scores_entry[key]["f1"] >= best_f1:
+                                    best_epoch = scores_entry["Epoch"]
+                                    best_f1 = scores_entry[key]["f1"]
+                                    scores[key]["distribution"] = score_value
+                            else:
+                                if score_name not in scores[key].keys():
+                                    scores[key][score_name] = {}
+                                    scores[key][score_name][scores_entry["Epoch"]] = scores_entry[key][score_name]
   
   #2) Plot requested scores
-  plots = {}
-  seaborn.reset_orig()
-  for task_key, task_header in tasks.items():
-    assert task_key in scores.keys(), "Scores for task "+task_key+" not found"
-    #metric_keys will contains all metrics we want to appear together in the
-    #combined plot
-    for plot_header, metric_keys in metrics.items():
-      if combine_tasks:
-        if plot_header in plots.keys():
-          current_plot = plt.figure(model_name+"_"+plot_header)
-        else:
-          current_plot = plt.figure(plot_header)
-          plots[plot_header] = current_plot
-          
-        if title_prefix is None:
-            title = "Combined tasks\n"+plot_header
-        else:
-            title = title_prefix+" - Combined tasks\n"+plot_header
-      else:
-        current_plot = plt.figure(model_name+"_"+task_header+"_"+plot_header)
-        plots[task_header+"_"+plot_header] = current_plot
-        if title_prefix is None:
-            title=task_header+"\n"+plot_header
-        else:
-            title = title_prefix+"\n"+plot_header
+    plots = {}
+    seaborn.reset_orig()
+    for task_key, task_header in tasks.items():
+        assert task_key in scores.keys(), "Scores for task "+task_key+" not found"
+        #metric_keys will contains all metrics we want to appear together in the
+        #combined plot
+        for plot_header, metric_keys in metrics.items():
+            if combine_tasks:
+                if plot_header in plots.keys():
+                    current_plot = plt.figure(model_name+"_"+plot_header)
+                else:
+                    current_plot = plt.figure(plot_header)
+                    plots[plot_header] = current_plot
+                
+                if title_prefix is None:
+                    title = "Combined tasks\n"+plot_header
+                else:
+                    title = title_prefix+" - Combined tasks\n"+plot_header
+            else:
+                current_plot = plt.figure(model_name+"_"+task_header+"_"+plot_header)
+                plots[task_header+"_"+plot_header] = current_plot
+                if title_prefix is None:
+                    title=task_header+"\n"+plot_header
+                else:
+                    title = title_prefix+"\n"+plot_header
 
-      plt.title(title)
+        plt.title(title)
 
-      if increase_epoch_labels_by_one:  
-        labels_list = [epoch+1 for epoch in epochs_list[::xticks_step]]
-      else:
-        labels_list = epochs_list[::xticks_step]
+        if increase_epoch_labels_by_one:  
+            labels_list = [epoch+1 for epoch in epochs_list[::xticks_step]]
+        else:
+            labels_list = epochs_list[::xticks_step]
 
-      plt.xticks(ticks=range(0,len(epochs_list),xticks_step), labels=labels_list)
-      plt.xlabel("Epoch")
-      for metric in metric_keys:
-        #2.1) Collect scores for this metric in a list
-        values = []
-        for _, value in sorted(scores[task_key][metric].items()):
-          values.append(value)
-        if combine_tasks:
-          label=task_header
-        else:
-          label=metric.capitalize()
-        if color is not None:
-            plt.plot(values, label=label, color = color)
-        else:
-            plt.plot(values, label=label)
+        plt.xticks(ticks=range(0,len(epochs_list),xticks_step), labels=labels_list)
+        plt.xlabel("Epoch")
+        for metric in metric_keys:
+            #2.1) Collect scores for this metric in a list
+            values = []
+            for _, value in sorted(scores[task_key][metric].items()):
+                values.append(value)
+            if combine_tasks:
+                label=task_header
+            else:
+                label=metric.capitalize()
+            if color is not None:
+                plt.plot(values, label=label, color = color)
+            else:
+                plt.plot(values, label=label)
 
-        if len(metric_keys)>1 or combine_tasks:
-          plt.legend(loc="lower right")
-        else:
-          plt.ylabel(metric.capitalize())
+            if len(metric_keys)>1 or combine_tasks:
+                plt.legend(loc="lower right")
+            else:
+                plt.ylabel(metric.capitalize())
       
-  plot_dir = os.path.join(model_dir,"plots")
-  if not os.path.exists(plot_dir):
-    os.makedirs(plot_dir)
-  for k,plot in plots.items():
-    #plot.show()
-    if save_to_file:
-      path = os.path.join(plot_dir,model_name+" - "+k)+".png"
-      plot.savefig(path)
+    plot_dir = os.path.join(model_dir,"plots")
+    if not os.path.exists(plot_dir):
+        os.makedirs(plot_dir)
+    for k,plot in plots.items():
+        #plot.show()
+        if save_to_file:
+            path = os.path.join(plot_dir,model_name+" - "+k)+".png"
+            plot.savefig(path)
   
 
-  if plot_confusion_matrix:
-    for task_key, task_header in tasks.items():
-      assert task_key in scores.keys(), "Scores for task "+task_key+" not found"
-      try:
-        confusion_matrix = scores[task_key]["confusion matrix"]
-        current_plot = plt.figure(task_header+"_Confusion_matrix")
-        
-        #Normalize the confusion matrix to broaden color ranges
-        data = np.array(confusion_matrix)
-        max_val = max(map(max,confusion_matrix))
+    if plot_confusion_matrix:
+        for task_key, task_header in tasks.items():
+            assert task_key in scores.keys(), "Scores for task "+task_key+" not found"
+            try:
+                confusion_matrix = scores[task_key]["confusion matrix"]
+                current_plot = plt.figure(task_header+"_Confusion_matrix")
+                
+                #Normalize the confusion matrix to broaden color ranges
+                data = np.array(confusion_matrix)
+                max_val = max(map(max,confusion_matrix))
 
-        #the sklearn confusion matrix function uses labels in lexicographic order!
-        labels = sorted([key for key, _ in scores[task_key]["distribution"].items()])
+                #the sklearn confusion matrix function uses labels in lexicographic order!
+                labels = sorted([key for key, _ in scores[task_key]["distribution"].items()])
 
-        #use the max between the actual min of the confusion matrix and 1 to 
-        #avoid problems with the non linear scale
-        min_val = max(1,min(map(min,confusion_matrix)))
-        #then replace all zeros with this values
-        for i,row in enumerate(confusion_matrix):
-          for j,value in enumerate(row):
-            if value==0:
-              confusion_matrix[i][j] = min_val
+                #use the max between the actual min of the confusion matrix and 1 to 
+                #avoid problems with the non linear scale
+                min_val = max(1,min(map(min,confusion_matrix)))
+                #then replace all zeros with this values
+                for i,row in enumerate(confusion_matrix):
+                for j,value in enumerate(row):
+                    if value==0:
+                    confusion_matrix[i][j] = min_val
 
+                        
+
+                avg_val = sum(sum(confusion_matrix))/(len(confusion_matrix)*len(confusion_matrix[0]))
+                fig, axes = plt.subplots(figsize=(10,10))  
+
+                #seaborn.set(font_scale=2)
+                ax = seaborn.heatmap(confusion_matrix, 
+                                norm = LogNorm(vmin=min_val, vmax=max_val),
+                                cbar_kws={"shrink": 0.5, "ticks":[0,1,10,1e2,1e3,1e4,1e5]}, 
+                                annot=True, ax = axes, fmt='g'
+                                ) #annot=True to annotate cells, fmt='g' to avoid scientific notation
+                ax.figure.subplots_adjust(left=0.3, bottom=0.3)
+
+                plt.xticks(rotation=90) 
+                plt.yticks(rotation=0) 
+
+
+                # labels, title and ticks
+                axes.set_xlabel('Predicted labels', size = 10)
+                axes.set_ylabel('True labels', size = 10) 
+                
+                if title_prefix is not None:
+                    conf_matrix_title = title_prefix
+                else:
+                    conf_matrix_title = model_name
+                axes.set_title(conf_matrix_title+"\nEpoch: "+str(best_epoch)+'\nConfusion Matrix') 
+
+                axes.xaxis.set_ticklabels(labels, size = 10)
+                axes.yaxis.set_ticklabels(labels, size = 10)
+
+                plots[task_header+"_Confusion_matrix"] = fig
                 
 
-        avg_val = sum(sum(confusion_matrix))/(len(confusion_matrix)*len(confusion_matrix[0]))
-        fig, axes = plt.subplots(figsize=(10,10))  
+                #fig.show()
+                if save_to_file:
+                path = os.path.join(plot_dir,model_name+"_Confusion_matrix")+".png"
+                fig.savefig(path)
+                
+            except Exception as e:
+                print(e)
+                pass
 
-        #seaborn.set(font_scale=2)
-        ax = seaborn.heatmap(confusion_matrix, 
-                        norm = LogNorm(vmin=min_val, vmax=max_val),
-                        cbar_kws={"shrink": 0.5, "ticks":[0,1,10,1e2,1e3,1e4,1e5]}, 
-                        annot=True, ax = axes, fmt='g'
-                        ) #annot=True to annotate cells, fmt='g' to avoid scientific notation
-        ax.figure.subplots_adjust(left=0.3, bottom=0.3)
-
-        plt.xticks(rotation=90) 
-        plt.yticks(rotation=0) 
-
-
-        # labels, title and ticks
-        axes.set_xlabel('Predicted labels', size = 10)
-        axes.set_ylabel('True labels', size = 10) 
-        
-        if title_prefix is not None:
-            conf_matrix_title = title_prefix
-        else:
-            conf_matrix_title = model_name
-        axes.set_title(conf_matrix_title+"\nEpoch: "+str(best_epoch)+'\nConfusion Matrix') 
-
-        axes.xaxis.set_ticklabels(labels, size = 10)
-        axes.yaxis.set_ticklabels(labels, size = 10)
-
-        plots[task_header+"_Confusion_matrix"] = fig
-        
-
-        #fig.show()
-        if save_to_file:
-          path = os.path.join(plot_dir,model_name+"_Confusion_matrix")+".png"
-          fig.savefig(path)
-        
-      except Exception as e:
-        print(e)
-        pass
-
-  plt.clf()
+    plt.clf()
 
 def plot_scores_from_multiple_dirs(
                 model_name, model_dir, score_dirs, tasks=None,
@@ -336,8 +334,6 @@ def plot_scores_from_multiple_dirs(
       (with a value of 5 we would have 0,5,10... on the x axis)
     - combine_tasks: allows plotting scores for all tasks on the same plot (False)
   '''
-
-  plt.close("all")
 
   #1) Load scores
 
@@ -404,7 +400,7 @@ def plot_scores_from_multiple_dirs(
               if plot_header in plots.keys():
                 current_plot = plt.figure(model_name+"_"+plot_header)
               else:
-                current_plot = plt.figure(model_name+"_"+plot_header)
+                current_plot = plt.figure(plot_header)
                 plots[plot_header] = current_plot
                 
               if title_prefix is None:
@@ -487,8 +483,6 @@ def comparative_plots(model_names, model_dir,
     - xticks_step: used to print a "tick" on the graph x axis every n ticks 
       (with a value of 5 we would have 0,5,10... on the x axis)
   '''
-
-  plt.close("all")
 
   #1) Load scores for each model
   scores = {}
@@ -776,3 +770,209 @@ def visualize_features_on_layers(model, image, image_label_idx,
   if make_gif:
     create_gif(save_to_dir, "", file_endswith="On_Image.png", gif_name="Layer_activations", save_to_dir = save_to_dir)
 
+
+
+
+'''
+Generates all plots and graphical renders needed for the presentation
+'''
+
+if __name__ == "__main__":
+        import os
+        import math
+        import random
+
+        import dill
+
+        import matplotlib.pyplot as plt
+
+        from sklearn import metrics
+        from sklearn.metrics import confusion_matrix
+
+        import numpy as np
+
+        from tqdm import tqdm
+
+        #from PIL import Image
+
+        from utils.plot_utils import *
+        #from Utils import *
+        #from CustomTrainer import *
+        #from Custom_CNN import *
+        #from Pretrained_CNN import *
+
+        model_dir = "model"
+
+        plot_color = "blue"
+        
+        SINGLE_PLOTS = True
+        SINGLE_TRAIN_TEST_PLOTS = True
+        COMPARATIVE_PLOTS = False
+        GRADIENT_FLOW = False
+        BEST_SCORES = False
+        IMAGE_PREPROCESSING = False
+        SALIENCY_MAPS = False
+
+        ################
+        # SINGLE PLOTS #
+        ################
+        if SINGLE_PLOTS:
+                #Change the xticks_step to avoid the overlapping of labels on the x axis of graphs
+                #Change the from/to_epoch and the epochs_skip to decide which score files are read
+                #Use the combine tasks flag to plot a comparative plot of the same metric for all tasks
+                plot_scores("PitchShift",
+                                model_dir, plot_confusion_matrix=True, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
+                                xticks_step=1, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "PROVA CACCAPUPU",
+                                color = plot_color
+                                )
+
+        ###########################
+        # SINGLE TRAIN/TEST PLOTS #
+        ###########################
+        if SINGLE_TRAIN_TEST_PLOTS:
+                scores_dirs = {
+                                "Test" : "scores_on_test",
+                                "Train" : "scores_on_train"
+                                }
+
+                colors = {
+                                "Test" : "blue",
+                                "Train" : "orange"
+                        }
+
+                plot_scores_from_multiple_dirs(
+                        "PitchShift", 
+                        model_dir, scores_dirs, 
+                        plot_confusion_matrix=True, 
+                        tasks={"audio_classification":"Audio classification"},
+                        #metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                        metrics={"F1-macro":["f1"]},
+                        from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
+                        xticks_step=1, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                        title_prefix = "PROVA CACCAPUPU",
+                        colors = colors
+                        )
+        
+
+        #####################
+        # Comparative plots #
+        #####################
+        if COMPARATIVE_PLOTS:
+                model_names = {
+                        "Feature extractor Inception_v3 - Standard classifier - No augmentation" : "Inception_v3",
+                        "Feature extractor VGG_11_bn - Standard classifier" : "VGG11 with Batch Norm.",
+                        "Feature extractor ResNet50 - Standard classifier" : "ResNet50"
+                }
+                comparative_plots(model_names, 
+                        model_dir,
+                        tasks={"image_classification":"Image classification"},
+                        metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                        from_epoch=0, to_epoch=39, epochs_skip=0, save_to_file=True,
+                        xticks_step=3, increase_epoch_labels_by_one=True,
+                        title_prefix = "Pretrained model selection"
+                        )  
+        
+
+        #################
+        # GRADIENT FLOW #
+        #################
+        if GRADIENT_FLOW:
+                cropX = (0,250)
+                cropY = (10,432)
+                create_gradient_flow_gif("Custom classifier 16 layers - Normal", model_dir, cropX=cropX, cropY=cropY)
+
+        ################
+        # BEST  SCORES #
+        ################
+        if BEST_SCORES:
+                model_names = {
+                        "Custom classifier 16 layers - Normal",
+                        }
+
+                with open(os.path.join(model_dir,"best_scores.txt"), "w") as f:
+                        for model_name in model_names:
+                                _, best_scores_str = print_best_epoch_scores(model_name, model_dir,
+                                        metrics = {"accuracy": "Accuracy",
+                                                "precision": "Precision",
+                                                "recall": "Recall",
+                                                "f1": "F1 Macro Avg.",
+                                                "distribution": "Distribution", 
+                                                "confusion matrix": "Confusion Matrix",
+                                                }
+                                                )
+                                f.write(best_scores_str)
+        
+        '''
+        images = []
+
+        images.append((
+                load_image(os.path.join("data","Black Rat snake","0e54a884c28f6781a5aa7bec768c3067.jpg")),
+                0,
+                "Black Rat snake"))
+        images.append((
+                load_image(os.path.join("data","Common Garter snake","2df3ab34c46139a4814c013ccb6218c8.jpg")),
+                1,
+                "Common Garter snake"))
+        images.append((
+                load_image(os.path.join("data","DeKay's Brown snake","a697c4a5205df2b5a32ff3538d08387f.jpg")),
+                2,
+                "DeKay's Brown snake"))
+        images.append((
+                load_image(os.path.join("data","Northern Watersnake","c9cadc328c4911c12558df424a15fb01.jpg")),
+                3,
+                "Northern Watersnake"))
+        images.append((
+                load_image(os.path.join("data","Western Diamondback rattlesnake","ca7b19ad649466877af003d13244db86.jpg")),
+                4,
+                "Western Diamondback rattlesnake"))
+        '''
+        
+        ################################
+        # IMAGE PREPROCESSING PIPELINE #
+        ################################
+        if IMAGE_PREPROCESSING:
+                for image in images:
+                        #Training preprocessing pipeline
+                        show_preprocessing({
+                                "1 - RandomHorizontalFlip" : transforms.RandomHorizontalFlip(p=1.0),
+                                "2 - RandomVerticalFlip" : transforms.RandomVerticalFlip(p=1.0),
+                                "3 - ColorJitter" : transforms.ColorJitter(brightness = 0.2, saturation=0.2),
+                                "4 - RandomCrop" : transforms.RandomResizedCrop((224,224)),
+                                }, image[0], title_prefix = "Training", save_to_dir=os.path.join(model_dir,"plots","preprocessed_image_examples",image[2]))
+
+                        #Validation preprocessing pipeline
+                        show_preprocessing({
+                                "1 - CenterCrop" : transforms.CenterCrop((224,224)),
+                                }, image[0], title_prefix = "Validation", save_to_dir=os.path.join(model_dir,"plots","preprocessed_image_examples",image[2]))
+
+        #################
+        # SALIENCY MAPS #
+        #################
+        if SALIENCY_MAPS:
+                training_preprocessing_pipeline = transforms.Compose([
+                        transforms.Resize((224,224)),
+                        transforms.ToTensor(),
+                        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                        ])
+                validation_preprocessing_pipeline = transforms.Compose([
+                        transforms.Resize((224,224)),
+                        ])
+
+                for image in images:
+                        #custom_model_wrapper = CustomTrainer.load("Custom classifier 20 layers - Final", 32, None, None, None, model_dir, 48)
+                        #layer = 0
+                        #visualize_features(custom_model_wrapper.model, image[0], image[1],
+                        #                        training_preprocessing_pipeline, validation_preprocessing_pipeline, 
+                        #                        save_to_dir=os.path.join(model_dir,"plots","saliency_maps"), filename="Feature_activation_layer_"+str(layer))
+                        
+                        custom_model_wrapper = CustomTrainer.load("Custom classifier 20 layers - Final", 32, None, None, None, model_dir, 48)
+                        visualize_features_on_layers(custom_model_wrapper.model, image[0], image[1],
+                                                training_preprocessing_pipeline, validation_preprocessing_pipeline,
+                                                save_to_dir=os.path.join(model_dir,"plots","saliency_maps","Custom20",image[2]),
+                                                from_layer = 0, to_layer=18,
+                                                filename_prefix="Custom_classifier_20_Feature_activation_layer_")
+        

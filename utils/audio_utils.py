@@ -81,15 +81,16 @@ class MultipleWindowSelector:
 
         #If random_location is True, the step size will be chosen randomly using the computed step size as an upper bound
         self.random_location = random_location
-    
-    def __call__(self, clip, spectrogram=None):
-        assert len(clip) >= self.window_size, "Window size ({}) is bigger than audio clip length ({})".format(self.window_size, len(clip))
-        total_clip_frames = len(clip)
-        total_spectrogram_frames = len(spectrogram)
+
+#TODO sistemare il caso in cui total_clip_frames=None
+    def __call__(self, total_clip_frames=None, total_spectrogram_frames=None):
+        assert total_clip_frames is not None or total_spectrogram_frames is not None, "To generate segments at least one among the clip length or the spectrogram length should be provided"
+        if total_clip_frames is not None:
+            assert total_clip_frames >= self.window_size, "Window size ({}) is bigger than audio clip length ({})".format(self.window_size, total_clip_frames)
         begin = 0
         while begin < total_clip_frames:
-            if spectrogram is not None:
-                assert self.spectrogram_hop_length is not None, "Please specify a hop length for the spectrogram"
+            if total_spectrogram_frames is not None:
+                assert self.spectrogram_hop_length is not None, "Specify a hop length for the spectrogram"
                 spectrogram_begin = int(math.floor(begin/self.spectrogram_hop_length))
                 yield (begin, begin + self.window_size, spectrogram_begin, spectrogram_begin + self.spectrogram_window_size)
             else:
@@ -103,10 +104,13 @@ class MultipleWindowSelector:
                 begin += self.step_size
         #If true, the last segment will be dropped if its length is lower than the segment size
         if not self.drop_last:
-            if spectrogram is not None:
-                yield (begin, total_clip_frames, spectrogram_begin, total_spectrogram_frames)
+            if total_spectrogram_frames is not None:
+                if total_clip_frames is not None:
+                    yield (begin, total_clip_frames, spectrogram_begin, total_spectrogram_frames)
+                else:
+                    yield (None, None, spectrogram_begin, total_spectrogram_frames)
             else:
-                yield (begin, total_clip_frames)
+                yield (begin, total_clip_frames, None, None)
 
 
 class SingleWindowSelector:
@@ -124,15 +128,33 @@ class SingleWindowSelector:
 
         self.random_location = random_location
 
-    def __call__(self, clip, spectrogram=None):
-        assert len(clip) >= self.window_size, "Window size ({}) is bigger than audio clip length ({})".format(self.window_size, len(clip))
-        if self.random_location:
-            begin = np.random.randint(0, len(clip)-self.window_size)
+    def __call__(self, total_clip_frames=None, total_spectrogram_frames=None):
+        assert total_clip_frames is not None or total_spectrogram_frames is not None, "To generate segments at least one among the clip length or the spectrogram length should be provided"
+        if total_clip_frames is not None:
+            assert total_clip_frames >= self.window_size, "Window size ({}) is bigger than audio clip length ({})".format(self.window_size, total_clip_frames)
+        
+        if total_clip_frames is not None:
+            if self.random_location:
+                begin = np.random.randint(0, total_clip_frames-self.window_size)
+            else:
+                begin = 0
+
+        if total_spectrogram_frames is not None:
+            assert self.spectrogram_hop_length is not None, "Specify a hop length for the spectrogram"
+
+            if total_clip_frames is None:            
+                if self.random_location:
+                    #print(total_spectrogram_frames)
+                    #print(self.spectrogram_window_size)
+                    spectrogram_begin = np.random.randint(0, total_spectrogram_frames-self.spectrogram_window_size)
+                else:
+                    spectrogram_begin = 0
+            else:
+                spectrogram_begin = int(math.floor(begin/self.spectrogram_hop_length))
+
+            if total_clip_frames is not None:
+                yield (begin, begin+self.window_size, spectrogram_begin, spectrogram_begin+self.spectrogram_window_size)
+            else:
+                yield (None, None, spectrogram_begin, spectrogram_begin+self.spectrogram_window_size)
         else:
-            begin = 0
-        if spectrogram is not None:
-            assert self.spectrogram_hop_length is not None, "Please specify a hop length for the spectrogram"
-            spectrogram_begin = int(math.floor(begin/self.spectrogram_hop_length))
-            yield (begin, begin+self.window_size, spectrogram_begin, spectrogram_begin+self.spectrogram_window_size)
-        else:
-            yield (begin, begin+self.window_size)
+            yield (begin, begin+self.window_size, None, None)

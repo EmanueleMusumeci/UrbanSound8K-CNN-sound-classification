@@ -94,7 +94,7 @@ class Trainer:
             running_loss = 0
             batch_losses = []
             
-            self.train_loader.dataset.test_mode = False
+            #self.train_loader.dataset.test_mode = False
             
             for batch in self.train_loader:
                 if batch is None:
@@ -210,7 +210,7 @@ class Trainer:
         '''
 
         if train:
-          self.train_loader.dataset.test_mode = True
+          #self.train_loader.dataset.test_mode = True
           loader = self.train_loader
         else:
           loader = self.test_loader

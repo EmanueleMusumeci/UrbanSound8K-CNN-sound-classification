@@ -9,16 +9,28 @@ try:
     from data_augmentation.image_transformations import *
     from data_augmentation.audio_transformations import *
     from Trainer import *
+    from utils.dataset_utils import *
+    from utils.audio_utils import *
 except:
     pass
 
-INSTANCE_NAME = "PROVA"
+preprocessing_name = None
+#preprocessing_name = "PitchShift"
+
+INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base")
 BATCH_SIZE = 128
 USE_CNN = True
-APPLY_IMAGE_AUGMENTATIONS = True
-APPLY_AUDIO_AUGMENTATIONS = True
+APPLY_IMAGE_AUGMENTATIONS = False
+#APPLY_AUDIO_AUGMENTATIONS = True
+CLIP_SECONDS = 3
+SPECTROGRAM_HOP_LENGTH = 512
+SAMPLE_RATE = 22050
 
-DEBUG_TIMING = False
+COMPUTE_DELTAS = False
+COMPUTE_DELTA_DELTAS = False
+
+DEBUG_PREPROCESSING = False
+DEBUG_TIMING = True
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -37,9 +49,13 @@ MODEL_DIR = os.path.join(base_dir,"model")
 
 selected_classes = [0,1,2,3,4,5,6,7,8,9]
 
-spectrogram_frames_per_segment = 128
+spectrogram_frames_per_segment = CLIP_SECONDS*SAMPLE_RATE / SPECTROGRAM_HOP_LENGTH
 spectrogram_bands = 128
-in_channels = (3 if USE_CNN else 1)
+
+in_channels = 1
+if USE_CNN:
+    if COMPUTE_DELTAS:in_channels = 2
+    elif COMPUTE_DELTA_DELTAS: in_channels = 3
 
 CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment, in_channels)
 FFN_INPUT_SIZE = 154
@@ -57,45 +73,73 @@ else:
     background_noise_transformation = None
 
 #Audio augmentations
-if APPLY_AUDIO_AUGMENTATIONS:
-    random_pitch_shift = PitchShift([-3.5, -2.5, 2.5, 3.5], debug_time=DEBUG_TIMING)
-    random_time_stretch = TimeStretch([0.81, 0.93, 1.07, 1.23], debug_time=DEBUG_TIMING)
+#if APPLY_AUDIO_AUGMENTATIONS:
+#    random_pitch_shift = PitchShift([-3.5, -2.5, 2.5, 3.5], debug_time=DEBUG_TIMING)
+#    random_time_stretch = TimeStretch([0.81, 0.93, 1.07, 1.23], debug_time=DEBUG_TIMING)
+#else:
+#    random_pitch_shift = None
+#    random_time_stretch = None
+
+
+train_fold_list = [1]
+train_fold_list = [1,2,3,4,5,6,7,8,9]
+test_fold_list = [10]
+
+if preprocessing_name is not None:
+    train_audio_meta, train_audio_clips, train_audio_spectrograms = load_preprocessed_compacted_dataset(DATASET_DIR, preprocessing_name, folds = train_fold_list)
+    #_, _, raw_train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list)
 else:
-    random_pitch_shift = None
-    random_time_stretch = None
+    train_audio_meta, train_audio_clips, train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list)
+
+test_audio_meta, test_audio_clips, test_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = test_fold_list)
+
 
 train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
-                            folds = [1], 
+                            folds = train_fold_list, 
+                            preprocessing_name = preprocessing_name,
+                            audio_meta = train_audio_meta,
+                            audio_clips = None,
+                            audio_spectrograms = train_audio_spectrograms,
                             shuffle = True, 
                             use_spectrograms = USE_CNN, 
-                            shift_transformation = right_shift_transformation, 
-                            background_noise_transformation = background_noise_transformation, 
-                            time_stretch_transformation = random_time_stretch,
-                            pitch_shift_transformation = random_pitch_shift, 
+                            image_shift_transformation = right_shift_transformation, 
+                            image_background_noise_transformation = background_noise_transformation, 
+                            #time_stretch_transformation = random_time_stretch,
+                            #pitch_shift_transformation = random_pitch_shift, 
                             spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
                             spectrogram_bands = spectrogram_bands, 
-                            compute_deltas=True, 
-                            compute_delta_deltas=True, 
+                            compute_deltas=COMPUTE_DELTAS, 
+                            compute_delta_deltas=COMPUTE_DELTA_DELTAS, 
                             test = False, 
                             progress_bar = True,
                             selected_classes=selected_classes,
                             select_percentage_of_dataset=DATASET_PERCENTAGE,
-                            debug_preprocessing_time=DEBUG_TIMING
+                            audio_segment_selector=SingleWindowSelector(CLIP_SECONDS, spectrogram_hop_length=SPECTROGRAM_HOP_LENGTH, random_location = True),
+                            debug_preprocessing=DEBUG_PREPROCESSING,
+                            debug_preprocessing_time=DEBUG_TIMING,
+                            silent_clip_cutoff_dB = None
                             )   
 
-test_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
-                            folds = [2], 
+test_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,  
+                            folds = test_fold_list, 
+                            preprocessing_name = preprocessing_name,
+                            audio_meta = test_audio_meta,
+                            audio_clips = None,
+                            audio_spectrograms = test_audio_spectrograms,
                             shuffle = False, 
                             use_spectrograms = USE_CNN, 
                             spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
                             spectrogram_bands = spectrogram_bands, 
-                            compute_deltas=True, 
-                            compute_delta_deltas=True, 
+                            compute_deltas=False, 
+                            compute_delta_deltas=False, 
                             test = True, 
                             progress_bar = True,
                             selected_classes=selected_classes,
                             select_percentage_of_dataset=DATASET_PERCENTAGE,
-                            debug_preprocessing_time=DEBUG_TIMING
+                            audio_segment_selector=SingleWindowSelector(CLIP_SECONDS, spectrogram_hop_length=SPECTROGRAM_HOP_LENGTH),
+                            debug_preprocessing=DEBUG_PREPROCESSING,
+                            debug_preprocessing_time=DEBUG_TIMING,
+                            silent_clip_cutoff_dB = None
                             )
 
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=False)
@@ -132,4 +176,4 @@ trainer = Trainer(
                     cnn = USE_CNN
                 )
 
-trainer.train(30, save_test_scores_every=1, save_train_scores_every=1, save_model_every=1, compute_gradient_statistics=True)
+trainer.train(50, save_test_scores_every=1, save_train_scores_every=1, save_model_every=1, compute_gradient_statistics=True)

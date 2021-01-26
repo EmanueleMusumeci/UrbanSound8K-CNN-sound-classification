@@ -14,24 +14,32 @@ if __name__=="__main__":
     DATASET_DIR = os.path.join(base_dir,"data")
     print(DATASET_DIR)
 
-    #fold_list = [1]
-    fold_list = [2]
-    #fold_list = [1,2,3,4,5,6,7,8,9,10]
+    #delete_compacted_dataset(DATASET_DIR)
 
-    audio_augmentation = PitchShift(values = [-1,1])
+    #fold_list = [4]
+    #fold_list = [2,3]
+    fold_list = [1,2,3,4,5,6,7,8,9,10]
+    #fold_list = [4,5,6,7,8,9,10]
 
-    for fold in fold_list:
-        compact_raw_fold(DATASET_DIR, fold)
-        generate_compacted_fold_spectrograms(DATASET_DIR, fold)
+    
+    audio_augmentations = [
+                           PitchShift(values = [-2, -1, 1, 2]), \
+                           #TimeStretch(values = [0.81, 0.93, 1.07, 1.23])
+                           ]
+    
+    for audio_augmentation in audio_augmentations:
+        for fold in fold_list:
+            #compact_raw_fold(DATASET_DIR, fold)
+            #generate_compacted_fold_spectrograms(DATASET_DIR, fold)
 
-        generate_compacted_preprocessed_fold(DATASET_DIR, fold, audio_augmentation.name, audio_augmentation)
-        generate_compacted_fold_spectrograms(DATASET_DIR, fold, preprocessing_name=audio_augmentation.name)
+            generate_compacted_preprocessed_fold(DATASET_DIR, fold, audio_augmentation.name, audio_augmentation)
+            generate_compacted_fold_spectrograms(DATASET_DIR, fold, preprocessing_name=audio_augmentation.name)
+        
+        with code_timer("load_compacted_dataset", debug=True):
+            audio_meta, audio_raw, audio_spectrograms_raw = load_raw_compacted_dataset(DATASET_DIR, folds = fold_list, spectrogram_bands=128)
 
-    with code_timer("load_compacted_dataset", debug=True):
-        audio_meta, audio_raw, audio_spectrograms_raw = load_raw_compacted_dataset(DATASET_DIR, folds = fold_list, spectrogram_bands=128)
-
-    with code_timer("load_compacted_preprocessed_dataset", debug=True):
-        audio_meta, audio_preprocessed, audio_spectrograms_preprocessed = load_preprocessed_compacted_dataset(DATASET_DIR, preprocessing_name=audio_augmentation.name, folds = fold_list)
+        with code_timer("load_compacted_preprocessed_dataset", debug=True):
+            audio_meta, audio_preprocessed, audio_spectrograms_preprocessed = load_preprocessed_compacted_dataset(DATASET_DIR, preprocessing_name=audio_augmentation.name, folds = fold_list)
 
     '''
     for i, clip_raw in enumerate(audio_raw):
