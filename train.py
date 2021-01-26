@@ -15,7 +15,7 @@ except:
     pass
 
 preprocessing_name = None
-#preprocessing_name = "PitchShift"
+preprocessing_name = "PitchShift"
 
 INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base")
 BATCH_SIZE = 128
@@ -30,7 +30,7 @@ COMPUTE_DELTAS = False
 COMPUTE_DELTA_DELTAS = False
 
 DEBUG_PREPROCESSING = False
-DEBUG_TIMING = True
+DEBUG_TIMING = False
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -86,13 +86,15 @@ train_fold_list = [1,2,3,4,5,6,7,8,9]
 test_fold_list = [10]
 
 if preprocessing_name is not None:
-    train_audio_meta, train_audio_clips, train_audio_spectrograms = load_preprocessed_compacted_dataset(DATASET_DIR, preprocessing_name, folds = train_fold_list)
+    train_audio_meta, train_audio_clips, train_audio_spectrograms = load_preprocessed_compacted_dataset(DATASET_DIR, preprocessing_name, folds = train_fold_list, only_spectrograms=True)
     #_, _, raw_train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list)
 else:
-    train_audio_meta, train_audio_clips, train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list)
+    train_audio_meta, train_audio_clips, train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list, only_spectrograms=True)
 
-test_audio_meta, test_audio_clips, test_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = test_fold_list)
+test_audio_meta, test_audio_clips, test_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = test_fold_list, only_spectrograms=True)
 
+del train_audio_clips
+del test_audio_clips
 
 train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
                             folds = train_fold_list, 

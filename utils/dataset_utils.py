@@ -32,7 +32,7 @@ def load_compacted_data(file_name, shape):
 
 #from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
 @function_timer
-def load_raw_compacted_dataset(dataset_dir, folds = []):
+def load_raw_compacted_dataset(dataset_dir, folds = [], only_spectrograms = False):
     """Load raw audio and metadata content from the UrbanSound8K dataset."""
     
     audio_meta = []
@@ -61,8 +61,11 @@ def load_raw_compacted_dataset(dataset_dir, folds = []):
         #Load audio data
         audio_length = json_index["fold_"+str(fold_number)]["raw"]["audio_length"]
         audio_file_name = os.path.join(dataset_dir,json_index["fold_"+str(fold_number)]["raw"]["audio_file_name"])
-        fold_raw = np.memmap(audio_file_name, dtype='float32', mode='r', shape=(len(fold_meta), audio_length))
-        audio_raw.append(fold_raw)
+        if not only_spectrograms:
+            fold_raw = np.memmap(audio_file_name, dtype='float32', mode='r', shape=(len(fold_meta), audio_length))
+            audio_raw.append(fold_raw)
+        else:
+            assert "spectrograms" in json_index["fold_"+str(fold_number)]["raw"].keys(), "No spectrograms compacted for raw dataset"
 
         #Load spectrograms (if they exist)
         if "spectrograms" in json_index["fold_"+str(fold_number)]["raw"].keys():
@@ -73,7 +76,8 @@ def load_raw_compacted_dataset(dataset_dir, folds = []):
             audio_spec = np.memmap(audio_spec_file_name, dtype="float32", mode = "r", shape=(len(fold_meta), audio_spec_bands, audio_spec_frames))
             audio_spectrograms_raw.append(audio_spec)
 
-    audio_raw = np.vstack(audio_raw)
+    if not only_spectrograms:
+        audio_raw = np.vstack(audio_raw)
 
     if len(audio_spectrograms_raw)>0:
         audio_spectrograms_raw = np.vstack(audio_spectrograms_raw)
@@ -82,7 +86,7 @@ def load_raw_compacted_dataset(dataset_dir, folds = []):
 
 #from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
 @function_timer
-def load_preprocessed_compacted_dataset(dataset_dir, preprocessing_name, folds = []):
+def load_preprocessed_compacted_dataset(dataset_dir, preprocessing_name, folds = [], only_spectrograms=False):
     """Load raw audio and metadata content from the UrbanSound8K dataset."""
     
     audio_meta = []
@@ -118,13 +122,16 @@ def load_preprocessed_compacted_dataset(dataset_dir, preprocessing_name, folds =
             
             assert os.path.exists(file_name), "Could not find preprocessed fold {}".format(file_name)
 
-            fold_preprocessed = np.memmap(file_name, dtype='float32', mode='r', shape=(len(fold_meta), audio_length))
+            if not only_spectrograms:
+                fold_preprocessed = np.memmap(file_name, dtype='float32', mode='r', shape=(len(fold_meta), audio_length))
+                
+                if preprocessing_value not in audio_preprocessed.keys():
+                    audio_preprocessed[preprocessing_value] = []
+                
+                audio_preprocessed[preprocessing_value].extend(fold_preprocessed)
+            else:
+                assert "spectrograms" in entry.keys(), "No spectrograms compacted for this preprocessing value ({}: {})".format(preprocessing_name, preprocessing_value)
             
-            if preprocessing_value not in audio_preprocessed.keys():
-                audio_preprocessed[preprocessing_value] = []
-            
-            audio_preprocessed[preprocessing_value].extend(fold_preprocessed)
-
             if "spectrograms" in entry.keys():
                 audio_spec_preprocessed_file_name = os.path.join(dataset_dir, entry["spectrograms"]["file_name"])
                 audio_spec_preprocessed_bands = entry["spectrograms"]["bands"]
