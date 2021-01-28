@@ -179,7 +179,7 @@ if __name__ == "__main__":
     #set it to generate the corresponding shift ( in article :steps (semitones) PS1 = {-2,-1,1,2} , PS2 = {-3.5,-2.5, 2.5,3.5} )
     sound_file = sound_file.replace("data_augmentation\\","")
     y1, sample_rate1 = load_audio_file(sound_file)
-
+    """
     ############################################################################################## test PitchShift
 
     print("-------- original sound")
@@ -258,6 +258,63 @@ if __name__ == "__main__":
     drc3 = drc_speech_standard()
     play_sound(drc3)
     print("drc3: ",drc3)
-    
+    """
+    ############################################################################################## test DRC
 
+    y1, sample_rate1 = load_audio_file(sound_file)
+    print("-------- original sound")
+    play_sound(y1)
+    print(y1)
+    """
+    import muda.deformers
+    #y_out = __sox(y1,sample_rate1,["0.1,0.3", "-90,-90,-70,-55,-50,-35,-31,-31,-21,-21,0,-20", "0", "0", "0.1"])
+    #drc = muda.deformers.DynamicRangeCompression(preset=['film standard'])
+    #print(drc)
+
+    y_out = drc(y1,sample_rate1,'film standard')
+    """
+    from muda.deformers.sox import drc
+    from utils.plot_utils import plot_periodogram
+
+    #from https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.periodogram.html
+    def plot_periodogram(sound, sound_file_name = None, sound_class=None, show = False, sr=22050, title=None):
+        f, Pxx_den = signal.periodogram(sound, sr)
+        plot = plt.figure()
+        plt.semilogy(f, Pxx_den)
+        plt.ylim([1e-7, 1e2])
+        plt.xlabel('Frequency [Hz]')
+        plt.ylabel('Magnitude (norm)')
+
+        if show:
+            plt.show()
+        return plot
+
+    y_out = drc(y1,sample_rate1,'film standard')
+    print("------- film standard")
+    play_sound(y_out)
+    plot_periodogram(y_out,show=True)
+
+    print(y_out)
+
+    y_out = drc(y1,sample_rate1,'speech')
+    print("------- speech")
+    play_sound(y_out)
+    plot_periodogram(y_out,show=True)
+
+    print(y_out)
+
+    
+    y_out = drc(y1,sample_rate1,'music standard')
+    print("------- music standard")
+    play_sound(y_out)
+    plot_periodogram(y_out,show=True)
+
+    print(y_out)
+
+
+    y_out = drc(y1,sample_rate1,'radio')
+    print("------- radio")
+    play_sound(y_out)
+    plot_periodogram(y_out,show=True)
+    print(y_out)
 

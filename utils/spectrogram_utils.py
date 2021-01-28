@@ -5,6 +5,8 @@ import numpy as np
 
 import librosa
 from matplotlib import pyplot as plt
+import scipy
+from scipy import signal
 
 try:
     from utils.timing import *

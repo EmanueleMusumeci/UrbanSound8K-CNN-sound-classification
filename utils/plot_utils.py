@@ -26,6 +26,11 @@ from PyTorchVisualizations.src.misc_functions import save_class_activation_image
 
 import librosa
 
+import scipy
+
+from scipy import signal
+
+
 
 '''
 Displays a wave plot for the input raw sound (using the Librosa library)
