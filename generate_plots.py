@@ -44,7 +44,6 @@ if __name__ == "__main__":
                 #Change the xticks_step to avoid the overlapping of labels on the x axis of graphs
                 #Change the from/to_epoch and the epochs_skip to decide which score files are read
                 #Use the combine tasks flag to plot a comparative plot of the same metric for all tasks
-<<<<<<< HEAD
                 plot_scores("Base",
                                 model_dir, plot_confusion_matrix=True, 
                                 tasks={"audio_classification":"Audio classification"},
@@ -62,15 +61,6 @@ if __name__ == "__main__":
                                 from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
                                 xticks_step=1, combine_tasks=False, increase_epoch_labels_by_one=True, 
                                 title_prefix = "PitchShift",
-=======
-                plot_scores(DIR,
-                                model_dir, plot_confusion_matrix=True, 
-                                tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
-                                from_epoch=0, to_epoch=49, epochs_skip=0, save_to_file=True,
-                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "PROVA CACCAPUPU",
->>>>>>> 9d8b71c15582fcb4944ba3168b7ec18b0f22f437
                                 color = plot_color
                                 )
 
@@ -89,7 +79,6 @@ if __name__ == "__main__":
                         }
 
                 plot_scores_from_multiple_dirs(
-<<<<<<< HEAD
                         "Base", 
                         model_dir, scores_dirs, 
                         plot_confusion_matrix=True, 
@@ -110,17 +99,6 @@ if __name__ == "__main__":
                         from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
                         xticks_step=1, combine_tasks=False, increase_epoch_labels_by_one=True, 
                         title_prefix = "PitchShift",
-=======
-                        DIR, 
-                        model_dir, scores_dirs, 
-                        plot_confusion_matrix=True, 
-                        tasks={"audio_classification":"Audio classification"},
-                        #metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
-                        metrics={"F1-macro":["f1"]},
-                        from_epoch=0, to_epoch=49, epochs_skip=0, save_to_file=True,
-                        xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                        title_prefix = "PROVA CACCAPUPU",
->>>>>>> 9d8b71c15582fcb4944ba3168b7ec18b0f22f437
                         colors = colors
                         )
         

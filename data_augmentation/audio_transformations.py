@@ -115,8 +115,6 @@ class DynamicRangeCompression(object):
 
         return t1
 
-
-
 class BackgroundNoise(object):
     def __init__(self, sound_file, loaded_audio_files):
         self.sound_file = sound_file

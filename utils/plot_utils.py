@@ -31,18 +31,13 @@ import scipy
 from scipy import signal
 
 
-
 '''
 Displays a wave plot for the input raw sound (using the Librosa library)
 '''
-def plot_sound_waves(sound, sound_file_name = None, sound_class=None, show=False, sr=22050, save_to_dir=None):
-    plot_title = "Wave plot"
-    
-    if sound_file_name is not None:
-        plot_title += "File: "+sound_file_name
-    
-    if sound_class is not None:
-        plot_title+=" (Class: "+sound_class+")"
+def plot_sound_waves(sound, sound_file_name = None, sound_class=None, show=False, sr=22050, plot_title=None,
+                     save_to_dir=None):
+    if plot_title is None:
+        plot_title = "Wave plot"
     
     plot = plt.figure(plot_title)
     librosa.display.waveplot(np.array(sound),sr=sr)
@@ -52,21 +47,13 @@ def plot_sound_waves(sound, sound_file_name = None, sound_class=None, show=False
       plt.show()
         
     if save_to_dir is not None:
-      path = os.path.join(save_to_dir,sound_file_name+" - Waveplot")+".png"
+      path = os.path.join(save_to_dir," - "+plot_title)+".png"
       plot.savefig(path)
 
-def plot_sound_spectrogram(sound, sound_file_name = None, sound_class=None, show = False, log_scale = False, hop_length=512, sr=22050, colorbar_format = "%+2.f dB", title=None):
-    if title is None:
-        plot_title = title
-    else:
+def plot_sound_spectrogram(sound, sound_class=None, show = False, log_scale = False, hop_length=512, sr=22050, colorbar_format = "%+2.f dB", plot_title=None):
+    if plot_title is None:
         plot_title = "Spectrogram"
         
-        if sound_file_name is not None:
-            plot_title += "File: "+sound_file_name
-        
-        if sound_class is not None:
-            plot_title+=" (Class: "+sound_class+")"
-    
     sound = librosa.stft(sound, hop_length = hop_length)
     sound = librosa.amplitude_to_db(np.abs(sound), ref=np.max)
 
@@ -89,15 +76,8 @@ def plot_sound_spectrogram(sound, sound_file_name = None, sound_class=None, show
 #from https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.periodogram.html
 def plot_periodogram(sound, sound_file_name = None, sound_class=None, show = False, sr=22050, plot_title=None,
                      save_to_dir = None):
-                     
-    if plot_title is not None:
-      plot_title = "Wave plot"
-    
-    if sound_file_name is not None:
-      plot_title += "File: "+sound_file_name
-    
-    if sound_class is not None:
-      plot_title+=" (Class: "+sound_class+")"
+    if plot_title is None:
+        plot_title = "Periodogram"
 
     f, Pxx_den = signal.periodogram(sound, sr)
     plot = plt.figure()
@@ -112,7 +92,7 @@ def plot_periodogram(sound, sound_file_name = None, sound_class=None, show = Fal
         plt.show()
 
     if save_to_dir is not None:
-      path = os.path.join(save_to_dir,sound_file_name+" - Waveplot")+".png"
+      path = os.path.join(save_to_dir," - "+plot_title)+".png"
       plot.savefig(path)
 
     return plot
