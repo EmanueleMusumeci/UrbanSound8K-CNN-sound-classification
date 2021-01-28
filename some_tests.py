@@ -15,27 +15,16 @@ from os import listdir
 from os.path import isfile, join
 
 from muda.deformers.sox import drc
-from utils.plot_utils import plot_periodogram
-from utils.plot_utils import plot_sound_waves
-import scipy.signal
-from muda.deformers.sox import drc
+from utils.plot_utils import plot_periodogram, plot_sound_waves
+from utils.audio_utils import load_audio_file, play_sound
+from utils.spectrogram_utils import generate_mel_spectrogram_librosa, display_heatmap
 
+from data_augmentation.audio_transformations import *
+
+import scipy.signal
 
 if __name__ == "__main__":
 
-    
-    def play_sound(sound, sr = 22050, blocking=True):
-        sd.play(sound, sr, blocking=True)
-
-        
-    def load_audio_file(path, duration = 4000, sample_rate = 22050, fixed_length = 88200):
-        data, sample_rate = librosa.load(path, sr=sample_rate, mono=True,  dtype=np.float32)
-        if len(data)>fixed_length:
-            data = data[:fixed_length]
-        else:
-            data = np.concatenate((data, np.zeros(int(fixed_length - len(data)))))
-        return data, sample_rate
-    
     base_dir = os.path.dirname(os.path.realpath(__file__))
     DATASET_DIR = os.path.join(base_dir,"data")
     print(librosa.__version__)
@@ -51,6 +40,21 @@ if __name__ == "__main__":
     #set it to generate the corresponding shift ( in article :steps (semitones) PS1 = {-2,-1,1,2} , PS2 = {-3.5,-2.5, 2.5,3.5} )
     sound_file = sound_file.replace("data_augmentation\\","")
     y1, sample_rate1 = load_audio_file(sound_file)
+    #play_sound(y1)
+    display_heatmap(generate_mel_spectrogram_librosa(y1, 128))
+
+    background_noise = BackgroundNoise({
+        "street_scene_1" : "150993__saphe__street-scene-1.wav",
+        #"street_scene_3" : "173955__saphe__street-scene-3.wav",
+        #"street_valencia" : "207208__jormarp__high-street-of-gandia-valencia-spain.wav",
+        #"city_park_tel_aviv" : "268903__yonts__city-park-tel-aviv-israel.wav",
+    }, files_dir = os.path.join(DATASET_DIR, "UrbanSound8K-JAMS", "background_noise"))
+
+    preprocessed_y1 = background_noise(y1, play=True)
+    #play_sound(preprocessed_y1)
+    display_heatmap(generate_mel_spectrogram_librosa(preprocessed_y1, 128))
+    
+
     """
     ############################################################################################## test PitchShift
 
@@ -132,34 +136,31 @@ if __name__ == "__main__":
     print("drc3: ",drc3)
     """
     ############################################################################################## test DRC
+    base_dir = os.path.dirname(os.path.realpath(__file__))
 
+    save_dir = "data"
     y1, sample_rate1 = load_audio_file(sound_file)
     print("-------- original sound")
     #play_sound(y1)
     print(y1)
-    plot_sound_waves(y1,show=True)
+    file_output = os.path.join(base_dir,save_dir)
+    #file_output = os.path.join(file_output,"original")
+    plot_sound_waves(y1,sound_file_name="original",show=True,save_to_dir=file_output)
 
-    """
-    import muda.deformers
-    #y_out = __sox(y1,sample_rate1,["0.1,0.3", "-90,-90,-70,-55,-50,-35,-31,-31,-21,-21,0,-20", "0", "0", "0.1"])
-    #drc = muda.deformers.DynamicRangeCompression(preset=['film standard'])
-    #print(drc)
-
-    y_out = drc(y1,sample_rate1,'film standard')
-    """
- 
-
+    
     y_out = drc(y1,sample_rate1,'film standard')
     print("------- film standard")
     #play_sound(y_out)
-    plot_sound_waves(y_out,show=True)
+    plot_sound_waves(y_out,sound_file_name="film standard",show=True,save_to_dir=file_output)
+
 
     print(y_out)
 
     y_out = drc(y1,sample_rate1,'speech')
     print("------- speech")
     #play_sound(y_out)
-    plot_sound_waves(y_out,show=True)
+    plot_sound_waves(y_out,sound_file_name="speech",show=True,save_to_dir=file_output)
+
 
     print(y_out)
 
@@ -167,7 +168,7 @@ if __name__ == "__main__":
     y_out = drc(y1,sample_rate1,'music standard')
     print("------- music standard")
     #play_sound(y_out)
-    plot_sound_waves(y_out,show=True)
+    plot_sound_waves(y_out,sound_file_name="music standard",show=True,save_to_dir=file_output)
 
     print(y_out)
 
@@ -175,6 +176,6 @@ if __name__ == "__main__":
     y_out = drc(y1,sample_rate1,'radio')
     print("------- radio")
     #play_sound(y_out)
-    plot_sound_waves(y_out,show=True)
-    print(y_out)
+    plot_sound_waves(y_out,sound_file_name="radio",show=True,save_to_dir=file_output)
 
+    print(y_out)

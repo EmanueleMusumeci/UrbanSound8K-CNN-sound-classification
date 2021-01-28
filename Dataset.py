@@ -231,11 +231,11 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
 
     def get_preprocessed_fields(self): 
         if self.use_spectrograms:
-            return ["original_spectrogram", "preprocessed_spectrogram"]
+            return ["preprocessed_spectrogram"]
         else:
             return ["mfccs", "chroma", "mel", "contrast", "tonnetz"]
 
-    def get_unpreprocessed_fields(self): return ["class_name", "meta_data"]
+    def get_unpreprocessed_fields(self): return ["class_name", "meta_data", "original_spectrogram"]
     def get_gold_fields(self): return ["class_id"]
 
     def __call__(self, sound, sample_rate=22050):
@@ -495,7 +495,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             preprocessed_spectrograms = np.asarray(preprocessed_spectrograms).reshape(len(preprocessed_spectrograms),self.spectrogram_bands,self.audio_segment_selector.spectrogram_window_size,1)
         
         with code_timer("deltas", debug=self.debug_preprocessing_time):
-            if self.compute_deltas:
+          if self.compute_deltas:
                 #Make space for the delta features
                 preprocessed_spectrograms = np.concatenate((preprocessed_spectrograms, np.zeros(np.shape(preprocessed_spectrograms))), axis = 3)
                 if self.compute_delta_deltas:
