@@ -1,31 +1,37 @@
 import os
 
 import torch
-try:
-    from Dataset import SoundDatasetFold
-    from DataLoader import DataLoader
-    from nn.convolutional_model import ConvolutionalNetwork
-    from nn.feed_forward_model import FeedForwardNetwork
-    from data_augmentation.image_transformations import *
-    from data_augmentation.audio_transformations import *
-    from Trainer import *
-    from utils.dataset_utils import *
-    from utils.audio_utils import *
-except:
-    pass
+
+from Dataset import SoundDatasetFold
+from DataLoader import DataLoader
+from nn.convolutional_model import ConvolutionalNetwork
+from nn.paper_convolutional_model import PaperConvolutionalNetwork
+from nn.feed_forward_model import FeedForwardNetwork
+from data_augmentation.image_transformations import *
+from data_augmentation.audio_transformations import *
+from Trainer import *
+from utils.dataset_utils import *
+from utils.audio_utils import *
 
 preprocessing_name = None
-preprocessing_name = "PitchShift"
+#preprocessing_name = "PitchShift"
+
 
 CUSTOM_MODEL = False
 
 INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base")
 
+<<<<<<< HEAD
 if CUSTOM_MODEL:
     INSTANCE_NAME+="_custom"
 
+=======
+>>>>>>> 9d8b71c15582fcb4944ba3168b7ec18b0f22f437
 BATCH_SIZE = 128
+
 USE_CNN = True
+
+
 APPLY_IMAGE_AUGMENTATIONS = False
 #APPLY_AUDIO_AUGMENTATIONS = True
 CLIP_SECONDS = 3
@@ -52,6 +58,10 @@ DATASET_NAME = "UrbanSound8K"
 DATASET_PERCENTAGE = 1.0
 
 MODEL_DIR = os.path.join(base_dir,"model")
+
+
+assert not os.path.exists(os.path.join(MODEL_DIR,INSTANCE_NAME)), "ATTENTION! The folder {} already exists: rename it or remove it".format(os.path.join(MODEL_DIR,INSTANCE_NAME))
+
 
 selected_classes = [0,1,2,3,4,5,6,7,8,9]
 
@@ -155,7 +165,8 @@ test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
 
 if USE_CNN:
-    model = ConvolutionalNetwork(CNN_INPUT_SIZE)
+    #model = ConvolutionalNetwork(CNN_INPUT_SIZE)
+    model = PaperConvolutionalNetwork(CNN_INPUT_SIZE)
 else:
     model = FeedForwardNetwork(FFN_INPUT_SIZE, 256, train_dataset.get_num_classes())
 
@@ -165,9 +176,13 @@ print("Class names: ",train_dataset.class_distribution.keys())
 
 loss_function = torch.nn.CrossEntropyLoss()
 
-optimizer = torch.optim.Adam(model.parameters())
-#optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
-#lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
+if isinstance(model, PaperConvolutionalNetwork):
+    optimizer = optim.SGD([
+                {'params': model.convolutional_layers.parameters()},
+                {'params': model.dense_layers.parameters(), 'weight_decay': 1e-3}
+            ], lr=1e-2)
+else:
+    optimizer = torch.optim.Adam(model.parameters())
 
 trainer = Trainer(
                     INSTANCE_NAME,

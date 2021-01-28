@@ -23,14 +23,14 @@ if __name__=="__main__":
 
     
     audio_augmentations = [
-                           PitchShift(values = [-2, -1, 1, 2]), \
-                           #TimeStretch(values = [0.81, 0.93, 1.07, 1.23])
+                           #PitchShift(values = [-2, -1, 1, 2]), \
+                           TimeStretch(values = [0.81, 0.93, 1.07, 1.23])
                            ]
     
     for audio_augmentation in audio_augmentations:
         for fold in fold_list:
-            #compact_raw_fold(DATASET_DIR, fold)
-            #generate_compacted_fold_spectrograms(DATASET_DIR, fold)
+            compact_raw_fold(DATASET_DIR, fold)
+            generate_compacted_fold_spectrograms(DATASET_DIR, fold)
 
             generate_compacted_preprocessed_fold(DATASET_DIR, fold, audio_augmentation.name, audio_augmentation)
             generate_compacted_fold_spectrograms(DATASET_DIR, fold, preprocessing_name=audio_augmentation.name)

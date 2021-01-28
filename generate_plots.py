@@ -19,7 +19,6 @@ if __name__ == "__main__":
         from tqdm import tqdm
 
         #from PIL import Image
-
         from utils.plot_utils import *
         #from Utils import *
         #from CustomTrainer import *
@@ -37,7 +36,7 @@ if __name__ == "__main__":
         BEST_SCORES = False
         IMAGE_PREPROCESSING = False
         SALIENCY_MAPS = False
-
+        DIR = "PitchShift"
         ################
         # SINGLE PLOTS #
         ################
@@ -45,6 +44,7 @@ if __name__ == "__main__":
                 #Change the xticks_step to avoid the overlapping of labels on the x axis of graphs
                 #Change the from/to_epoch and the epochs_skip to decide which score files are read
                 #Use the combine tasks flag to plot a comparative plot of the same metric for all tasks
+<<<<<<< HEAD
                 plot_scores("Base",
                                 model_dir, plot_confusion_matrix=True, 
                                 tasks={"audio_classification":"Audio classification"},
@@ -62,6 +62,15 @@ if __name__ == "__main__":
                                 from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
                                 xticks_step=1, combine_tasks=False, increase_epoch_labels_by_one=True, 
                                 title_prefix = "PitchShift",
+=======
+                plot_scores(DIR,
+                                model_dir, plot_confusion_matrix=True, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0, save_to_file=True,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "PROVA CACCAPUPU",
+>>>>>>> 9d8b71c15582fcb4944ba3168b7ec18b0f22f437
                                 color = plot_color
                                 )
 
@@ -80,6 +89,7 @@ if __name__ == "__main__":
                         }
 
                 plot_scores_from_multiple_dirs(
+<<<<<<< HEAD
                         "Base", 
                         model_dir, scores_dirs, 
                         plot_confusion_matrix=True, 
@@ -100,6 +110,17 @@ if __name__ == "__main__":
                         from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
                         xticks_step=1, combine_tasks=False, increase_epoch_labels_by_one=True, 
                         title_prefix = "PitchShift",
+=======
+                        DIR, 
+                        model_dir, scores_dirs, 
+                        plot_confusion_matrix=True, 
+                        tasks={"audio_classification":"Audio classification"},
+                        #metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                        metrics={"F1-macro":["f1"]},
+                        from_epoch=0, to_epoch=49, epochs_skip=0, save_to_file=True,
+                        xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                        title_prefix = "PROVA CACCAPUPU",
+>>>>>>> 9d8b71c15582fcb4944ba3168b7ec18b0f22f437
                         colors = colors
                         )
         
@@ -220,4 +241,23 @@ if __name__ == "__main__":
                                                 save_to_dir=os.path.join(model_dir,"plots","saliency_maps","Custom20",image[2]),
                                                 from_layer = 0, to_layer=18,
                                                 filename_prefix="Custom_classifier_20_Feature_activation_layer_")
-        
+
+"""
+import torch
+print(torch.__version__)
+
+import torchvision
+print(torchvision.__version__)
+
+import numpy
+print(numpy.__version__)
+
+import matplotlib
+print(matplotlib.__version__)
+
+import PIL
+print(PIL.__version__)
+import os
+ROOT_DIR = os.path.dirname(os.path.abspath("generate_plots.py"))
+print(ROOT_DIR)
+"""
