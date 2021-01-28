@@ -17,7 +17,13 @@ except:
 preprocessing_name = None
 preprocessing_name = "PitchShift"
 
+CUSTOM_MODEL = False
+
 INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base")
+
+if CUSTOM_MODEL:
+    INSTANCE_NAME+="_custom"
+
 BATCH_SIZE = 128
 USE_CNN = True
 APPLY_IMAGE_AUGMENTATIONS = False

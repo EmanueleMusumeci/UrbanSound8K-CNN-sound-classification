@@ -31,7 +31,7 @@ if __name__ == "__main__":
         plot_color = "blue"
         
         SINGLE_PLOTS = True
-        SINGLE_TRAIN_TEST_PLOTS = True
+        SINGLE_TRAIN_TEST_PLOTS = False
         COMPARATIVE_PLOTS = False
         GRADIENT_FLOW = False
         BEST_SCORES = False
@@ -45,13 +45,23 @@ if __name__ == "__main__":
                 #Change the xticks_step to avoid the overlapping of labels on the x axis of graphs
                 #Change the from/to_epoch and the epochs_skip to decide which score files are read
                 #Use the combine tasks flag to plot a comparative plot of the same metric for all tasks
+                plot_scores("Base",
+                                model_dir, plot_confusion_matrix=True, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
+                                xticks_step=1, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Base",
+                                color = plot_color
+                                )
+
                 plot_scores("PitchShift",
                                 model_dir, plot_confusion_matrix=True, 
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                 from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
                                 xticks_step=1, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "PROVA CACCAPUPU",
+                                title_prefix = "PitchShift",
                                 color = plot_color
                                 )
 
@@ -70,15 +80,26 @@ if __name__ == "__main__":
                         }
 
                 plot_scores_from_multiple_dirs(
+                        "Base", 
+                        model_dir, scores_dirs, 
+                        plot_confusion_matrix=True, 
+                        tasks={"audio_classification":"Audio classification"},
+                        metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                        from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
+                        xticks_step=1, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                        title_prefix = "Base",
+                        colors = colors
+                        )
+
+                plot_scores_from_multiple_dirs(
                         "PitchShift", 
                         model_dir, scores_dirs, 
                         plot_confusion_matrix=True, 
                         tasks={"audio_classification":"Audio classification"},
-                        #metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
-                        metrics={"F1-macro":["f1"]},
+                        metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                         from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
                         xticks_step=1, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                        title_prefix = "PROVA CACCAPUPU",
+                        title_prefix = "PitchShift",
                         colors = colors
                         )
         
@@ -88,9 +109,8 @@ if __name__ == "__main__":
         #####################
         if COMPARATIVE_PLOTS:
                 model_names = {
-                        "Feature extractor Inception_v3 - Standard classifier - No augmentation" : "Inception_v3",
-                        "Feature extractor VGG_11_bn - Standard classifier" : "VGG11 with Batch Norm.",
-                        "Feature extractor ResNet50 - Standard classifier" : "ResNet50"
+                        "Custom model - No augmentation" : "Base",
+                        "Custom model - PitchShift" : "PitchShift",
                 }
                 comparative_plots(model_names, 
                         model_dir,
@@ -98,7 +118,7 @@ if __name__ == "__main__":
                         metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                         from_epoch=0, to_epoch=39, epochs_skip=0, save_to_file=True,
                         xticks_step=3, increase_epoch_labels_by_one=True,
-                        title_prefix = "Pretrained model selection"
+                        title_prefix = "Custom model"
                         )  
         
 
