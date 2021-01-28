@@ -35,7 +35,7 @@ from scipy import signal
 '''
 Displays a wave plot for the input raw sound (using the Librosa library)
 '''
-def plot_sound_waves(sound, sound_file_name = None, sound_class=None, show=False, sr=22050):
+def plot_sound_waves(sound, sound_file_name = None, sound_class=None, show=False, sr=22050, save_to_dir=None):
     plot_title = "Wave plot"
     
     if sound_file_name is not None:
@@ -49,7 +49,11 @@ def plot_sound_waves(sound, sound_file_name = None, sound_class=None, show=False
     plt.title(plot_title)
     
     if show:
-        plt.show()
+      plt.show()
+        
+    if save_to_dir is not None:
+      path = os.path.join(save_to_dir,sound_file_name+" - Waveplot")+".png"
+      plot.savefig(path)
 
 def plot_sound_spectrogram(sound, sound_file_name = None, sound_class=None, show = False, log_scale = False, hop_length=512, sr=22050, colorbar_format = "%+2.f dB", title=None):
     if title is None:
@@ -79,67 +83,52 @@ def plot_sound_spectrogram(sound, sound_file_name = None, sound_class=None, show
     
     if show:
         plt.show()
-    
+        
     return plot
 
 #from https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.periodogram.html
-def plot_periodogram(sound, sound_file_name = None, sound_class=None, show = False, sr=22050, title=None):
+def plot_periodogram(sound, sound_file_name = None, sound_class=None, show = False, sr=22050, plot_title=None,
+                     save_to_dir = None):
+                     
+    if plot_title is not None:
+      plot_title = "Wave plot"
+    
+    if sound_file_name is not None:
+      plot_title += "File: "+sound_file_name
+    
+    if sound_class is not None:
+      plot_title+=" (Class: "+sound_class+")"
+
     f, Pxx_den = signal.periodogram(sound, sr)
     plot = plt.figure()
     plt.semilogy(f, Pxx_den)
     plt.ylim([1e-7, 1e2])
     plt.xlabel('Frequency [Hz]')
     plt.ylabel('Magnitude (norm)')
+    if title is not None:
+      plt.set_title(title)
 
     if show:
         plt.show()
+
+    if save_to_dir is not None:
+      path = os.path.join(save_to_dir,sound_file_name+" - Waveplot")+".png"
+      plot.savefig(path)
+
     return plot
 
+def load_scores(model_name, model_dir, from_epoch=0, to_epoch=0, epochs_skip=0, scores_subdir=None, scores_on_train=False):
 
-###########
-#  PLOTS  #
-###########
-
-'''
-Utils to generate all plots and graphical renders needed for the presentation
-'''
-def plot_scores(model_name, model_dir, tasks={"audio_classification" : "Audio classification"},
-                metrics={"F1-macro":["f1"]}, plot_confusion_matrix=True, 
-                from_epoch=0, to_epoch=0, epochs_skip=0, save_to_file=False,
-                xticks_step=0, combine_tasks=False, increase_epoch_labels_by_one=False, 
-                title_prefix=None, color = None):
-  '''
-  Plots the requested performance metrics from the score history of the current model
-  (used to generate the graphs in the report)
-  Args:
-    - model_name: name of the model that generated the scores to be plotted
-    - model_dir: directory containing the models
-    OPTIONAL
-    - tasks: dictionary containing tasks whose score is going to be plotted and
-             the name to print on the plot
-    - plot_confusion_matrix: (default: True)
-    - from_epoch: plot scores starting from a certain episode (default: 0)
-    - to_epoch: plot scores starting until a certain episode (default: 0, plot all scores)
-    - epochs_skip: allows skipping n epochs every plotted point (if scores where saved
-                   every n epochs) (default: 0)
-    - save_to_file: save plots to file (default: False)
-    - xticks_step: used to print a "tick" on the graph x axis every n ticks 
-      (with a value of 5 we would have 0,5,10... on the x axis)
-    - combine_tasks: allows plotting scores for all tasks on the same plot (False)
-  '''
-
-  plt.close("all")
-
-  #1) Load scores
   scores_directory = os.path.join(model_dir,model_name)
-  scores_directory = os.path.join(model_dir,model_name)
-  if os.path.exists(os.path.join(scores_directory,"scores_on_train")):
-    scores_directory = os.path.join(scores_directory,"scores_on_train")
-  else:
+
+  if scores_subdir is not None:
+    scores_directory = os.path.join(scores_directory,scores_subdir)
+
+  if os.path.exists(os.path.join(scores_directory,"scores_on_test")) and not scores_on_train:
     scores_directory = os.path.join(scores_directory,"scores_on_test")
+  else:
+    scores_directory = os.path.join(scores_directory,"scores_on_train")
 
-
-  losses = {}
   scores = {}
   epochs_list = []
   
@@ -184,6 +173,46 @@ def plot_scores(model_name, model_dir, tasks={"audio_classification" : "Audio cl
                 if score_name not in scores[key].keys():
                   scores[key][score_name] = {}
                 scores[key][score_name][scores_entry["Epoch"]] = scores_entry[key][score_name]
+  
+  return scores, epochs_list
+
+###########
+#  PLOTS  #
+###########
+
+'''
+Utils to generate all plots and graphical renders needed for the presentation
+'''
+def plot_scores(model_name, model_dir, tasks={"audio_classification" : "Audio classification"},
+                metrics={"F1-macro":["f1"]},
+                from_epoch=0, to_epoch=0, epochs_skip=0, save_to_file=False,
+                xticks_step=0, combine_tasks=False, increase_epoch_labels_by_one=False, 
+                title_prefix=None, color = None, scores_on_train=False):
+  '''
+  Plots the requested performance metrics from the score history of the current model
+  (used to generate the graphs in the report)
+  Args:
+    - model_name: name of the model that generated the scores to be plotted
+    - model_dir: directory containing the models
+    OPTIONAL
+    - tasks: dictionary containing tasks whose score is going to be plotted and
+             the name to print on the plot
+    - from_epoch: plot scores starting from a certain episode (default: 0)
+    - to_epoch: plot scores starting until a certain episode (default: 0, plot all scores)
+    - epochs_skip: allows skipping n epochs every plotted point (if scores where saved
+                   every n epochs) (default: 0)
+    - save_to_file: save plots to file (default: False)
+    - xticks_step: used to print a "tick" on the graph x axis every n ticks 
+      (with a value of 5 we would have 0,5,10... on the x axis)
+    - combine_tasks: allows plotting scores for all tasks on the same plot (False)
+  '''
+
+  plt.close("all")
+
+  #1) Load scores
+  scores, epochs_list = load_scores(model_name, model_dir, 
+                                    from_epoch=from_epoch, to_epoch=to_epoch,
+                                    epochs_skip=0, scores_on_train=scores_on_train)
   
   #2) Plot requested scores
   plots = {}
@@ -249,77 +278,73 @@ def plot_scores(model_name, model_dir, tasks={"audio_classification" : "Audio cl
       path = os.path.join(plot_dir,model_name+" - "+k)+".png"
       plot.savefig(path)
   
+def plot_confusion_matrix(model_name, model_dir, tasks={"audio_classification" : "Audio classification"}, 
+                          save_to_file=False, title_prefix=None, scores_on_train=False):
+                          
+  for task_key, task_header in tasks.items():
+    assert task_key in scores.keys(), "Scores for task "+task_key+" not found"
+    try:
+      confusion_matrix = scores[task_key]["confusion matrix"]
+      current_plot = plt.figure(task_header+"_Confusion_matrix")
+      
+      #Normalize the confusion matrix to broaden color ranges
+      data = np.array(confusion_matrix)
+      max_val = max(map(max,confusion_matrix))
 
-  if plot_confusion_matrix:
-    for task_key, task_header in tasks.items():
-      assert task_key in scores.keys(), "Scores for task "+task_key+" not found"
-      try:
-        confusion_matrix = scores[task_key]["confusion matrix"]
-        current_plot = plt.figure(task_header+"_Confusion_matrix")
-        
-        #Normalize the confusion matrix to broaden color ranges
-        data = np.array(confusion_matrix)
-        max_val = max(map(max,confusion_matrix))
+      #the sklearn confusion matrix function uses labels in lexicographic order!
+      labels = sorted([key for key, _ in scores[task_key]["distribution"].items()])
 
-        #the sklearn confusion matrix function uses labels in lexicographic order!
-        labels = sorted([key for key, _ in scores[task_key]["distribution"].items()])
+      #use the max between the actual min of the confusion matrix and 1 to 
+      #avoid problems with the non linear scale
+      min_val = max(1,min(map(min,confusion_matrix)))
+      #then replace all zeros with this values
+      for i,row in enumerate(confusion_matrix):
+        for j,value in enumerate(row):
+          if value==0:
+            confusion_matrix[i][j] = min_val
 
-        #use the max between the actual min of the confusion matrix and 1 to 
-        #avoid problems with the non linear scale
-        min_val = max(1,min(map(min,confusion_matrix)))
-        #then replace all zeros with this values
-        for i,row in enumerate(confusion_matrix):
-          for j,value in enumerate(row):
-            if value==0:
-              confusion_matrix[i][j] = min_val
+              
 
-                
+      avg_val = sum(sum(confusion_matrix))/(len(confusion_matrix)*len(confusion_matrix[0]))
+      fig, axes = plt.subplots(figsize=(10,10))  
 
-        avg_val = sum(sum(confusion_matrix))/(len(confusion_matrix)*len(confusion_matrix[0]))
-        fig, axes = plt.subplots(figsize=(10,10))  
+      #seaborn.set(font_scale=2)
+      ax = seaborn.heatmap(confusion_matrix, 
+                      norm = LogNorm(vmin=min_val, vmax=max_val),
+                      cbar_kws={"shrink": 0.5, "ticks":[0,1,10,1e2,1e3,1e4,1e5]}, 
+                      annot=True, ax = axes, fmt='g'
+                      ) #annot=True to annotate cells, fmt='g' to avoid scientific notation
+      ax.figure.subplots_adjust(left=0.3, bottom=0.3)
 
-        #seaborn.set(font_scale=2)
-        ax = seaborn.heatmap(confusion_matrix, 
-                        norm = LogNorm(vmin=min_val, vmax=max_val),
-                        cbar_kws={"shrink": 0.5, "ticks":[0,1,10,1e2,1e3,1e4,1e5]}, 
-                        annot=True, ax = axes, fmt='g'
-                        ) #annot=True to annotate cells, fmt='g' to avoid scientific notation
-        ax.figure.subplots_adjust(left=0.3, bottom=0.3)
+      plt.xticks(rotation=90) 
+      plt.yticks(rotation=0) 
 
-        plt.xticks(rotation=90) 
-        plt.yticks(rotation=0) 
+      # labels, title and ticks
+      axes.set_xlabel('Predicted labels', size = 10)
+      axes.set_ylabel('True labels', size = 10) 
+      
+      if title_prefix is not None:
+          conf_matrix_title = title_prefix
+      else:
+          conf_matrix_title = model_name
+      axes.set_title(conf_matrix_title+"\nEpoch: "+str(best_epoch)+'\nConfusion Matrix') 
 
+      axes.xaxis.set_ticklabels(labels, size = 10)
+      axes.yaxis.set_ticklabels(labels, size = 10)
 
-        # labels, title and ticks
-        axes.set_xlabel('Predicted labels', size = 10)
-        axes.set_ylabel('True labels', size = 10) 
-        
-        if title_prefix is not None:
-            conf_matrix_title = title_prefix
-        else:
-            conf_matrix_title = model_name
-        axes.set_title(conf_matrix_title+"\nEpoch: "+str(best_epoch)+'\nConfusion Matrix') 
+      plots[task_header+"_Confusion_matrix"] = fig
 
-        axes.xaxis.set_ticklabels(labels, size = 10)
-        axes.yaxis.set_ticklabels(labels, size = 10)
-
-        plots[task_header+"_Confusion_matrix"] = fig
-        
-
-        #fig.show()
-        if save_to_file:
-          path = os.path.join(plot_dir,model_name+"_Confusion_matrix")+".png"
-          fig.savefig(path)
-        
-      except Exception as e:
-        print(e)
-        pass
-
-  plt.clf()
+      if save_to_file:
+        path = os.path.join(plot_dir,model_name+"_Confusion_matrix")+".png"
+        fig.savefig(path)
+      
+    except Exception as e:
+      print(e)
+      pass
 
 def plot_scores_from_multiple_dirs(
                 model_name, model_dir, score_dirs, tasks=None,
-                metrics={"F1-macro":["f1"]}, plot_confusion_matrix=True, 
+                metrics={"F1-macro":["f1"]},
                 from_epoch=0, to_epoch=0, epochs_skip=0, save_to_file=False,
                 xticks_step=0, combine_tasks=False, increase_epoch_labels_by_one=False, 
                 title_prefix=None, colors = None, switch_labels = False):
@@ -332,7 +357,6 @@ def plot_scores_from_multiple_dirs(
     OPTIONAL
     - tasks: dictionary containing tasks whose score is going to be plotted and
              the name to print on the plot
-    - plot_confusion_matrix: (default: True)
     - from_epoch: plot scores starting from a certain episode (default: 0)
     - to_epoch: plot scores starting until a certain episode (default: 0, plot all scores)
     - epochs_skip: allows skipping n epochs every plotted point (if scores where saved
@@ -347,7 +371,6 @@ def plot_scores_from_multiple_dirs(
 
   #1) Load scores
 
-  losses = {}
   all_scores = {}
   epochs_list = []
   
@@ -355,47 +378,9 @@ def plot_scores_from_multiple_dirs(
   best_f1 = 0
   
   for scores_header, scores_subdir in score_dirs.items():
-    scores = {}
-    scores_directory = os.path.join(model_dir, model_name, scores_subdir)
-    for filename in natsorted(os.listdir(scores_directory)):
-      #read files in alphabetical order
-      if not os.path.isfile(os.path.join(scores_directory,filename)):
-        continue
-      elif filename.endswith(".scores"):
-        scores_path = os.path.join(scores_directory, filename)
-        with open(scores_path, "rb") as f:
-          scores_entry = dill.load(f)
-  
-          if scores_entry["Epoch"] < from_epoch:
-            continue
-          elif to_epoch>0 and scores_entry["Epoch"] > to_epoch:
-            break
-          else:
-            if epochs_skip>0 and (scores_entry["Epoch"]-from_epoch)%epochs_skip!=0:
-              continue
-          epochs_list.append(scores_entry["Epoch"])
-          for key, value in scores_entry.items():
-            if key=="Epoch": continue
-            else:
-              if key not in scores.keys():
-                scores[key] = {}
-              if scores_entry[key] is None: continue
-              for score_name, score_value in scores_entry[key].items():
-                if score_name=="confusion matrix":
-                    if scores_entry[key]["f1"] > best_f1:
-                      best_epoch = scores_entry["Epoch"]
-                      best_f1 = scores_entry[key]["f1"]
-                      scores[key]["confusion matrix"] = score_value
-                elif score_name=="distribution":
-                    if scores_entry[key]["f1"] > best_f1:
-                      best_epoch = scores_entry["Epoch"]
-                      best_f1 = scores_entry[key]["f1"]
-                      scores[key]["confusion matrix"] = score_value
-                else:
-                  if score_name not in scores[key].keys():
-                    scores[key][score_name] = {}
-                  scores[key][score_name][scores_entry["Epoch"]] = scores_entry[key][score_name]
-    all_scores[scores_header] = scores
+    all_scores[scores_header], epochs_list = load_scores(model_name, model_dir, 
+                                        from_epoch=from_epoch, to_epoch=to_epoch,
+                                        epochs_skip=0, scores_subdir=scores_subdir)
 
   #2) Plot requested scores
   plots = {}
@@ -467,12 +452,11 @@ def plot_scores_from_multiple_dirs(
   
   plt.clf()
     
-
 def comparative_plots(model_names, model_dir, 
                       tasks={"audio_classification" : "Audio classification"},
                       metrics={"F1-macro":["f1"]}, 
                       from_epoch=0, to_epoch=0, epochs_skip=0, save_to_file=False,
-                      xticks_step=0, increase_epoch_labels_by_one=False,
+                      xticks_step=0, increase_epoch_labels_by_one=False, scores_on_train=False,
                       title_prefix=None
                       ):
   '''
@@ -503,14 +487,14 @@ def comparative_plots(model_names, model_dir,
   #for the model with most epochs (the one that has been trained longest)
   epochs_list = []
 
+  #1) Load scores
   for model_name, model_header in model_names.items():
     scores_directory = os.path.join(model_dir,model_name)
-    if os.path.exists(os.path.join(scores_directory,"scores_on_train")):
-      scores_directory = os.path.join(scores_directory,"scores_on_train")
-    else:
+    scores_directory = os.path.join(model_dir,model_name)
+    if os.path.exists(os.path.join(scores_directory,"scores_on_test")) and not scores_on_train:
       scores_directory = os.path.join(scores_directory,"scores_on_test")
-
-    scores[model_name] = {}
+    else:
+      scores_directory = os.path.join(scores_directory,"scores_on_train")
 
     #read files in alphabetical order
     for filename in natsorted(os.listdir(scores_directory)):

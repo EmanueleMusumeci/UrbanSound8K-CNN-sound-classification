@@ -17,8 +17,16 @@ preprocessing_name = None
 #preprocessing_name = "PitchShift"
 
 
+CUSTOM_MODEL = False
+
 INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base")
 
+<<<<<<< HEAD
+if CUSTOM_MODEL:
+    INSTANCE_NAME+="_custom"
+
+=======
+>>>>>>> 9d8b71c15582fcb4944ba3168b7ec18b0f22f437
 BATCH_SIZE = 128
 
 USE_CNN = True
