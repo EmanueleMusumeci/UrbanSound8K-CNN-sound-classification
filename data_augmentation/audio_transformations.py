@@ -1,28 +1,18 @@
+import os
+import random
+import copy
+
+import math
+
 import librosa
 import soundfile as sf
-import os
-import os.path
-import random
+
 import numpy as np
 
-try:
-    from utils.audio_utils import play_sound, load_audio_file
-    from utils.timing import code_timer
-except:
-    pass
+from utils.audio_utils import play_sound, load_audio_file
+from utils.timing import code_timer
 
-def write_audio_file(file, data, sample_rate):
-        #librosa.output.write_wav(file, data, sample_rate)
-        sf.write(file, data,sample_rate)
-
-def load_file(name_file):
-    y, sr = librosa.load(name_file)
-    return y, sr
-
-def pitch_shifting(y,sr,steps):
-    y_changed = librosa.effects.pitch_shift(y, sr, n_steps=tone_step)
-    return y_changed
-
+import muda
 
 class PitchShift(object):
     def __init__(self, values, debug_time = False):
@@ -30,15 +20,15 @@ class PitchShift(object):
         self.values = values
         self.debug_time = debug_time
         self.name = "PitchShift"
-        #print("Instance of PitchShift created")
-    def __call__(self, y, sr=22050, value = None):
+        
+    def __call__(self, clip, sr=22050, value = None):
         
         if value is None:
             #with code_timer("PitchShift np.random.choice", debug=self.debug_time):
             value = np.random.choice(self.values)
         #with code_timer("PitchShift librosa", debug=self.debug_time):
-        y_changed = librosa.effects.pitch_shift(y, sr, n_steps=value)
-        return y_changed
+        preprocessed_clip = librosa.effects.pitch_shift(clip, sr, n_steps=value)
+        return preprocessed_clip
     
     def get_value_labels(self):
         labels = []
@@ -52,14 +42,14 @@ class TimeStretch(object):
         self.values = values
         self.debug_time = debug_time
         self.name = "TimeStretch"
-        #print("Instance of TimeStretch created")
-    def __call__(self, y, value = None):
+
+    def __call__(self, clip, value = None):
         if value is None:
             #with code_timer("TimeStretch np.random.choice", debug=self.debug_time):
             value = np.random.choice(self.values)
         #with code_timer("TimeStretch librosa", debug=self.debug_time):
-        y_changed = librosa.effects.time_stretch(y, value)
-        return y_changed
+        preprocessed_clip = librosa.effects.time_stretch(y, value)
+        return preprocessed_clip
 
 
 #DONT delete this
@@ -98,46 +88,97 @@ Parameterizations from icecast: see https://icecast.imux.net/viewtopic.php?t=346
 
 
 """
-class DynamicRangeCompression(object):
-    def __init__(self,sound_file,min_dB,max_dB):
-        self.sound_file = sound_file
-        self.min_dB = min_dB
-        self.max_dB = max_dB
+class MUDADynamicRangeCompression(object):
+    def __init__(self, sample_rate = 22050):
+        self.values = list(muda.deformers.PRESETS.keys())
+
+        self.sample_rate = sample_rate
+        '''
+        assert isinstance(presets, dict) or isinstance(presets, str), "presets should be a dictionary or a directory to a JSON dictionary containing Dolby Digital DRC presets"
+        if isinstance(presets, dict):
+            self.presets = presets
+        elif isinstance(presets, str):
+            with open(presets, "r") as f:
+                self.presets = json.load(f)
+        '''
+        
         self.name = "DynamicRangeCompression"
     
-    def __call__(self):
-        #librosa.load return a time series representing amplitude not in db
-        y1_db = librosa.amplitude_to_db(self.sound_file)
-        #clip is done on decibel, but then must be translated back to amplitude
-        t1_db = np.clip(y1_db, a_min = self.min_dB, a_max=self.max_dB)
-        #back to amplitude
-        t1 = librosa.db_to_amplitude(t1_db)
+    def get_value_labels(self):
+        return copy.deepcopy(self.values)
 
-        return t1
+    def __call__(self, sound, value = None, sample_rate = 22050, debug = False):
+        if value is None:
+            value = self.values[np.random.randint(low = 0, high = len(self.values))]
+        
+        if debug: print("Chosen preset: "+value)
+
+        preprocessed_clip = muda.deformers.sox.drc(sound, self.sample_rate, value)
+        
+        return preprocessed_clip
 
 class BackgroundNoise(object):
-    def __init__(self, sound_file, loaded_audio_files):
-        self.sound_file = sound_file
-        self.loaded_audio_files = loaded_audio_files
+    def __init__(self, background_files, files_dir):
+        
+        self.background_clips = {}
+        self.values = []
+        
+        print("Loading background noise clips...")
+        #Load background files
+        for background_file_id, background_file_name in background_files.items():
+            background_file_dir = os.path.join(files_dir, background_file_name)
+            assert os.path.exists(background_file_dir), "Specified background file {} does not exist".format(background_file_dir)
+            self.background_clips[background_file_id], _ = load_audio_file(background_file_dir)
+            self.values.append(background_file_id)
+
         self.name = "BackgroundNoise"
+        print("Clips loaded")
     
-    def __call__(self, index_file, weight = None, debug = False):
-        #files : lista di Stringhe con i path dei noises
-        #index : indice del noise scelto
+    def get_value_labels(self):
+        return copy.deepcopy(self.values)
+
+    def __call__(self, sound, value = None, debug = False, play = False, weight = None):
+        if value is None:
+            value = self.values[np.random.randint(low = 0, high = len(self.values))]
+
+        #Choose random overlaying weight in range [0.1, 0.5] distributed uniformly
         if weight is not None:
-            assert weight <= 1.0 and weight >= 0.0
+            assert weight >= 0.1 and weight <= 0.5, "Weight should be in range [0, 1]"
         else:
-            weight = random.uniform(0.0, 0.5)
-            if debug: print("--- weight random: ",weight)
-        if debug: print("NOISE : ",self.loaded_audio_files[index_file])
-        y1, sample_rate1 = load_audio_file(self.sound_file)
-        y2, sample_rate2 = self.loaded_audio_files[index_file]
-        y3 = ((1-weight)*y1 + weight*y2)/2
-        sr=int((sample_rate1+sample_rate2)/2)
+            weight = np.random.uniform(low = 0.1, high = 0.5)
 
-        if debug: play_sound(y3)
-        return y3
+        if debug: print("background_file_id", value)
 
+        #Load background clip
+        bg_noise = self.background_clips[value]
+        
+        #Even out clip and background clip lengths
+        if len(bg_noise)>len(sound):
+            #If clip is shorter than bg_noise, choose random clip from bg_noise of the same length
+            clip_length = len(sound)
+            bg_noise_begin = np.random.randint(0, high=len(bg_noise)-clip_length)
+            bg_noise_end = bg_noise_begin + clip_length
+            bg_noise = bg_noise[bg_noise_begin: bg_noise_end]
+        elif len(bg_noise)<len(sound):
+            #If clip is longer than bg_noise, repeat bg_noise to match clip length
+            n_repeats = math.floor(len(sound) / len(bg_noise))
+            remaining = len(sound) - len(bg_noise) * n_repeats
+            bg_noise = np.repeat(bg_noise, n_repeats)
+            bg_noise = np.concatenate(bg_noise, bg_noise[:remaining])
+
+        #Overlay the two clips
+        preprocessed_clip = ((1-weight)*sound + weight*bg_noise)/2
+
+        #sr=int((sample_rate1+sample_rate2)/2)
+
+        if play:
+            print("Playing original clip")
+            play_sound(sound)
+            print("Playing background noise")
+            play_sound(preprocessed_clip)
+            print("Playing preprocessed clip")
+
+        return preprocessed_clip
 
 if __name__ == "__main__":
 
@@ -149,18 +190,6 @@ if __name__ == "__main__":
 
     from os import listdir
     from os.path import isfile, join
-
-    def play_sound(sound, sr = 22050, blocking=True):
-        sd.play(sound, sr, blocking=True)
-
-        
-    def load_audio_file(path, duration = 4000, sample_rate = 22050, fixed_length = 88200):
-        data, sample_rate = librosa.load(path, sr=sample_rate, mono=True,  dtype=np.float32)
-        if len(data)>fixed_length:
-            data = data[:fixed_length]
-        else:
-            data = np.concatenate((data, np.zeros(int(fixed_length - len(data)))))
-        return data, sample_rate
     
     base_dir = os.path.dirname(os.path.realpath(__file__))
     DATASET_DIR = os.path.join(base_dir,"data")
@@ -201,7 +230,7 @@ if __name__ == "__main__":
     audio_with_time_stretching = time_stretching(y1)
     print("-------- TimeStretching:")
     play_sound(audio_with_time_stretching)
-    
+    """
     ############################################################################################## test BackGroundNoise
 
     noise_file = noise_file.replace("data_augmentation\\","")
@@ -226,12 +255,12 @@ if __name__ == "__main__":
     
     print("-------- BackGroundNoise:")
 
-    bn = BackgroundNoise(sound_file,loaded_audio_files)
+    bn = BackgroundNoise(sound_file=sound_file,loaded_audio_files=new_only_files,index_file=2)
 
-    background_noise = bn(2,0.5)
+    background_noise = bn(0.5)
     play_sound(background_noise)
     print(background_noise)
-    
+    """
     ############################################################################################## test DRC
 
     
@@ -271,21 +300,6 @@ if __name__ == "__main__":
 
     y_out = drc(y1,sample_rate1,'film standard')
     """
-    from muda.deformers.sox import drc
-    from utils.plot_utils import plot_periodogram
-
-    #from https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.periodogram.html
-    def plot_periodogram(sound, sound_file_name = None, sound_class=None, show = False, sr=22050, title=None):
-        f, Pxx_den = signal.periodogram(sound, sr)
-        plot = plt.figure()
-        plt.semilogy(f, Pxx_den)
-        plt.ylim([1e-7, 1e2])
-        plt.xlabel('Frequency [Hz]')
-        plt.ylabel('Magnitude (norm)')
-
-        if show:
-            plt.show()
-        return plot
 
     y_out = drc(y1,sample_rate1,'film standard')
     print("------- film standard")

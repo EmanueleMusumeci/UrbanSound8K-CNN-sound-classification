@@ -15,14 +15,18 @@ from utils.audio_utils import *
 
 preprocessing_name = None
 #preprocessing_name = "PitchShift"
+preprocessing_name = "TimeStretch"
+#preprocessing_name = "MUDADynamicRangeCompression"
 
 
 CUSTOM_MODEL = False
 
 INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base")
- 
+
 if CUSTOM_MODEL:
     INSTANCE_NAME+="_custom"
+
+PREVENT_OVERWRITE = True
 
 BATCH_SIZE = 128
 
@@ -30,7 +34,6 @@ USE_CNN = True
 
 
 APPLY_IMAGE_AUGMENTATIONS = False
-#APPLY_AUDIO_AUGMENTATIONS = True
 CLIP_SECONDS = 3
 SPECTROGRAM_HOP_LENGTH = 512
 SAMPLE_RATE = 22050
@@ -56,9 +59,8 @@ DATASET_PERCENTAGE = 1.0
 
 MODEL_DIR = os.path.join(base_dir,"model")
 
-
-assert not os.path.exists(os.path.join(MODEL_DIR,INSTANCE_NAME)), "ATTENTION! The folder {} already exists: rename it or remove it".format(os.path.join(MODEL_DIR,INSTANCE_NAME))
-
+if PREVENT_OVERWRITE:
+    assert not os.path.exists(os.path.join(MODEL_DIR,INSTANCE_NAME)), "ATTENTION! The folder {} already exists: rename it or remove it".format(os.path.join(MODEL_DIR,INSTANCE_NAME))
 
 selected_classes = [0,1,2,3,4,5,6,7,8,9]
 
@@ -85,18 +87,11 @@ else:
     random_side_shift_transformation = None
     background_noise_transformation = None
 
-#Audio augmentations
-#if APPLY_AUDIO_AUGMENTATIONS:
-#    random_pitch_shift = PitchShift([-3.5, -2.5, 2.5, 3.5], debug_time=DEBUG_TIMING)
-#    random_time_stretch = TimeStretch([0.81, 0.93, 1.07, 1.23], debug_time=DEBUG_TIMING)
-#else:
-#    random_pitch_shift = None
-#    random_time_stretch = None
-
 
 train_fold_list = [1]
-train_fold_list = [1,2,3,4,5,6,7,8,9]
-test_fold_list = [10]
+#train_fold_list = [1,2,3,4,5,6,7,8,9]
+test_fold_list = [1]
+#test_fold_list = [10]
 
 if preprocessing_name is not None:
     train_audio_meta, train_audio_clips, train_audio_spectrograms = load_preprocessed_compacted_dataset(DATASET_DIR, preprocessing_name, folds = train_fold_list, only_spectrograms=True)
@@ -119,8 +114,7 @@ train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,
                             use_spectrograms = USE_CNN, 
                             image_shift_transformation = right_shift_transformation, 
                             image_background_noise_transformation = background_noise_transformation, 
-                            #time_stretch_transformation = random_time_stretch,
-                            #pitch_shift_transformation = random_pitch_shift, 
+
                             spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
                             spectrogram_bands = spectrogram_bands, 
                             compute_deltas=COMPUTE_DELTAS, 

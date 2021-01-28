@@ -162,7 +162,6 @@ class DataLoader():
           except Exception as e:
               print("Exception during conversion to numpy arrays, raised by field ",field," with value ",value)
               for i,el in enumerate(value):
-                print(current_batch["image_name"][i])
                 print(el.shape)
               raise e
 
