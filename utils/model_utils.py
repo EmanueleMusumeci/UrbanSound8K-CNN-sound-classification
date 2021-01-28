@@ -3,6 +3,7 @@ import os
 import torch
 import dill
 
+
 def save_model_summary(model, name, input_shape, input_channels=3, save_to_dir="models", torchsummary=False):
     if torchsummary:
         smr = summary(model, input_size=(input_channels, input_shape[0], input_shape[1]))
