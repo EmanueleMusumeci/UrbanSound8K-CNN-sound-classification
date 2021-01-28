@@ -2,4 +2,3 @@ data/*
 model/*
 test/*
 PyTorchVisualizations/*
-nn/PyTorchVisualizations/*

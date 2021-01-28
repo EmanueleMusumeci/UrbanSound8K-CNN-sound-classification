@@ -18,25 +18,22 @@ if __name__ == "__main__":
 
         from tqdm import tqdm
 
-        #from PIL import Image
         from utils.plot_utils import *
-        #from Utils import *
-        #from CustomTrainer import *
-        #from Custom_CNN import *
-        #from Pretrained_CNN import *
 
         model_dir = "model"
 
         plot_color = "blue"
         
-        SINGLE_PLOTS = True
+        SINGLE_PLOTS = False
         SINGLE_TRAIN_TEST_PLOTS = False
+        CONFUSION_MATRIX = True
         COMPARATIVE_PLOTS = False
-        GRADIENT_FLOW = False
+        GRADIENT_FLOW = True
         BEST_SCORES = False
         IMAGE_PREPROCESSING = False
         SALIENCY_MAPS = False
         DIR = "PitchShift"
+
         ################
         # SINGLE PLOTS #
         ################
@@ -44,8 +41,7 @@ if __name__ == "__main__":
                 #Change the xticks_step to avoid the overlapping of labels on the x axis of graphs
                 #Change the from/to_epoch and the epochs_skip to decide which score files are read
                 #Use the combine tasks flag to plot a comparative plot of the same metric for all tasks
-                plot_scores("Base",
-                                model_dir, plot_confusion_matrix=True, 
+                plot_scores("Base", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                 from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
@@ -54,8 +50,7 @@ if __name__ == "__main__":
                                 color = plot_color
                                 )
 
-                plot_scores("PitchShift",
-                                model_dir, plot_confusion_matrix=True, 
+                plot_scores("PitchShift", model_dir,
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                 from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
@@ -78,47 +73,57 @@ if __name__ == "__main__":
                                 "Train" : "orange"
                         }
 
-                plot_scores_from_multiple_dirs(
-                        "Base", 
-                        model_dir, scores_dirs, 
-                        plot_confusion_matrix=True, 
-                        tasks={"audio_classification":"Audio classification"},
-                        metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
-                        from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
-                        xticks_step=1, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                        title_prefix = "Base",
-                        colors = colors
-                        )
+                plot_scores_from_multiple_dirs("Base", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
+                                                xticks_step=1, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Base",
+                                                colors = colors
+                                                )
 
-                plot_scores_from_multiple_dirs(
-                        "PitchShift", 
-                        model_dir, scores_dirs, 
-                        plot_confusion_matrix=True, 
-                        tasks={"audio_classification":"Audio classification"},
-                        metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
-                        from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
-                        xticks_step=1, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                        title_prefix = "PitchShift",
-                        colors = colors
-                        )
-        
+                plot_scores_from_multiple_dirs("PitchShift", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=3, epochs_skip=0, save_to_file=True,
+                                                xticks_step=1, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "PitchShift",
+                                                colors = colors
+                                                )
+
+        ####################
+        # CONFUSION MATRIX #
+        ####################
+        if CONFUSION_MATRIX:
+                plot_confusion_matrix("Base", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                        save_to_file=True, 
+                                        title_prefix = "Base",
+                                        scores_on_train=False
+                                        )
+
+                plot_confusion_matrix("PitchShift", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                        save_to_file=True, 
+                                        title_prefix = "PitchShift",
+                                        scores_on_train=False
+                                        )
 
         #####################
         # Comparative plots #
         #####################
         if COMPARATIVE_PLOTS:
                 model_names = {
-                        "Custom model - No augmentation" : "Base",
-                        "Custom model - PitchShift" : "PitchShift",
-                }
-                comparative_plots(model_names, 
-                        model_dir,
-                        tasks={"image_classification":"Image classification"},
-                        metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
-                        from_epoch=0, to_epoch=39, epochs_skip=0, save_to_file=True,
-                        xticks_step=3, increase_epoch_labels_by_one=True,
-                        title_prefix = "Custom model"
-                        )  
+                        "Base" : "Custom model - No augmentation", 
+                        "PitchShift" : "Custom model - PitchShift",
+                        }
+                comparative_plots(model_names, model_dir,
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=39, epochs_skip=0, save_to_file=True,
+                                xticks_step=3, increase_epoch_labels_by_one=True,
+                                title_prefix = "Custom model"
+                                )  
         
 
         #################
@@ -127,7 +132,7 @@ if __name__ == "__main__":
         if GRADIENT_FLOW:
                 cropX = (0,250)
                 cropY = (10,432)
-                create_gradient_flow_gif("Custom classifier 16 layers - Normal", model_dir, cropX=cropX, cropY=cropY)
+                create_gradient_flow_gif("Base", model_dir, cropX=cropX, cropY=cropY)
 
         ################
         # BEST  SCORES #

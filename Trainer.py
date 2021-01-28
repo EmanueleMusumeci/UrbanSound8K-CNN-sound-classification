@@ -260,7 +260,7 @@ class Trainer:
             #progress_bar.close()
             
         audio_classification_results = evaluate_class_prediction(all_class_labels, all_class_predictions)
-        audio_classification_table = print_table('Image classification', audio_classification_results, fields=["accuracy", "precision", "recall", "f1"])
+        audio_classification_table = print_table('Audio classification', audio_classification_results, fields=["accuracy", "precision", "recall", "f1"])
         audio_classification_distribution = print_distribution(audio_classification_results)
         if print_scores: print(audio_classification_table)
         #if print_scores: print_confusion_matrix(audio_classification_results)
@@ -490,36 +490,6 @@ class Trainer:
                 gradient_stats[layer_name]["max_grads"] = layer_parameters.grad.abs().max().cpu().detach().numpy()
                 gradient_stats[layer_name]["min_grads"] = layer_parameters.grad.abs().min().cpu().detach().numpy()
         return gradient_stats
-
-    #Taken from https://discuss.pytorch.org/t/check-gradient-flow-in-network/15063/8
-    @classmethod
-    def plot_grad_flow(gradient_magnitudes, show=False, save_to_dir=None):
-
-        layers = [layer_name for layer_name, _ in gradient_magnitudes.items()]
-        max_grads = [entry["max_grad"] for layer_name, entry in gradient_magnitudes.items()]
-        #min_grads = [entry["min_grad"] for layer_name, entry in gradient_magnitudes.items()]
-        avg_grads = [entry["avg_grad"] for layer_name, entry in gradient_magnitudes.items()]
-
-        plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
-        plt.bar(np.arange(len(max_grads)), avg_grads, alpha=0.1, lw=1, color="b")
-        plt.hlines(0, 0, len(avg_grads)+1, lw=2, color="k" )
-        plt.xticks(range(0,len(avg_grads), 1), layers, rotation="vertical")
-        plt.xlim(left=0, right=len(avg_grads))
-        plt.ylim(bottom = -0.001, top=0.02) # zoom in on the lower gradient regions
-        plt.xlabel("Layers")
-        plt.ylabel("Gradient magnitude")
-        plt.title("Gradient flow")
-        plt.grid(True)
-        plt.legend([matplotlib.lines.Line2D([0], [0], color="c", lw=4),
-                    matplotlib.lines.Line2D([0], [0], color="b", lw=4),
-                    matplotlib.lines.Line2D([0], [0], color="k", lw=4)], ['Max. gradient', 'Avg. gradient', 'Zero gradient'])
-        
-        if show:
-            plt.show()
-
-        if save_to_dir is not None:
-            path = os.path.join(save_to_dir,"Gradient flow - Epoch "+str(self.last_epoch))+".png"
-            plt.savefig(path)
 
 class ResultsWriterThread(threading.Thread):
     '''Creates a small "preview" of the scores for a certain epoch

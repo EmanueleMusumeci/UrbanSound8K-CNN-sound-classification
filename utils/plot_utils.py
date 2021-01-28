@@ -70,8 +70,6 @@ def plot_sound_spectrogram(sound, sound_class=None, show = False, log_scale = Fa
     
     if show:
         plt.show()
-        
-    return plot
 
 #from https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.periodogram.html
 def plot_periodogram(sound, sound_file_name = None, sound_class=None, show = False, sr=22050, plot_title=None,
@@ -95,19 +93,20 @@ def plot_periodogram(sound, sound_file_name = None, sound_class=None, show = Fal
       path = os.path.join(save_to_dir," - "+plot_title)+".png"
       plot.savefig(path)
 
-    return plot
-
-def load_scores(model_name, model_dir, from_epoch=0, to_epoch=0, epochs_skip=0, scores_subdir=None, scores_on_train=False):
+def load_scores(model_name, model_dir, 
+                from_epoch=0, to_epoch=0, epochs_skip=0, 
+                scores_subdir=None, 
+                scores_on_train=False):
 
   scores_directory = os.path.join(model_dir,model_name)
 
   if scores_subdir is not None:
     scores_directory = os.path.join(scores_directory,scores_subdir)
-
-  if os.path.exists(os.path.join(scores_directory,"scores_on_test")) and not scores_on_train:
-    scores_directory = os.path.join(scores_directory,"scores_on_test")
   else:
-    scores_directory = os.path.join(scores_directory,"scores_on_train")
+    if os.path.exists(os.path.join(scores_directory,"scores_on_test")) and not scores_on_train:
+      scores_directory = os.path.join(scores_directory,"scores_on_test")
+    else:
+      scores_directory = os.path.join(scores_directory,"scores_on_train")
 
   scores = {}
   epochs_list = []
@@ -154,12 +153,11 @@ def load_scores(model_name, model_dir, from_epoch=0, to_epoch=0, epochs_skip=0, 
                   scores[key][score_name] = {}
                 scores[key][score_name][scores_entry["Epoch"]] = scores_entry[key][score_name]
   
-  return scores, epochs_list
+  return scores, epochs_list, best_epoch
 
 ###########
 #  PLOTS  #
 ###########
-
 '''
 Utils to generate all plots and graphical renders needed for the presentation
 '''
@@ -190,7 +188,7 @@ def plot_scores(model_name, model_dir, tasks={"audio_classification" : "Audio cl
   plt.close("all")
 
   #1) Load scores
-  scores, epochs_list = load_scores(model_name, model_dir, 
+  scores, epochs_list, best_epoch = load_scores(model_name, model_dir, 
                                     from_epoch=from_epoch, to_epoch=to_epoch,
                                     epochs_skip=0, scores_on_train=scores_on_train)
   
@@ -258,70 +256,73 @@ def plot_scores(model_name, model_dir, tasks={"audio_classification" : "Audio cl
       path = os.path.join(plot_dir,model_name+" - "+k)+".png"
       plot.savefig(path)
   
-def plot_confusion_matrix(model_name, model_dir, tasks={"audio_classification" : "Audio classification"}, 
-                          save_to_file=False, title_prefix=None, scores_on_train=False):
-                          
+def plot_confusion_matrix(model_name, model_dir, 
+                          tasks={"audio_classification" : "Audio classification"}, 
+                          save_to_file=False, title_prefix=None, 
+                          scores_on_train=False):
+
+  scores, epoch_list, best_epoch = load_scores(model_name, model_dir, scores_on_train=scores_on_train)
+
+  plot_dir = os.path.join(model_dir,"plots","confusion_matrices")
+  if not os.path.exists(plot_dir):
+    os.makedirs(plot_dir)
+
   for task_key, task_header in tasks.items():
     assert task_key in scores.keys(), "Scores for task "+task_key+" not found"
-    try:
-      confusion_matrix = scores[task_key]["confusion matrix"]
-      current_plot = plt.figure(task_header+"_Confusion_matrix")
+    confusion_matrix = scores[task_key]["confusion matrix"]
+    current_plot = plt.figure(task_header+"_Confusion_matrix")
+    
+    #Normalize the confusion matrix to broaden color ranges
+    data = np.array(confusion_matrix)
+    max_val = max(map(max,confusion_matrix))
+
+    #the sklearn confusion matrix function uses labels in lexicographic order!
+    labels = sorted([key for key, _ in scores[task_key]["distribution"].items()])
+
+    #use the max between the actual min of the confusion matrix and 1 to 
+    #avoid problems with the non linear scale
+    min_val = max(1,min(map(min,confusion_matrix)))
+    #then replace all zeros with this values
+    for i,row in enumerate(confusion_matrix):
+      for j,value in enumerate(row):
+        if value==0:
+          confusion_matrix[i][j] = min_val
+
+    avg_val = sum(sum(confusion_matrix))/(len(confusion_matrix)*len(confusion_matrix[0]))
+    fig, axes = plt.subplots(figsize=(10,10))  
+
+    #seaborn.set(font_scale=2)
+    # TODO Michele Confusion matrix , discalie oblique (no orizzontali)
+    ax = seaborn.heatmap(confusion_matrix, 
+                    norm = LogNorm(vmin=min_val, vmax=max_val),
+                    cbar_kws={"shrink": 0.5, "ticks":[0,1,10,1e2,1e3,1e4,1e5]},#"orientation": "oblique"}, 
+                    annot=True, ax = axes, fmt='g',
+                    xticklabels=True
+                    ) #annot=True to annotate cells, fmt='g' to avoid scientific notation
+    ax.figure.subplots_adjust(left=0.3, bottom=0.3)
+
+    plt.xticks(rotation=90) 
+    plt.yticks(rotation=0) 
+    #heatmap.set_xticklabels(heatmap.get_xticklabels(), rotation=30) 
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=10) 
+
+    # labels, title and ticks
+    axes.set_xlabel('Predicted labels', size = 10)
+    axes.set_ylabel('True labels', size = 10) 
+    
+    if title_prefix is not None:
+        conf_matrix_title = title_prefix
+    else:
+        conf_matrix_title = model_name
+    axes.set_title(conf_matrix_title+"\nEpoch: "+str(best_epoch)+'\nConfusion Matrix') 
+
+    axes.xaxis.set_ticklabels(labels, size = 10)
+    axes.yaxis.set_ticklabels(labels, size = 10)
+
+    if save_to_file:
+      path = os.path.join(plot_dir,model_name+"_Confusion_matrix")+".png"
+      fig.savefig(path)
       
-      #Normalize the confusion matrix to broaden color ranges
-      data = np.array(confusion_matrix)
-      max_val = max(map(max,confusion_matrix))
-
-      #the sklearn confusion matrix function uses labels in lexicographic order!
-      labels = sorted([key for key, _ in scores[task_key]["distribution"].items()])
-
-      #use the max between the actual min of the confusion matrix and 1 to 
-      #avoid problems with the non linear scale
-      min_val = max(1,min(map(min,confusion_matrix)))
-      #then replace all zeros with this values
-      for i,row in enumerate(confusion_matrix):
-        for j,value in enumerate(row):
-          if value==0:
-            confusion_matrix[i][j] = min_val
-
-              
-
-      avg_val = sum(sum(confusion_matrix))/(len(confusion_matrix)*len(confusion_matrix[0]))
-      fig, axes = plt.subplots(figsize=(10,10))  
-
-      #seaborn.set(font_scale=2)
-      ax = seaborn.heatmap(confusion_matrix, 
-                      norm = LogNorm(vmin=min_val, vmax=max_val),
-                      cbar_kws={"shrink": 0.5, "ticks":[0,1,10,1e2,1e3,1e4,1e5]}, 
-                      annot=True, ax = axes, fmt='g'
-                      ) #annot=True to annotate cells, fmt='g' to avoid scientific notation
-      ax.figure.subplots_adjust(left=0.3, bottom=0.3)
-
-      plt.xticks(rotation=90) 
-      plt.yticks(rotation=0) 
-
-      # labels, title and ticks
-      axes.set_xlabel('Predicted labels', size = 10)
-      axes.set_ylabel('True labels', size = 10) 
-      
-      if title_prefix is not None:
-          conf_matrix_title = title_prefix
-      else:
-          conf_matrix_title = model_name
-      axes.set_title(conf_matrix_title+"\nEpoch: "+str(best_epoch)+'\nConfusion Matrix') 
-
-      axes.xaxis.set_ticklabels(labels, size = 10)
-      axes.yaxis.set_ticklabels(labels, size = 10)
-
-      plots[task_header+"_Confusion_matrix"] = fig
-
-      if save_to_file:
-        path = os.path.join(plot_dir,model_name+"_Confusion_matrix")+".png"
-        fig.savefig(path)
-      
-    except Exception as e:
-      print(e)
-      pass
-
 def plot_scores_from_multiple_dirs(
                 model_name, model_dir, score_dirs, tasks=None,
                 metrics={"F1-macro":["f1"]},
@@ -353,14 +354,13 @@ def plot_scores_from_multiple_dirs(
 
   all_scores = {}
   epochs_list = []
-  
-  best_epoch = 0 #Find best epoch based on f1 score
-  best_f1 = 0
-  
+    
   for scores_header, scores_subdir in score_dirs.items():
-    all_scores[scores_header], epochs_list = load_scores(model_name, model_dir, 
+    scores, epochs_list, _ = load_scores(model_name, model_dir, 
                                         from_epoch=from_epoch, to_epoch=to_epoch,
-                                        epochs_skip=0, scores_subdir=scores_subdir)
+                                        epochs_skip=epochs_skip,  scores_subdir=scores_subdir)
+
+    all_scores[scores_header] = scores
 
   #2) Plot requested scores
   plots = {}
@@ -461,7 +461,7 @@ def comparative_plots(model_names, model_dir,
   plt.close("all")
 
   #1) Load scores for each model
-  scores = {}
+  all_scores = {}
 
   #Epochs list is going to hold the available epochs in the interval [from_epoch, to_epoch]
   #for the model with most epochs (the one that has been trained longest)
@@ -469,50 +469,13 @@ def comparative_plots(model_names, model_dir,
 
   #1) Load scores
   for model_name, model_header in model_names.items():
-    scores_directory = os.path.join(model_dir,model_name)
-    scores_directory = os.path.join(model_dir,model_name)
-    if os.path.exists(os.path.join(scores_directory,"scores_on_test")) and not scores_on_train:
-      scores_directory = os.path.join(scores_directory,"scores_on_test")
-    else:
-      scores_directory = os.path.join(scores_directory,"scores_on_train")
-
-    #read files in alphabetical order
-    for filename in natsorted(os.listdir(scores_directory)):
-      if not os.path.isfile(os.path.join(scores_directory,filename)):
-        continue
-      elif filename.endswith(".scores"):
-        scores_path = os.path.join(scores_directory, filename)
-        with open(scores_path, "rb") as f:
-          scores_entry = dill.load(f)
-
-          if scores_entry["Epoch"] < from_epoch:
-            continue
-          elif to_epoch>0 and scores_entry["Epoch"] > to_epoch:
-            break
-          else:
-            if epochs_skip>0 and (scores_entry["Epoch"]-from_epoch)%epochs_skip!=0:
-              continue
-
-          if scores_entry["Epoch"] not in epochs_list:
-            epochs_list.append(scores_entry["Epoch"])
-          for key, value in scores_entry.items():
-            if key=="Epoch": continue
-            else:
-              if key not in scores[model_name].keys():
-                scores[model_name][key] = {}
-              if scores_entry[key] is None: continue
-              for score_name, score_value in scores_entry[key].items():
-                if score_name=="confusion matrix": continue
-                elif score_name=="distribution":
-                  continue
-                else:
-                  if score_name not in scores[model_name][key].keys():
-                    scores[model_name][key][score_name] = {}
-                  scores[model_name][key][score_name][scores_entry["Epoch"]] = scores_entry[key][score_name]
+    scores, epochs_list, _ = load_scores(model_name, model_dir, 
+                                          from_epoch=from_epoch, to_epoch=to_epoch,
+                                          epochs_skip=epochs_skip, scores_on_train=scores_on_train)
+    all_scores[model_name] = scores
 
   names = [model_header for _, model_header in model_names.items()]
   names = ", ".join(names)
-
 
   #2) Plot requested scores
   plots = {}
@@ -527,7 +490,7 @@ def comparative_plots(model_names, model_dir,
         title=title_prefix+"\n"+task_header+"\n"+plot_header
 
       plt.title(title)
-      for model_name, model_scores in scores.items():
+      for model_name, model_scores in all_scores.items():
 
         assert task_key in model_scores.keys(), "Scores for model "+model_names[model_name] + " for task "+task_key+" not found"
 
@@ -564,54 +527,11 @@ def comparative_plots(model_names, model_dir,
 
   plt.close(plot)
 
-def print_best_epoch_scores(model_name, model_dir, metrics, print_scores=True):
+def get_best_epoch_scores(model_name, model_dir, metrics, print_scores=True):
     
     #1) Load scores
-    scores_directory = os.path.join(model_dir,model_name)
-    scores_directory = os.path.join(model_dir,model_name)
-    if os.path.exists(os.path.join(scores_directory,"scores_on_train")):
-      scores_directory = os.path.join(scores_directory,"scores_on_train")
-    else:
-      scores_directory = os.path.join(scores_directory,"scores_on_test")
 
-
-    losses = {}
-    scores = {}
-    epochs_list = []
-        
-    best_f1 = 0
-    best_epoch = 0
-
-  #read files in alphabetical order
-    for filename in natsorted(os.listdir(scores_directory)):
-        if not os.path.isfile(os.path.join(scores_directory,filename)):
-          continue
-        elif filename.endswith(".scores"):
-          scores_path = os.path.join(scores_directory, filename)
-          with open(scores_path, "rb") as f:
-            scores_entry = dill.load(f)
-            epochs_list.append(scores_entry["Epoch"])
-            for key, value in scores_entry.items():
-              if key=="Epoch": continue
-              else:
-                if key not in scores.keys():
-                  scores[key] = {}
-                if scores_entry[key] is None: continue
-                for score_name, score_value in scores_entry[key].items():
-                  if score_name=="confusion matrix":
-                      if scores_entry[key]["f1"] >= best_f1:
-                        best_epoch = scores_entry["Epoch"]
-                        best_f1 = scores_entry[key]["f1"]
-                        scores[key]["confusion matrix"] = score_value
-                  elif score_name=="distribution":
-                      if scores_entry[key]["f1"] >= best_f1:
-                        best_epoch = scores_entry["Epoch"]
-                        best_f1 = scores_entry[key]["f1"]
-                        scores[key]["distribution"] = score_value
-                  else:
-                    if score_name not in scores[key].keys():
-                      scores[key][score_name] = {}
-                    scores[key][score_name][scores_entry["Epoch"]] = scores_entry[key][score_name]
+    scores, epochs_list, best_epoch = load_scores(model_name, model_dir)
 
     best_scores = {}
     best_scores_str = "-"*40 + "\n" + model_name + "\n" + "-"*40 + "\n"
@@ -631,22 +551,51 @@ def print_best_epoch_scores(model_name, model_dir, metrics, print_scores=True):
       print(best_scores_str)
     return best_scores, best_scores_str
 
+#Taken from https://discuss.pytorch.org/t/check-gradient-flow-in-network/15063/8
+def plot_grad_flow(gradient_magnitudes, show=False, save_to_dir=None):
 
-def create_gradient_flow_gif(model_name, model_dir, cropX = None, cropY = None):
-    filenames = []
-    for filename in natsorted(os.listdir(os.path.join(model_dir,model_name))):
-        if filename.startswith("Gradient flow"):
-            filenames.append(os.path.join(model_dir,model_name, filename))
+    layers = [layer_name for layer_name, _ in gradient_magnitudes.items()]
+    max_grads = [entry["max_grads"] for layer_name, entry in gradient_magnitudes.items()]
+    #min_grads = [entry["min_grad"] for layer_name, entry in gradient_magnitudes.items()]
+    avg_grads = [entry["avg_grads"] for layer_name, entry in gradient_magnitudes.items()]
 
-    images = []
-    for filename in filenames:
-        image = imageio.imread(filename)
-        if cropX is not None:
-          image = image[cropX[0]:cropX[1],:,:]
-        if cropY is not None:
-          image = image[:,cropY[0]:cropY[1],:]
-        images.append(image)
-    imageio.mimsave(os.path.join(model_dir, "plots",model_name+"_Gradient_flow.gif"), images)
+    plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
+    plt.bar(np.arange(len(max_grads)), avg_grads, alpha=0.1, lw=1, color="b")
+    plt.hlines(0, 0, len(avg_grads)+1, lw=2, color="k" )
+    plt.xticks(range(0,len(avg_grads), 1), layers, rotation="vertical")
+    plt.xlim(left=0, right=len(avg_grads))
+    plt.ylim(bottom = -0.001, top=0.02) # zoom in on the lower gradient regions
+    plt.xlabel("Layers")
+    plt.ylabel("Gradient magnitude")
+    plt.title("Gradient flow")
+    plt.grid(True)
+    plt.legend([matplotlib.lines.Line2D([0], [0], color="c", lw=4),
+                matplotlib.lines.Line2D([0], [0], color="b", lw=4),
+                matplotlib.lines.Line2D([0], [0], color="k", lw=4)], ['Max. gradient', 'Avg. gradient', 'Zero gradient'])
+    
+    if show:
+        plt.show()
+
+    if save_to_dir is not None:
+        path = os.path.join(save_to_dir,"Gradient flow - Epoch "+str(self.last_epoch))+".png"
+        plt.savefig(path)
+
+def create_gradient_flow_gif(model_name, model_dir, 
+                              tasks={"audio_classification" : "Audio classification"},
+                              cropX = None, cropY = None):
+
+  scores, epochs_list, best_epoch = load_scores(model_name, model_dir)
+
+  for task_name, task_header in tasks.items():
+    gradient_images = []
+    for epoch in epochs_list:
+      image = plot_grad_flow(scores[task_name]["gradient_stats"][epoch], show=True)
+      if cropX is not None:
+        image = image[cropX[0]:cropX[1],:,:]
+      if cropY is not None:
+        image = image[:,cropY[0]:cropY[1],:]
+      gradient_images.append(image)
+    imageio.mimsave(os.path.join(model_dir, "plots",model_name+"_Gradient_flow.gif"), gradient_images)
 
 def show_preprocessing(transformations, image, title_prefix="", progressive=True, save_to_dir=None):
     images = {}
