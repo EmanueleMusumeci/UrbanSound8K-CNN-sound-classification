@@ -23,14 +23,14 @@ if __name__=="__main__":
     
     audio_augmentations = [
                            #PitchShift(values = [-2, -1, 1, 2]), \
-                           PitchShift(values = [-3.5, -2.5, 2.5, 3.5]),
-                           MUDADynamicRangeCompression(),
-                           BackgroundNoise({
-                               "street_scene_1" : "150993__saphe__street-scene-1.wav",
-                               "street_scene_3" : "173955__saphe__street-scene-3.wav",
-                               "street_valencia" : "207208__jormarp__high-street-of-gandia-valencia-spain.wav",
-                               "city_park_tel_aviv" : "268903__yonts__city-park-tel-aviv-israel.wav",
-                           }, files_dir = os.path.join(DATASET_DIR, "UrbanSound8K-JAMS", "background_noise")),
+                           #PitchShift(values = [-3.5, -2.5, 2.5, 3.5]),
+                           #MUDADynamicRangeCompression(),
+                           #BackgroundNoise({
+                           #    "street_scene_1" : "150993__saphe__street-scene-1.wav",
+                           #    "street_scene_3" : "173955__saphe__street-scene-3.wav",
+                           #    "street_valencia" : "207208__jormarp__high-street-of-gandia-valencia-spain.wav",
+                           #    "city_park_tel_aviv" : "268903__yonts__city-park-tel-aviv-israel.wav",
+                           #}, files_dir = os.path.join(DATASET_DIR, "UrbanSound8K-JAMS", "background_noise")),
                            TimeStretch(values = [0.81, 0.93, 1.07, 1.23])
                            
                            ]

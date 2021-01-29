@@ -48,7 +48,7 @@ class TimeStretch(object):
             #with code_timer("TimeStretch np.random.choice", debug=self.debug_time):
             value = np.random.choice(self.values)
         #with code_timer("TimeStretch librosa", debug=self.debug_time):
-        preprocessed_clip = librosa.effects.time_stretch(y, value)
+        preprocessed_clip = librosa.effects.time_stretch(clip, value)
         return preprocessed_clip
 
 
