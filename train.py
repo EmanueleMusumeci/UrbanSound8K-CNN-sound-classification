@@ -26,7 +26,7 @@ INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base
 if CUSTOM_MODEL:
     INSTANCE_NAME+="_custom"
 
-PREVENT_OVERWRITE = False
+PREVENT_OVERWRITE = True
 
 BATCH_SIZE = 128
 
