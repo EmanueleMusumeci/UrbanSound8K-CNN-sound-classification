@@ -1,4 +1,6 @@
 import os
+import sys
+import argparse
 
 import torch
 
@@ -13,6 +15,17 @@ from Trainer import *
 from utils.dataset_utils import *
 from utils.audio_utils import *
 
+
+parser = argparse.ArgumentParser(description='Launch training with pre-compacted folds (use compact_dataset to \
+                                              prepare them).')
+parser.add_argument('-n','--name', type=str, help='Name of the training instance (will be the same name of the folder where \
+                                        checkpoints are saved)')
+#parser.add_argument('--preprocessing_name', help='Name of the preprocessing applied (pre-processed compacted folds \
+#                                                        need to be generated with compact_dataset.py')
+#parser.add_argument('--device', help='Name of the CUDA device to be used')
+
+
+args = parser.parse_args()
 
 #CUDA device
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -72,7 +85,10 @@ FFN_INPUT_SIZE = 154
 
 
 #Training instance name
-INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base")
+if args.name is None:
+    INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base")
+else:
+    INSTANCE_NAME = args.name
 if not USE_PAPER_CNN:
     INSTANCE_NAME+="_custom"
 
