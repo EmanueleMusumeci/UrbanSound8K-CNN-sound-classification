@@ -291,7 +291,7 @@ def plot_confusion_matrix(model_name, model_dir,
           confusion_matrix[i][j] = min_val
 
     avg_val = sum(sum(confusion_matrix))/(len(confusion_matrix)*len(confusion_matrix[0]))
-    fig, axes = plt.subplots(figsize=(10,10))  
+    fig, axes = plt.subplots(figsize=(8,8))
 
     #seaborn.set(font_scale=2)
     # TODO Michele Confusion matrix , discalie oblique (no orizzontali)
@@ -301,16 +301,18 @@ def plot_confusion_matrix(model_name, model_dir,
                     annot=True, ax = axes, fmt='g',
                     xticklabels=True
                     ) #annot=True to annotate cells, fmt='g' to avoid scientific notation
-    ax.figure.subplots_adjust(left=0.3, bottom=0.3)
+    ax.figure.subplots_adjust(left=0.2, bottom=0.2)
 
-    plt.xticks(rotation=90) 
+    plt.xticks(rotation=45, ha="right") 
     plt.yticks(rotation=0) 
     #heatmap.set_xticklabels(heatmap.get_xticklabels(), rotation=30) 
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=10) 
+    #ax.set_xticklabels(ax.get_xticklabels(), rotation=10) 
 
     # labels, title and ticks
     axes.set_xlabel('Predicted labels', size = 10)
     axes.set_ylabel('True labels', size = 10) 
+    axes.xaxis.set_ticklabels(labels, size = 10)
+    axes.yaxis.set_ticklabels(labels, size = 10)
     
     if title_prefix is not None:
         conf_matrix_title = title_prefix
@@ -318,8 +320,6 @@ def plot_confusion_matrix(model_name, model_dir,
         conf_matrix_title = model_name
     axes.set_title(conf_matrix_title+"\nEpoch: "+str(best_epoch)+'\nConfusion Matrix') 
 
-    axes.xaxis.set_ticklabels(labels, size = 10)
-    axes.yaxis.set_ticklabels(labels, size = 10)
 
     if save_to_file:
       path = os.path.join(plot_dir,model_name+"_Confusion_matrix")+".png"
@@ -558,38 +558,52 @@ def get_best_epoch_scores(model_name, model_dir, metrics, print_scores=True):
 #Taken from https://discuss.pytorch.org/t/check-gradient-flow-in-network/15063/8
 def plot_grad_flow(gradient_magnitudes, epoch, show=False, save_to_dir=None):
 
-    layers = []
-    for layer_name, _ in gradient_magnitudes.items():
-      layers.append(layer_name.split(".")[0])
-    max_grads = [entry["max_grads"] for layer_name, entry in gradient_magnitudes.items()]
-    #min_grads = [entry["min_grad"] for layer_name, entry in gradient_magnitudes.items()]
-    avg_grads = [entry["avg_grads"] for layer_name, entry in gradient_magnitudes.items()]
+  layers = []
+  for layer_name, _ in gradient_magnitudes.items():
+    layers.append(layer_name.split(".")[0])
+  max_grads = [entry["max_grads"] for layer_name, entry in gradient_magnitudes.items()]
+  #min_grads = [entry["min_grad"] for layer_name, entry in gradient_magnitudes.items()]
+  avg_grads = [entry["avg_grads"] for layer_name, entry in gradient_magnitudes.items()]
 
-    plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
-    plt.bar(np.arange(len(max_grads)), avg_grads, alpha=0.1, lw=1, color="b")
-    plt.hlines(0, 0, len(avg_grads)+1, lw=2, color="k" )
-    plt.xticks(range(0,len(avg_grads), 1), layers, rotation="vertical")
-    plt.xlim(left=0, right=len(avg_grads))
-    plt.ylim(bottom = -0.001, top=0.02) # zoom in on the lower gradient regions
-    plt.xlabel("Layers")
-    plt.ylabel("Gradient magnitude")
-    plt.title("Gradient flow")
-    plt.grid(True)
-    plt.legend([matplotlib.lines.Line2D([0], [0], color="c", lw=4),
-                matplotlib.lines.Line2D([0], [0], color="b", lw=4),
-                matplotlib.lines.Line2D([0], [0], color="k", lw=4)], ['Max. gradient', 'Avg. gradient', 'Zero gradient'])
-    
-    if show:
-        plt.show()
+  plt.rc('xtick',labelsize=15)
+  plt.rc('ytick',labelsize=15)
+  plt.figure(figsize=(10,10))
+  
+  plt.hlines(0, 0, len(avg_grads)+1, lw=2, color="k" )
+  plt.xticks(range(0,len(avg_grads), 1), layers, rotation=45, ha="right")
+  
+  plt.xlim(left=-1, right=len(avg_grads))
+  plt.ylim(bottom = 0, top=0.1) # zoom in on the lower gradient regions
+  plt.xlabel("Layers", size = 15)
+  plt.ylabel("Gradient magnitude", size = 17)
 
-    if save_to_dir is not None:
-      path = os.path.join(save_to_dir,"Gradient flow - Epoch "+str(epoch))+".png"
-      plt.savefig(path)
-    
+  plt.subplots_adjust(left=0.2, bottom=0.2)
+
+  plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.5, lw=1, color="c", align="center")
+  plt.bar(np.arange(len(max_grads)), avg_grads, alpha=0.5, lw=1, color="b", align="center")
+
+  title = "Gradient flow"
+  if epoch is not None:
+    title += " - Epoch: "+str(epoch)
+  plt.title(title, fontsize=15)
+  plt.grid(True)
+  plt.legend([matplotlib.lines.Line2D([0], [0], color="c", lw=4),
+              matplotlib.lines.Line2D([0], [0], color="b", lw=4),
+              matplotlib.lines.Line2D([0], [0], color="k", lw=4)], ['Max. gradient', 'Avg. gradient', 'Zero gradient'], 
+              fontsize = 15, loc = "upper right")
+  
+  if show:
+      plt.show()
+
+  if save_to_dir is not None:
+    path = os.path.join(save_to_dir,"Gradient flow - Epoch "+str(epoch))+".png"
+    plt.savefig(path)
+  
+  plt.close("all")
 
 def create_gradient_flow_gif(model_name, model_dir, 
                               tasks={"audio_classification" : "Audio classification"},
-                              cropX = None, cropY = None):
+                              cropX = None, cropY = None, frame_duration = 0.3):
 
   scores, epochs_list, best_epoch = load_scores(model_name, model_dir)
   
@@ -614,7 +628,7 @@ def create_gradient_flow_gif(model_name, model_dir,
       image = image[:,cropY[0]:cropY[1],:]
     #plt.imshow(image)
     gradient_images.append(image)
-  imageio.mimsave(os.path.join(model_dir, "plots", model_name+"_Gradient_flow.gif"), gradient_images)
+  imageio.mimsave(os.path.join(model_dir, "plots", model_name+"_Gradient_flow.gif"), gradient_images, duration = frame_duration)
 
 def show_preprocessing(transformations, image, title_prefix="", progressive=True, save_to_dir=None):
     images = {}
@@ -714,3 +728,4 @@ def visualize_features_on_layers(model, image, image_label_idx,
   if make_gif:
     create_gif(save_to_dir, "", file_endswith="On_Image.png", gif_name="Layer_activations", save_to_dir = save_to_dir)
 
+#TODO Per class scores (need to load model and generate them)

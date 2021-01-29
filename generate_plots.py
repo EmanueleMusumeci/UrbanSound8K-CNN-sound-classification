@@ -26,7 +26,7 @@ if __name__ == "__main__":
         
         SINGLE_PLOTS = False
         SINGLE_TRAIN_TEST_PLOTS = False
-        CONFUSION_MATRIX = True
+        CONFUSION_MATRIX = False
         COMPARATIVE_PLOTS = False
         GRADIENT_FLOW = True
         BEST_SCORES = False
