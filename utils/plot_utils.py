@@ -306,7 +306,7 @@ def plot_confusion_matrix(model_name, model_dir,
     plt.xticks(rotation=90) 
     plt.yticks(rotation=0) 
     #heatmap.set_xticklabels(heatmap.get_xticklabels(), rotation=30) 
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=10) 
+    #ax.set_xticklabels(ax.get_xticklabels(), rotation=10) 
 
     # labels, title and ticks
     axes.set_xlabel('Predicted labels', size = 10)

@@ -23,10 +23,11 @@ DATASET_DIR = os.path.join(BASE_DIR,"data")
 MODEL_DIR = os.path.join(BASE_DIR,"model")
 
 #Preprocessing
-preprocessing_name = None
+#preprocessing_name = None
 preprocessing_name = "PitchShift"
 #preprocessing_name = "TimeStretch"
-#preprocessing_name = "MUDADynamicRangeCompression"
+#preprocessing_name = "DynamicRangeCompression"
+#preprocessing_name = "BackgroundNoise"
 
 CLIP_SECONDS = 3
 SPECTROGRAM_HOP_LENGTH = 512
