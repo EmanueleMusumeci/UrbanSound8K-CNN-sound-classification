@@ -258,10 +258,6 @@ if __name__=="__main__":
   dataloader = DataLoader(dataset, batch_size=8, shuffle=False)
 
   batch = next(iter(dataloader))
-  #print(batch)
-  #print(len(batch["original_spectrogram"]))
-  #print(len(batch["preprocessed_spectrogram"]))
-  #print(len(batch["class_id"]))
-  #print(len(batch["class_name"]))
+ 
 
 

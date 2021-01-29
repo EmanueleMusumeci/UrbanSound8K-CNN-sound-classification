@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import numpy as np
-#from sklearn.datasets import make_blobs
 import os
 import librosa
 
@@ -27,7 +26,7 @@ def load_sound_files(parent_dir, file_paths):
 class FeedForwardNetwork(nn.Module):
     
     def __init__(self, input_size, hidden_size, output_size):
-        super(FeedForwardNetwork, self).__init__()                     # Inherited from the parent class nn.Module
+        super(FeedForwardNetwork, self).__init__()                    
         
         self.input_size = input_size
         self.hidden_size  = hidden_size
@@ -96,26 +95,15 @@ if __name__ == "__main__":
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
     
     batch = next(iter(dataloader))
-    #input_size, hidden_size
+   
     nn = FeedForwardNetwork(154, 256, dataset.get_num_classes())
-    #fai spacchetto , usa cat e dai in pasto.
-    #print(batch.keys())
-    #output = nn(batch)
-    
+
     mfccs = batch["mfccs"]
     chroma = batch["chroma"]
     mel = batch["mel"]
     contrast = batch["contrast"]
     tonnetz = batch["tonnetz"]
 
-    '''
-    print("mfccs: ",mfccs,"\n",chroma,"\n",mel,"\n",contrast,"\n",tonnetz,"\n")
-    mfccs = torch.unsqueeze(mfccs, 1)
-    cat1_tensor = torch.cat([mfccs, chroma, mel, contrast, tonnetz],1)
-    print("third_tensor\n",cat1_tensor)
-    print(cat1_tensor.shape)
-    raise
-    '''
     output = nn(mfccs, chroma, mel, contrast, tonnetz)
     print("output_net: ",output)
     print(output.shape)

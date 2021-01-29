@@ -6,7 +6,6 @@ import numpy as np
 
 class SpectrogramAddGaussNoise(object):
     """Aggiunge rumore Gaussiano al vettore dello spettogramma"""
-    #costruttore
 
     def __init__(self, input_size, gaussian_mean=0.0, gaussian_std=None, prob_to_have_noise=1.0):
 
@@ -31,11 +30,9 @@ class SpectrogramAddGaussNoise(object):
             return img, np.zeros(self.input_size)
         
         if self.gaussian_std is None:
-            #ne prendo il valore assoluto dipendentemente da np.min(img)
             gaussian_std = np.abs(np.min(img)*std_factor)
 
         if noise_mask is None:
-            #scelgo una posizione random da cui iniziare
             noise_mask = np.random.normal(self.gaussian_mean, gaussian_std, size=self.input_size).astype('float32')
 
         if debug: print(noise_mask.shape)
@@ -48,10 +45,7 @@ class SpectrogramAddGaussNoise(object):
 class SpectrogramShift(object):
     """Calcola il vettore dell' immagine dello spettrogramma shiftato"""
     def __init__(self, input_size, width_shift_range, shift_prob=1.0, left = False, random_side = False):
-        #checko che questi siano veri,altrimenti triggero subito errore
 
-        #gli assert sono usati nel debugging, se sono sicuro
-        #di cosa sono istanze , posso anche non metterli
 
         assert isinstance(input_size, tuple), "Input size must be a tuple (input_width, input_height)"
         self.input_size = input_size[:2]
@@ -72,30 +66,23 @@ class SpectrogramShift(object):
         self.left = left
         self.random_side = random_side
 
-    #image è un vettore numpy rappresentante lo spettrogramma
-    #con questa l'istanza MyRightShift si comporterà come una '''funzione'''
     def __call__(self, img, shift_position = None, debug=False):
         if debug: print(shift_position)
-        #se la shift prob è minore di una random non fare nulla sull'array
+
         if np.random.random() > self.shift_prob or shift_position==0:
             return img, 0
         
-        #altrimenti mi creo una nuovo array pieno del valore minimo presente in quell array
-        #i valori del vettore shiftato devono essere float32
         if debug: print(img.shape)
         img_shifted = np.full(self.input_size, np.min(img), dtype='float32')
 
         if shift_position is not None:
             assert isinstance(shift_position, int), "provided shift_position should be float"
         else:
-            #scelgo una posizione random da cui iniziare
             shift_position = np.random.randint(1, self.width_shift_range)
 
-            #(Optional) Left shift
             if self.left:
                 shift_position *= -1
             
-            #(Optional) Choose a random size
             if self.random_side and np.random.random() > 0.5:
                 if shift_position<0: shift_position *= -1
             else:
@@ -103,8 +90,6 @@ class SpectrogramShift(object):
 
         if debug: print(shift_position)
 
-        #eseguo lo shift facendo deepcoopy dell'array in funzione di shift_position
-        #in una porzione di image_shifted
         if shift_position<0:
             img_shifted[:,:shift_position] = copy.deepcopy(img[:,-shift_position:])
         else:
@@ -126,10 +111,7 @@ def SpectrogramReshape(object):
 if __name__ == "__main__":
     #https://github.com/mariostrbac/environmental-sound-classification/blob/main/notebooks/data_preprocessing.ipynb
     # build transformation pipelines for data augmentation for training phase and testing phase
-    """
-    transforms.Compose just clubs(raggruppa)all the transforms provided to it. 
-    So, all the transforms in the transforms.Compose are applied to the input one by one.
-    """
+ 
     training_transformations_pipelines = transforms.Compose([SpectogrammRightShift(input_size=128,width_shift_range=13,shift_probability=0.9),
                                                             SpectogramAddGaussNoise(input_size=128,prob_to_have_noise=0.55),
                                                             SpectogramReshape(output_size=(1,128,128))])

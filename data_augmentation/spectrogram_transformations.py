@@ -14,7 +14,6 @@ from collections import namedtuple
 import matplotlib.pyplot as plt
 import os
 
-### utils for spectrogram Augmentation ###
 def tensor_to_img(spectrogram):
     plt.figure(figsize=(14,1)) # arbitrary, looks good on my screen.
     plt.imshow(spectrogram[0])
@@ -34,7 +33,6 @@ def tensor_to_img(spectrogram):
         plt.imshow(spectrogram[0])
         plt.show()
         display(spectrogram.shape)
-###########################################
 
 class TimeMaskSpectrogram(object):
     def __init__(self):

@@ -4,7 +4,7 @@ import torch
 
 from Dataset import SoundDatasetFold
 from DataLoader import DataLoader
-from nn.convolutional_model import ConvolutionalNetwork
+from nn.convolutional_model import CustomConvolutionalNetwork
 from nn.paper_convolutional_model import PaperConvolutionalNetwork
 from nn.feed_forward_model import FeedForwardNetwork
 from data_augmentation.image_transformations import *
@@ -13,67 +13,75 @@ from Trainer import *
 from utils.dataset_utils import *
 from utils.audio_utils import *
 
+
+#CUDA device
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+#Directories
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+DATASET_DIR = os.path.join(BASE_DIR,"data")
+MODEL_DIR = os.path.join(BASE_DIR,"model")
+
+#Preprocessing
 preprocessing_name = None
-#preprocessing_name = "PitchShift"
-preprocessing_name = "TimeStretch"
+preprocessing_name = "PitchShift"
+#preprocessing_name = "TimeStretch"
 #preprocessing_name = "MUDADynamicRangeCompression"
 
-
-CUSTOM_MODEL = False
-
-INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base")
-
-if CUSTOM_MODEL:
-    INSTANCE_NAME+="_custom"
-
-PREVENT_OVERWRITE = True
-
-BATCH_SIZE = 128
-
-USE_CNN = True
-
-
-APPLY_IMAGE_AUGMENTATIONS = False
 CLIP_SECONDS = 3
 SPECTROGRAM_HOP_LENGTH = 512
 SAMPLE_RATE = 22050
 
 COMPUTE_DELTAS = False
 COMPUTE_DELTA_DELTAS = False
+APPLY_IMAGE_AUGMENTATIONS = False
 
-DEBUG_PREPROCESSING = False
-DEBUG_TIMING = False
+BATCH_SIZE = 128
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-try:
-  from google.colab import drive
-  base_dir = "/content/drive/My Drive/Neural Networks Project"
-  DATASET_DIR = "/content/drive/data"
-except:
-  base_dir = os.path.dirname(os.path.realpath(__file__))
-  DATASET_DIR = os.path.join(base_dir,"data")
-
-DATASET_NAME = "UrbanSound8K"
-DATASET_PERCENTAGE = 1.0
-
-MODEL_DIR = os.path.join(base_dir,"model")
-
-if PREVENT_OVERWRITE:
-    assert not os.path.exists(os.path.join(MODEL_DIR,INSTANCE_NAME)), "ATTENTION! The folder {} already exists: rename it or remove it".format(os.path.join(MODEL_DIR,INSTANCE_NAME))
-
-selected_classes = [0,1,2,3,4,5,6,7,8,9]
-
+#Spectrogram shape
 spectrogram_frames_per_segment = CLIP_SECONDS*SAMPLE_RATE / SPECTROGRAM_HOP_LENGTH
 spectrogram_bands = 128
 
 in_channels = 1
-if USE_CNN:
-    if COMPUTE_DELTAS:in_channels = 2
-    elif COMPUTE_DELTA_DELTAS: in_channels = 3
+if COMPUTE_DELTAS:in_channels = 2
+elif COMPUTE_DELTA_DELTAS: in_channels = 3
 
+
+#Dataset
+DATASET_NAME = "UrbanSound8K"
+DATASET_PERCENTAGE = 1.0
+DEBUG_PREPROCESSING = False
+DEBUG_TIMING = False
+
+selected_classes = [0,1,2,3,4,5,6,7,8,9]
+
+#Precompacted folds used for training
+SINGLE_FOLD = False
+if SINGLE_FOLD:
+    train_fold_list = [1]
+    test_fold_list = [1]
+else:
+    train_fold_list = [1,2,3,4,5,6,7,8,9]
+    test_fold_list = [10]
+
+
+#Model
+USE_PAPER_CNN = True
 CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment, in_channels)
 FFN_INPUT_SIZE = 154
+
+
+#Training instance name
+INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base")
+if not USE_PAPER_CNN:
+    INSTANCE_NAME+="_custom"
+
+
+#Check we are not overwriting any existing checkpoints
+PREVENT_OVERWRITE = True
+if PREVENT_OVERWRITE:
+    assert not os.path.exists(os.path.join(MODEL_DIR,INSTANCE_NAME)), "ATTENTION! The folder {} already exists: rename it or remove it".format(os.path.join(MODEL_DIR,INSTANCE_NAME))
+
 
 #Image augmentations
 if APPLY_IMAGE_AUGMENTATIONS:
@@ -88,22 +96,22 @@ else:
     background_noise_transformation = None
 
 
-train_fold_list = [1]
-#train_fold_list = [1,2,3,4,5,6,7,8,9]
-test_fold_list = [1]
-#test_fold_list = [10]
-
+#Load precompacted dataset
+#Load preprocessed folds
 if preprocessing_name is not None:
     train_audio_meta, train_audio_clips, train_audio_spectrograms = load_preprocessed_compacted_dataset(DATASET_DIR, preprocessing_name, folds = train_fold_list, only_spectrograms=True)
     #_, _, raw_train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list)
 else:
     train_audio_meta, train_audio_clips, train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list, only_spectrograms=True)
 
+#Load raw folds
 test_audio_meta, test_audio_clips, test_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = test_fold_list, only_spectrograms=True)
-
+#Free up memory
 del train_audio_clips
 del test_audio_clips
 
+
+#Dataset instances
 train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
                             folds = train_fold_list, 
                             preprocessing_name = preprocessing_name,
@@ -111,7 +119,7 @@ train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,
                             audio_clips = None,
                             audio_spectrograms = train_audio_spectrograms,
                             shuffle = True, 
-                            use_spectrograms = USE_CNN, 
+                            use_spectrograms = True, 
                             image_shift_transformation = right_shift_transformation, 
                             image_background_noise_transformation = background_noise_transformation, 
 
@@ -136,7 +144,7 @@ test_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,
                             audio_clips = None,
                             audio_spectrograms = test_audio_spectrograms,
                             shuffle = False, 
-                            use_spectrograms = USE_CNN, 
+                            use_spectrograms = True, 
                             spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
                             spectrogram_bands = spectrogram_bands, 
                             compute_deltas=False, 
@@ -151,22 +159,29 @@ test_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,
                             silent_clip_cutoff_dB = None
                             )
 
+#Dataset statistics
+num_classes = train_dataset.get_num_classes()
+print("Number of classes: ", train_dataset.get_num_classes())
+#print("Class names: ",train_dataset.class_distribution.keys())
+
+
+#DataLoader instances
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
 
-if USE_CNN:
-    #model = ConvolutionalNetwork(CNN_INPUT_SIZE)
+#Model instances
+if USE_PAPER_CNN:
     model = PaperConvolutionalNetwork(CNN_INPUT_SIZE)
 else:
-    model = FeedForwardNetwork(FFN_INPUT_SIZE, 256, train_dataset.get_num_classes())
+    model = CustomConvolutionalNetwork(CNN_INPUT_SIZE)
 
-num_classes = train_dataset.get_num_classes()
-print("Number of classes: ", train_dataset.get_num_classes())
-print("Class names: ",train_dataset.class_distribution.keys())
 
+#Loss function
 loss_function = torch.nn.CrossEntropyLoss()
 
+
+#Optimizer
 if isinstance(model, PaperConvolutionalNetwork):
     optimizer = optim.SGD([
                 {'params': model.convolutional_layers.parameters()},
@@ -175,6 +190,8 @@ if isinstance(model, PaperConvolutionalNetwork):
 else:
     optimizer = torch.optim.Adam(model.parameters())
 
+
+#Training loop wrapper
 trainer = Trainer(
                     INSTANCE_NAME,
                     BATCH_SIZE,
@@ -187,7 +204,9 @@ trainer = Trainer(
                     DEVICE,
                     MODEL_DIR,
                     lr_scheduler=None,
-                    cnn = USE_CNN
+                    cnn = True
                 )
 
+
+#Launch training
 trainer.train(50, save_test_scores_every=1, save_train_scores_every=1, save_model_every=1, compute_gradient_statistics=True)

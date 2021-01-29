@@ -261,6 +261,8 @@ def plot_confusion_matrix(model_name, model_dir,
                           save_to_file=False, title_prefix=None, 
                           scores_on_train=False):
 
+  plt.close("all")
+
   scores, epoch_list, best_epoch = load_scores(model_name, model_dir, scores_on_train=scores_on_train)
 
   plot_dir = os.path.join(model_dir,"plots","confusion_matrices")
@@ -322,6 +324,8 @@ def plot_confusion_matrix(model_name, model_dir,
     if save_to_file:
       path = os.path.join(plot_dir,model_name+"_Confusion_matrix")+".png"
       fig.savefig(path)
+      
+  plt.close("all")
       
 def plot_scores_from_multiple_dirs(
                 model_name, model_dir, score_dirs, tasks=None,
@@ -429,8 +433,6 @@ def plot_scores_from_multiple_dirs(
     if save_to_file:
       path = os.path.join(plot_dir,model_name+" - Train_Test comparison - "+k)+".png"
       plot.savefig(path)
-  
-  plt.clf()
     
 def comparative_plots(model_names, model_dir, 
                       tasks={"audio_classification" : "Audio classification"},
@@ -525,7 +527,7 @@ def comparative_plots(model_names, model_dir,
       path = os.path.join(plot_dir,title_prefix+" - "+k)+".png"
       plot.savefig(path)
 
-  plt.close(plot)
+    plt.close(plot)
 
 def get_best_epoch_scores(model_name, model_dir, metrics, print_scores=True):
     
@@ -551,10 +553,14 @@ def get_best_epoch_scores(model_name, model_dir, metrics, print_scores=True):
       print(best_scores_str)
     return best_scores, best_scores_str
 
+#TODO: Ottenere colori fissi per le barre (per evitare l'effetto "lampeggiamento")
+#TODO: Far entrare tutte le label nella figura (ispirarsi a confusion matrix)
 #Taken from https://discuss.pytorch.org/t/check-gradient-flow-in-network/15063/8
-def plot_grad_flow(gradient_magnitudes, show=False, save_to_dir=None):
+def plot_grad_flow(gradient_magnitudes, epoch, show=False, save_to_dir=None):
 
-    layers = [layer_name for layer_name, _ in gradient_magnitudes.items()]
+    layers = []
+    for layer_name, _ in gradient_magnitudes.items():
+      layers.append(layer_name.split(".")[0])
     max_grads = [entry["max_grads"] for layer_name, entry in gradient_magnitudes.items()]
     #min_grads = [entry["min_grad"] for layer_name, entry in gradient_magnitudes.items()]
     avg_grads = [entry["avg_grads"] for layer_name, entry in gradient_magnitudes.items()]
@@ -577,25 +583,38 @@ def plot_grad_flow(gradient_magnitudes, show=False, save_to_dir=None):
         plt.show()
 
     if save_to_dir is not None:
-        path = os.path.join(save_to_dir,"Gradient flow - Epoch "+str(self.last_epoch))+".png"
-        plt.savefig(path)
+      path = os.path.join(save_to_dir,"Gradient flow - Epoch "+str(epoch))+".png"
+      plt.savefig(path)
+    
 
 def create_gradient_flow_gif(model_name, model_dir, 
                               tasks={"audio_classification" : "Audio classification"},
                               cropX = None, cropY = None):
 
   scores, epochs_list, best_epoch = load_scores(model_name, model_dir)
+  
+  plot_dir = os.path.join(model_dir,"plots","gradient_flow",model_name)
+  
+  if not os.path.exists(plot_dir):
+    os.makedirs(plot_dir)
 
   for task_name, task_header in tasks.items():
     gradient_images = []
     for epoch in epochs_list:
-      image = plot_grad_flow(scores[task_name]["gradient_stats"][epoch], show=True)
-      if cropX is not None:
-        image = image[cropX[0]:cropX[1],:,:]
-      if cropY is not None:
-        image = image[:,cropY[0]:cropY[1],:]
-      gradient_images.append(image)
-    imageio.mimsave(os.path.join(model_dir, "plots",model_name+"_Gradient_flow.gif"), gradient_images)
+      image = plot_grad_flow(scores[task_name]["gradient_stats"][epoch], epoch, show=False, save_to_dir=plot_dir)
+  
+  for filename in os.listdir(plot_dir):
+    if not filename.endswith(".png") or not os.path.isfile(os.path.join(plot_dir,filename)):
+      continue
+    print(os.path.join(plot_dir,filename))
+    image = imageio.imread(os.path.join(plot_dir, filename))
+    if cropX is not None:
+      image = image[cropX[0]:cropX[1],:,:]
+    if cropY is not None:
+      image = image[:,cropY[0]:cropY[1],:]
+    #plt.imshow(image)
+    gradient_images.append(image)
+  imageio.mimsave(os.path.join(model_dir, "plots", model_name+"_Gradient_flow.gif"), gradient_images)
 
 def show_preprocessing(transformations, image, title_prefix="", progressive=True, save_to_dir=None):
     images = {}

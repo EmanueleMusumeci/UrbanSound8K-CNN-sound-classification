@@ -179,8 +179,6 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
 
         self.class_distribution = self.compute_dataset_distribution()
         
-# TODO MICHELE
-    # Per ogni classe , numero di istanze 
     def compute_dataset_distribution(self):
         class_distribution = {}
         for class_id, samples in self.class_id_to_sample_ids.items():
@@ -339,9 +337,6 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     "meta_data" : meta_data
                     }]
     
-    #pattern iter, chiamo n=len(dataset) volte __getitem__ (nostro metodo getter)
-    #con yield
-    #forse spacchetto dati di __getitem__, e.q se due finestre, una alla volta
     def __iter__(self):
         if self.shuffle: self.shuffle_dataset()
 
@@ -733,9 +728,7 @@ if __name__ == "__main__":
     print(test_sample[0]["preprocessed_spectrogram"][:,:,0].shape)
     '''
 
-    #test_sample = test_dataset[0]
-    #print(test_sample["original_spectrogram"])
-    #print(test_sample["preprocessed_spectrogram"])
+    
     #progress_bar = tqdm(total=len(dataset), desc="Sample", position=0)
     with code_timer("OVERALL"):
         for i, obj in enumerate(train_dataset):
@@ -746,11 +739,7 @@ if __name__ == "__main__":
                 pass
         #progress_bar.update(1)
     #progress_bar.close()
-    #print("mfccs : "+str(sample["mfccs"]))
-    #print("chroma: "+str(sample["chroma"]))
-    #print("mel: "+ str(sample["mel"]))
-    #print("contrast: "+str(sample["contrast"]))
-    #print("tonnetz: "+str(sample["tonnetz"]))
+
 
     print_code_stats()
     

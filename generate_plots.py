@@ -32,7 +32,6 @@ if __name__ == "__main__":
         BEST_SCORES = False
         IMAGE_PREPROCESSING = False
         SALIENCY_MAPS = False
-        DIR = "PitchShift"
 
         ################
         # SINGLE PLOTS #
@@ -130,8 +129,10 @@ if __name__ == "__main__":
         # GRADIENT FLOW #
         #################
         if GRADIENT_FLOW:
-                cropX = (0,250)
-                cropY = (10,432)
+                #cropX = (0,250)
+                cropX = None
+                #cropY = (10,432)
+                cropY = None
                 create_gradient_flow_gif("Base", model_dir, cropX=cropX, cropY=cropY)
 
         ################
@@ -225,22 +226,3 @@ if __name__ == "__main__":
                                                 from_layer = 0, to_layer=18,
                                                 filename_prefix="Custom_classifier_20_Feature_activation_layer_")
 
-"""
-import torch
-print(torch.__version__)
-
-import torchvision
-print(torchvision.__version__)
-
-import numpy
-print(numpy.__version__)
-
-import matplotlib
-print(matplotlib.__version__)
-
-import PIL
-print(PIL.__version__)
-import os
-ROOT_DIR = os.path.dirname(os.path.abspath("generate_plots.py"))
-print(ROOT_DIR)
-"""
