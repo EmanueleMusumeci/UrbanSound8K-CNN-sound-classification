@@ -36,7 +36,7 @@ DATASET_DIR = os.path.join(BASE_DIR,"data")
 MODEL_DIR = os.path.join(BASE_DIR,"model")
 
 #Preprocessing
-#preprocessing_name = None
+preprocessing_name = None
 #preprocessing_name = "PitchShift"
 #preprocessing_name = "TimeStretch"
 preprocessing_name = "DynamicRangeCompression"
@@ -47,7 +47,9 @@ SPECTROGRAM_HOP_LENGTH = 512
 SAMPLE_RATE = 22050
 
 COMPUTE_DELTAS = True
-COMPUTE_DELTA_DELTAS = False
+COMPUTE_DELTA_DELTAS = True
+if COMPUTE_DELTA_DELTAS:
+    COMPUTE_DELTAS = True
 APPLY_IMAGE_AUGMENTATIONS = False
 
 BATCH_SIZE = 128
@@ -58,7 +60,7 @@ spectrogram_bands = 128
 
 in_channels = 1
 if COMPUTE_DELTAS:in_channels = 2
-elif COMPUTE_DELTA_DELTAS: in_channels = 3
+if COMPUTE_DELTA_DELTAS: in_channels = 3
 
 
 #Dataset
@@ -92,10 +94,14 @@ else:
     INSTANCE_NAME = args.name
 if not USE_PAPER_CNN:
     INSTANCE_NAME+="_custom"
+if COMPUTE_DELTAS:
+    INSTANCE_NAME+="_delta"
+if COMPUTE_DELTA_DELTAS:
+    INSTANCE_NAME+="_delta"
 
 
 #Check we are not overwriting any existing checkpoints
-PREVENT_OVERWRITE = True
+PREVENT_OVERWRITE = False
 if PREVENT_OVERWRITE:
     assert not os.path.exists(os.path.join(MODEL_DIR,INSTANCE_NAME)), "ATTENTION! The folder {} already exists: rename it or remove it".format(os.path.join(MODEL_DIR,INSTANCE_NAME))
 
@@ -207,14 +213,12 @@ if isinstance(model, PaperConvolutionalNetwork):
 else:
     optimizer = torch.optim.Adam(model.parameters())
 
-
 #Training loop wrapper
 trainer = Trainer(
                     INSTANCE_NAME,
                     BATCH_SIZE,
                     train_loader,
                     test_loader,
-                    train_dataset.get_id_to_class(),
                     model,
                     loss_function,
                     optimizer,

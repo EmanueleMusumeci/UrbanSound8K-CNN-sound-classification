@@ -26,7 +26,6 @@ class Trainer:
         batch_size,
         train_loader,
         test_loader,
-        index_to_class,
         model,
         loss_function,
         optimizer,
@@ -56,8 +55,6 @@ class Trainer:
 
         self.train_loader = train_loader
         self.test_loader = test_loader
-
-        self.index_to_class = index_to_class
         
         self.batch_size = batch_size
 
@@ -248,8 +245,8 @@ class Trainer:
 
                 predictions = torch.argmax(predictions, axis= 1).detach().cpu().numpy()
 
-                decoded_labels = self.decode_class_names(labels)
-                decoded_predictions = self.decode_class_names(predictions)
+                decoded_labels = loader.dataset.decode_class_names(labels)
+                decoded_predictions = loader.dataset.decode_class_names(predictions)
 
                 #Accumulate batch entries
                 all_class_predictions.extend(decoded_predictions)
@@ -272,9 +269,6 @@ class Trainer:
                                 self.instance_name+"_audio_classifications", epoch=self.last_epoch, overwrite=False).start()
 
         return audio_classification_results
-
-    def decode_class_names(self, class_indices):
-        return [self.index_to_class[idx] for idx in class_indices]
 
     def save_model_structure(self):
         '''
@@ -351,7 +345,8 @@ class Trainer:
                 f.write("\n")
 
     @classmethod
-    def load(cls, train_loader, dev_loader, test_loader, instance_name, model_dir, checkpoint_epoch, nn_mode, device="cuda"):
+    def load(cls, train_loader, test_loader, instance_name, model_dir, checkpoint_epoch, 
+                device="cuda", batch_size = 128, loss_function=None, is_cnn = True):
         '''
         Returns an instance of Trainer by loading a previously saved model structure and checkpoint
         Args:
@@ -368,7 +363,9 @@ class Trainer:
         Returns
         - an instance of Trainer containing the loaded training session
         ''' 
-        
+        if loss_function is None:
+            loss_function = nn.CrossEntropyLoss()
+
         #find model file that refers to this epoch
         model_path = os.path.join(model_dir,instance_name)
 
@@ -387,7 +384,6 @@ class Trainer:
                 model = model_structure["model"]
                 print("Model structure loaded:\n"+str(model))
 
-                #assert nn_mode == model.mode, "Required mode is :"+str(nn_mode)+" while model mode is: "+str(model.mode)
                 
                 model.to(device=device)
 
@@ -401,8 +397,19 @@ class Trainer:
                 except Exception as er:
                     lr_scheduler = None
 
-                trainer = Trainer(instance_name, train_loader, dev_loader, test_loader, 
-                            model, optimizer, device, nn_mode, model_dir, lr_scheduler = lr_scheduler)
+                trainer = Trainer(
+                                    instance_name,
+                                    batch_size,
+                                    train_loader,
+                                    test_loader, 
+                                    model, 
+                                    loss_function,
+                                    optimizer, 
+                                    device, 
+                                    model_dir, 
+                                    lr_scheduler = lr_scheduler,
+                                    cnn = is_cnn
+                                 )
                             
                 print("Trainer state restored\n")
                 break

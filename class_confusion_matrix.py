@@ -32,8 +32,7 @@ import scipy
 
 from scipy import signal
 
-from utils.plot_utils import load_scores
-from utils.plot_utils import get_best_epoch_scores
+from utils.plot_utils import load_scores, get_best_epoch_scores
 
 def f1_score_models(model_name, model_dir, 
                           tasks={"audio_classification" : "Audio classification"}, 
@@ -48,16 +47,21 @@ def f1_score_models(model_name, model_dir,
 def accuracy_all_classes(model_name, model_dir, 
                           tasks={"audio_classification" : "Audio classification"}, 
                           save_to_file=False, title_prefix=None, 
-                          scores_on_train=False,best_epoch_bool=False):
+                          scores_on_train=False):
 
     plt.close("all")
 
     scores, epoch_list, best_epoch = load_scores(model_name, model_dir, scores_on_train=scores_on_train)
 
+<<<<<<< HEAD
     if best_epoch_bool is True:
         scores_best,epoch_list_best,best_epoch_best = load_scores(model_name,model_dir,from_epoch=best_epoch,to_epoch=best_epoch,scores_on_train=scores_on_train)
     
     print("scores on : ",model_name , scores["audio_classification"]["accuracy"][best_epoch],"\n\n")
+=======
+    best_epoch_scores, _ = get_best_epoch_scores(model_name, model_dir, metrics = {"accuracy" : "Accuracy"}, task_name = "audio_classification")
+    print(best_epoch_scores)
+>>>>>>> c71458f301e3437bfbacd8912f7af8496d7ad8c4
 
     #print(len(scores))
 
@@ -78,6 +82,7 @@ def accuracy_all_classes(model_name, model_dir,
     for task_key, task_header in tasks.items():
         assert task_key in scores.keys(), "Scores for task "+task_key+" not found"
         
+<<<<<<< HEAD
         if best_epoch_bool : 
             confusion_matrix = scores_best[task_key]["confusion matrix"]
             #print(scores_best[task_key]["confusion matrix"])
@@ -85,6 +90,9 @@ def accuracy_all_classes(model_name, model_dir,
 
         else:
             confusion_matrix = scores[task_key]["confusion matrix"]
+=======
+        confusion_matrix = scores[task_key]["confusion matrix"]
+>>>>>>> c71458f301e3437bfbacd8912f7af8496d7ad8c4
 
       
         #print(confusion_matrix)
@@ -138,10 +146,9 @@ def accuracy_all_classes(model_name, model_dir,
             for j in range(len_confusion_matrix):
                 col = confusion_matrix[i][j]
                 #FNc = sum(row)
-                if i == j and j == counter_class:
+                if i == j:
                     TPc = confusion_matrix[i][j]
                     TPs[i+1] = TPc
-                    counter_class += 1
                     FNc = FNc - TPc
                     FNs[i+1] = FNc
 
@@ -151,22 +158,21 @@ def accuracy_all_classes(model_name, model_dir,
         sum_columns = confusion_matrix.sum(axis=0)
         #print(sum_columns)
         counter = 1
-        FPs = dict()
+        FPs = {}
         for i in sum_columns:
             FPs[counter] = i - TPs[counter]
             counter +=1
         
         #print("FPs: ",FPs,"\n")
 
-        TNs = dict()
-
+        TNs = {}
         for i in range(len_confusion_matrix):
             TNs[i+1] = sum_over_all_matrix - TPs[i+1] - FPs[i+1] - FNs[i+1]
+            #TNs[i+1] = 0
 
         #print("TNs: ",TNs,"\n")
 
-        ACCs =dict()
-
+        ACCs = {}
         for i in range(len_confusion_matrix):
             Num = TPs[i+1] + TNs[i+1] 
             Den = TPs[i+1] + TNs[i+1] + FPs[i+1] + FNs[i+1]
@@ -238,9 +244,13 @@ def get_accuracy_delta(accuracies_augmentation_method,accuracies_base):
     
     return delta   
 
+<<<<<<< HEAD
 
 
 def plot_delta_on_metric(model_dir,metric,aug_to_test,
+=======
+def plot_delta_accuracies(model_names, model_dir,
+>>>>>>> c71458f301e3437bfbacd8912f7af8496d7ad8c4
                       tasks={"audio_classification" : "Audio classification"},
                       save_to_file=True, 
                       title_prefix = "Base",
