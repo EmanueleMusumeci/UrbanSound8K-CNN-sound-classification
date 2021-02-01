@@ -30,7 +30,7 @@ import scipy
 
 from scipy import signal
 
-from utils.plot_utils import load_scores
+from utils.plot_utils import load_scores, get_best_epoch_scores
 
 def accuracy_all_classes(model_name, model_dir, 
                           tasks={"audio_classification" : "Audio classification"}, 
@@ -40,6 +40,9 @@ def accuracy_all_classes(model_name, model_dir,
     plt.close("all")
 
     scores, epoch_list, best_epoch = load_scores(model_name, model_dir, scores_on_train=scores_on_train)
+
+    best_epoch_scores, _ = get_best_epoch_scores(model_name, model_dir, metrics = {"accuracy" : "Accuracy"}, task_name = "audio_classification")
+    print(best_epoch_scores)
 
     #print(len(scores))
 
@@ -93,6 +96,21 @@ def accuracy_all_classes(model_name, model_dir,
         TNc = sum over all matrix - TPc-FPc-FNc
 
         """
+        '''
+        
+        confusion_matrix = np.array(confusion_matrix)
+
+        #True positive (TP) elements on the diagonal
+        true_positives = confusion_matrix.diagonal()
+
+        #True negatives (TN) other elements on the column + other elements on the diagonal
+        diagonal_sum = true_positives.sum()
+        true_negatives = []
+        for k in len(confusion_matrix):
+        '''
+
+        #False positives (FP) other elements on the row
+        
         sum_over_all_matrix = 0
         for i in range(len_confusion_matrix):
             for j in range(len_confusion_matrix):
@@ -100,8 +118,9 @@ def accuracy_all_classes(model_name, model_dir,
         
         print(sum_over_all_matrix)
         counter_class = 0
-        TPs = dict()
-        FNs = dict()
+
+        TPs = {}
+        FNs = {}
         for i in range(len_confusion_matrix):
             row = confusion_matrix[i]
             #print(row)
@@ -110,10 +129,9 @@ def accuracy_all_classes(model_name, model_dir,
             for j in range(len_confusion_matrix):
                 col = confusion_matrix[i][j]
                 #FNc = sum(row)
-                if i == j and j == counter_class:
+                if i == j:
                     TPc = confusion_matrix[i][j]
                     TPs[i+1] = TPc
-                    counter_class += 1
                     FNc = FNc - TPc
                     FNs[i+1] = FNc
 
@@ -123,28 +141,35 @@ def accuracy_all_classes(model_name, model_dir,
         sum_columns = confusion_matrix.sum(axis=0)
         #print(sum_columns)
         counter = 1
-        FPs = dict()
+        FPs = {}
         for i in sum_columns:
             FPs[counter] = i - TPs[counter]
             counter +=1
         
         print("FPs: ",FPs,"\n")
 
-        TNs = dict()
-
+        TNs = {}
         for i in range(len_confusion_matrix):
             TNs[i+1] = sum_over_all_matrix - TPs[i+1] - FPs[i+1] - FNs[i+1]
+            #TNs[i+1] = 0
 
         print("TNs: ",TNs,"\n")
 
-        ACCs =dict()
-
+        ACCs = {}
         for i in range(len_confusion_matrix):
             ACCs[i+1] = (TPs[i+1] + TNs[i+1]) /(TPs[i+1] + TNs[i+1] + FPs[i+1] + FNs[i+1])
         
+
+        class_distrib = confusion_matrix.sum(axis=1)
+        total = sum(class_distrib)
+        weights = class_distrib/total
+        print("Class distribution: "+str(class_distrib))
+        print("total: "+str(class_distrib))
+        print("weights: "+str(weights))
+        
+        ACCs = [value for _, value in ACCs.items()]
         print("ACCs: ",ACCs)
-
-
+        
 
 
 if __name__ == "__main__":

@@ -36,8 +36,8 @@ DATASET_DIR = os.path.join(BASE_DIR,"data")
 MODEL_DIR = os.path.join(BASE_DIR,"model")
 
 #Preprocessing
-#preprocessing_name = None
-preprocessing_name = "PitchShift"
+preprocessing_name = None
+#preprocessing_name = "PitchShift"
 #preprocessing_name = "TimeStretch"
 #preprocessing_name = "DynamicRangeCompression"
 #preprocessing_name = "BackgroundNoise"
@@ -214,7 +214,6 @@ trainer = Trainer(
                     BATCH_SIZE,
                     train_loader,
                     test_loader,
-                    train_dataset.get_id_to_class(),
                     model,
                     loss_function,
                     optimizer,

@@ -65,6 +65,12 @@ class DataLoader():
       return batch
     '''
     
+    def __call__(self, sample_meta, preprocessing_value = None):
+      samples = self.dataset(sample_meta, preprocessing_value = preprocessing_value)
+      batch = self.collate_fn(samples)
+      batch = self.preprocess_batch(batch)
+      return batch
+
     def __iter__(self):
       '''
       __iter__ method for this custom DataLoader class, prepares data by performing

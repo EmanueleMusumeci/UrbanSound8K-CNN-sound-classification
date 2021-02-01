@@ -154,6 +154,9 @@ class CustomConvolutionalNetwork(nn.Module):
 
         return x
 
+#Class alias for previous versions of this class
+ConvolutionalNetwork = CustomConvolutionalNetwork
+
 if __name__ == "__main__":
     """
     net = ConvolutionalNetwork(1)
