@@ -35,6 +35,16 @@ from scipy import signal
 from utils.plot_utils import load_scores
 from utils.plot_utils import get_best_epoch_scores
 
+def f1_score_models(model_name, model_dir, 
+                          tasks={"audio_classification" : "Audio classification"}, 
+                          save_to_file=False, title_prefix=None, 
+                          scores_on_train=False,best_epoch_bool=False):
+    plt.close("all")
+    scores, epoch_list, best_epoch = load_scores(model_name, model_dir, scores_on_train=scores_on_train)
+    
+    print("scores on : ",model_name , scores["audio_classification"]["accuracy"][best_epoch],"\n\n")
+    return scores["audio_classification"]["f1"][best_epoch]
+
 def accuracy_all_classes(model_name, model_dir, 
                           tasks={"audio_classification" : "Audio classification"}, 
                           save_to_file=False, title_prefix=None, 
@@ -46,6 +56,8 @@ def accuracy_all_classes(model_name, model_dir,
 
     if best_epoch_bool is True:
         scores_best,epoch_list_best,best_epoch_best = load_scores(model_name,model_dir,from_epoch=best_epoch,to_epoch=best_epoch,scores_on_train=scores_on_train)
+    
+    print("scores on : ",model_name , scores["audio_classification"]["accuracy"][best_epoch],"\n\n")
 
     #print(len(scores))
 
@@ -56,7 +68,7 @@ def accuracy_all_classes(model_name, model_dir,
     #print(scores)
 
     #print(epoch_list)
-    print("best epoch: ",best_epoch)
+    #print("best epoch: ",best_epoch)
     
     plot_dir = os.path.join(model_dir,"plots","confusion_matrices")
     if not os.path.exists(plot_dir):
@@ -68,8 +80,8 @@ def accuracy_all_classes(model_name, model_dir,
         
         if best_epoch_bool : 
             confusion_matrix = scores_best[task_key]["confusion matrix"]
-            print(scores_best[task_key]["confusion matrix"])
-            print(scores[task_key]["confusion matrix"])
+            #print(scores_best[task_key]["confusion matrix"])
+            #print(scores[task_key]["confusion matrix"])
 
         else:
             confusion_matrix = scores[task_key]["confusion matrix"]
@@ -165,7 +177,7 @@ def accuracy_all_classes(model_name, model_dir,
 
 
 def delta_accuracy_plot(data):
-    print("delat_accuracy_plot")
+    print("delta_accuracy_plot")
     import seaborn as sns
     import pandas as pd
     
@@ -177,12 +189,34 @@ def delta_accuracy_plot(data):
         x="value", y="class", hue="augmentations",
         ci="sd", palette="dark", alpha=.6, height=6
     )
-    print(len(g.axes[0]))
+    #print(len(g.axes[0]))
     ax1 = g.axes[0]
-    print(ax1)
+    #print(ax1)
     g.despine(left=True)
     g.set_axis_labels("Δ Classification Accuracy", "class")
     g.legend.set_title("")
+
+    plt.show()
+
+def delta_f1_plot(data):
+    print("delta_f1_plot")
+    import seaborn as sns
+    import pandas as pd
+    
+    # Create DataFrame
+    df = pd.DataFrame(data)
+    #print(df)
+    g = sns.catplot(
+        data=df, kind="bar",
+        x="f1_score", y="augmentations",
+        ci="sd", palette="dark", alpha=.6, height=6
+    )
+    #print(len(g.axes[0]))
+    ax1 = g.axes[0]
+    #print(ax1)
+    g.despine(left=True)
+    g.set_axis_labels("Δ f1-score", "augmentations")
+    #g.legend.set_title("")
 
     plt.show()
 
@@ -203,90 +237,127 @@ def get_accuracy_delta(accuracies_augmentation_method,accuracies_base):
         delta[names[key-1]] = accuracies_augmentation_method[key] - value
     
     return delta   
-  
 
-def plot_delta_accuracies(model_dir,
+
+
+def plot_delta_on_metric(model_dir,metric,aug_to_test,
                       tasks={"audio_classification" : "Audio classification"},
                       save_to_file=True, 
                       title_prefix = "Base",
                       scores_on_train=False
+                      
 ):
     #e.g parameters used
     #model_dir = "model"
     #test_dir = "delta_test_on_fold_1/"
     #test_dir = ""
 
+    augmentation_delta_computed = {}
+    for el in aug_to_test:
+        if metric == "accuracy":
+            augmentation_delta_computed[el] = accuracy_all_classes(el, model_dir, 
+                                            tasks=tasks,
+                                            save_to_file=save_to_file, 
+                                            title_prefix = title_prefix,
+                                            scores_on_train=scores_on_train
+                                            )
+        elif metric == "f1": 
+            augmentation_delta_computed[el] = f1_score_models(el,model_dir,
+                                            tasks=tasks,
+                                            save_to_file=save_to_file,
+                                            title_prefix=title_prefix,
+                                            scores_on_train=scores_on_train
+                                            )
+
+    #print(augmentation_delta_computed)
+    #Add "All classes" class as average value of other classes for each augmentation choosen
+    if metric == "accuracy":
+        sums = {}
+        for key,value in augmentation_delta_computed.items():
+            sum_on_aug = 0
+            for key_aug,value_aug in augmentation_delta_computed[key].items():
+                sum_on_aug += value_aug
+
+            sums[key] = sum_on_aug/len(augmentation_delta_computed[key])
+        
+        for key,value in sums.items():
+            augmentation_delta_computed[key][len(augmentation_delta_computed[key])+1] = value
+        #print(augmentation_delta_computed)
+    
+        
+        data = {"class":[],"value":[],"augmentations":[]}
+
+        if "TimeStretch" in aug_to_test:
+            TS_delta = get_accuracy_delta(augmentation_delta_computed["TimeStretch"],augmentation_delta_computed["Base"])
+            #print("TS_delta: ",TS_delta)
+            data = update_data(data,TS_delta,"TS")
+            #print(data)
+
+        if "PitchShift" in aug_to_test:
+            PS1_delta = get_accuracy_delta(augmentation_delta_computed["PitchShift"],augmentation_delta_computed["Base"])
+            #print("PS1_delta: ",PS1_delta)
+            data = update_data(data,PS1_delta,"PS1")
+        
+            #print(data)
+
+        if "DynamicRangeCompression" in aug_to_test:
+            DRC_delta = get_accuracy_delta(augmentation_delta_computed["DynamicRangeCompression"],augmentation_delta_computed["Base"])
+            #print("DRC_delta: ",DRC_delta)
+            data = update_data(data,DRC_delta,"DRC")
+            #print(data)
+
+        if "BackgroundNoise" in aug_to_test:
+            BG_delta = get_accuracy_delta(augmentation_delta_computed["BackgroundNoise"],augmentation_delta_computed["Base"])
+            #print("BG_delta: ",BG_delta)
+            data = update_data(data,BG_delta,"BG")
+
+            #print(data)
+        """
+        All_delta = {}
+        for key,value in TS_delta.items():
+            average = (value + PS1_delta[key] + DRC_delta[key] + BG_delta[key])/5
+            All_delta[key] = average
+        print("All_delta: ", All_delta)
+        data = update_data(data,All_delta,"All")
+        """
+        
+        print(data)
+        delta_accuracy_plot(data)
+    
+    else:
+        print(augmentation_delta_computed)
+        data = {"augmentations":[],"f1_score":[]}
+
+        for key,value in augmentation_delta_computed.items():
+            if key is "Base":
+                base_value = value
+            else:
+                data["augmentations"].append(key)
+                data["f1_score"].append(value-base_value)
+        
+        data_with_delta = {"augmentations":[],"f1_score":[]}
+        
+        #data["augmentations"].remove(data["augmentations"][0])
+        #data["f1_score"].remove(data[value][0])
+        print(augmentation_delta_computed)
+
+
+        
+        print(data)
+
+        delta_f1_plot(data)
+
+
+
+if __name__ == "__main__":
+    model_dir = "model/test_on_fold_10"
     list_augmentation_to_test = [
         "Base",
         "PitchShift",
-        #"BackgroundNoise",
+        "BackgroundNoise",
         "DynamicRangeCompression",
         "TimeStretch"
 
     ]
-    augmentation_delta_computed = {}
-    for el in list_augmentation_to_test:
-        augmentation_delta_computed[el] = accuracy_all_classes(el, model_dir, 
-                                        tasks=tasks,
-                                        save_to_file=save_to_file, 
-                                        title_prefix = title_prefix,
-                                        scores_on_train=scores_on_train
-                                        )
-    print(augmentation_delta_computed)
-    #Add "All classes" class as average value of other classes for each augmentation choosen
-    sums = {}
-    for key,value in augmentation_delta_computed.items():
-        sum_on_aug = 0
-        for key_aug,value_aug in augmentation_delta_computed[key].items():
-            sum_on_aug += value_aug
-
-        sums[key] = sum_on_aug/len(augmentation_delta_computed[key])
-    
-    for key,value in sums.items():
-        augmentation_delta_computed[key][len(augmentation_delta_computed[key])+1] = value
-    #print(augmentation_delta_computed)
-   
-    
-    data = {"class":[],"value":[],"augmentations":[]}
-
-    if "TimeStretch" in list_augmentation_to_test:
-        TS_delta = get_accuracy_delta(augmentation_delta_computed["TimeStretch"],augmentation_delta_computed["Base"])
-        print("TS_delta: ",TS_delta)
-        data = update_data(data,TS_delta,"TS")
-        #print(data)
-
-    if "PitchShift" in list_augmentation_to_test:
-        PS1_delta = get_accuracy_delta(augmentation_delta_computed["PitchShift"],augmentation_delta_computed["Base"])
-        print("PS1_delta: ",PS1_delta)
-        data = update_data(data,PS1_delta,"PS1")
-    
-        #print(data)
-
-    if "DynamicRangeCompression" in list_augmentation_to_test:
-        DRC_delta = get_accuracy_delta(augmentation_delta_computed["DynamicRangeCompression"],augmentation_delta_computed["Base"])
-        print("DRC_delta: ",DRC_delta)
-        data = update_data(data,DRC_delta,"DRC")
-        #print(data)
-
-    if "BackgroundNoise" in list_augmentation_to_test:
-        BG_delta = get_accuracy_delta(augmentation_delta_computed["BackgroundNoise"],augmentation_delta_computed["Base"])
-        print("BG_delta: ",BG_delta)
-        data = update_data(data,BG_delta,"BG")
-
-         #print(data)
-    """
-    All_delta = {}
-    for key,value in TS_delta.items():
-        average = (value + PS1_delta[key] + DRC_delta[key] + BG_delta[key])/5
-        All_delta[key] = average
-    print("All_delta: ", All_delta)
-    data = update_data(data,All_delta,"All")
-    """
-    
-    #print(data)
-    delta_accuracy_plot(data)
-
-if __name__ == "__main__":
-    model_dir = "model"
-
-    plot_delta_accuracies(model_dir)
+    plot_delta_on_metric(model_dir,"f1",list_augmentation_to_test)
+    #plot_delta_f1_score(model_dir)
