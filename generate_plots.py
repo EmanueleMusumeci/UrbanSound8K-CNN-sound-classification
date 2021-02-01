@@ -40,12 +40,12 @@ if __name__ == "__main__":
         COMPARATIVE_PLOTS = False
         GRADIENT_FLOW = False
         BEST_SCORES = False
-        PLOT_BEST_SCORES_DELTAS = True
+        PLOT_BEST_SCORES_DELTAS = False
         PLOT_CLASS_DISTRIBUTION = False
         PLOT_PREPROCESSING_ACCURACY_RESULTS = False
-        COLLECT_AND_PREPROCESS_SAMPLES = False
+        COLLECT_AND_PREPROCESS_SAMPLES = True
         SHOW_PREPROCESSING = False
-        SALIENCY_MAPS = False
+        SALIENCY_MAPS = True
 
         ################
         # SINGLE PLOTS 
@@ -243,20 +243,10 @@ if __name__ == "__main__":
         # BEST  SCORES #
         ################
         if PLOT_BEST_SCORES_DELTAS:
-                
-                model_names = {
-                        "Base" : ["BackgroundNoise", "DynamicRangeCompression"]
-                        }
+                pass
 
-                plot_model_improvement_deltas(model_names, model_dir, 
-                                                tasks={"audio_classification" : "Audio classification"},
-                                                metrics={"Accuracy":["accuracy"]}, 
-                                                epoch=0, to_epoch=0, epochs_skip=0,
-                                                scores_on_train=False,
-                                                title_prefix=None,
-                                                plot_dir = None, 
-                                                show = False
-                                             )
+#TODO : Integrare con Michele
+
         #############################
         #  PLOT CLASS DISTRIBUTION  #
         #############################

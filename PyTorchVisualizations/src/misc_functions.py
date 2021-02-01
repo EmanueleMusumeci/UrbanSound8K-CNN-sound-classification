@@ -6,13 +6,15 @@ Created on Thu Oct 21 11:09:09 2017
 import os
 import copy
 import numpy as np
-from PIL import Image, ImageFilter, ImageDraw, ImageFont
+from PIL import Image, ImageFilter, ImageDraw, ImageFont, ImageOps
 import matplotlib
 import matplotlib.cm as mpl_color_map
 
 import torch
 from torch.autograd import Variable
 from torchvision import models
+
+import imageio
 
 
 def convert_to_grayscale(im_as_arr):
@@ -78,7 +80,7 @@ def save_class_activation_images(org_img, activation_map, file_name, directory, 
     save_image(activation_map, file_name)
 
 
-def apply_colormap_on_image(org_im, activation, colormap_name, layer = None):
+def apply_colormap_on_image(org_im, activation, colormap_name, layer = None, resize_to=(128,128)):
     """
         Apply heatmap on image
     Args:
@@ -87,7 +89,8 @@ def apply_colormap_on_image(org_im, activation, colormap_name, layer = None):
         colormap_name (str): Name of the colormap
     """
 
-    org_im = Image.fromarray(org_im)
+    org_im_PIL = Image.fromarray(org_im)
+    org_im_PIL = org_im_PIL.convert("RGBA")
 
     # Get colormap
     color_map = mpl_color_map.get_cmap(colormap_name)
@@ -97,19 +100,33 @@ def apply_colormap_on_image(org_im, activation, colormap_name, layer = None):
     heatmap[:, :, 3] = 0.4
     heatmap = Image.fromarray((heatmap*255).astype(np.uint8))
     no_trans_heatmap = Image.fromarray((no_trans_heatmap*255).astype(np.uint8))
+    
+    org_im_PIL = org_im_PIL.transpose(Image.ROTATE_90)
+    org_im_PIL = org_im_PIL.resize(resize_to)
+    
+    #Rotate and flip heatmap to be aligned to original image
+    heatmap = heatmap.transpose(Image.ROTATE_180)
+    heatmap = ImageOps.mirror(heatmap)
+    heatmap = heatmap.resize(resize_to)
+    
+    no_trans_heatmap = no_trans_heatmap.transpose(Image.ROTATE_180)
+    no_trans_heatmap = ImageOps.mirror(no_trans_heatmap)
+    no_trans_heatmap = no_trans_heatmap.resize(resize_to)
 
     # Apply heatmap on iamge
-    heatmap_on_image = Image.new("RGBA", org_im.size)
-    heatmap_on_image = Image.alpha_composite(heatmap_on_image, org_im.convert('RGBA'))
+    heatmap_on_image = Image.new("RGBA", org_im_PIL.size)
+    heatmap_on_image = Image.alpha_composite(heatmap_on_image, org_im_PIL)
     heatmap_on_image = Image.alpha_composite(heatmap_on_image, heatmap)
 
-    heatmap_on_image = heatmap_on_image.transpose(Image.ROTATE_180)
+    #heatmap_on_image = heatmap_on_image.transpose(Image.ROTATE_180)
     scaling_factor = 2
     heatmap_on_image = heatmap_on_image.resize((heatmap_on_image.size[0] * scaling_factor, heatmap_on_image.size[1] * scaling_factor))
 
     if layer is not None:
         draw = ImageDraw.Draw(heatmap_on_image)
         draw.text((0, 0),"Layer: "+str(layer),(255,255,255))
+
+    org_im =  np.rot90(org_im)
 
     return org_im, no_trans_heatmap, heatmap_on_image
 
@@ -149,9 +166,12 @@ def save_image(im, path):
         path (str): Path to the image
     """
     if isinstance(im, (np.ndarray, np.generic)):
-        im = format_np_output(im)
-        im = Image.fromarray(im)
-    im.save(path, format="PNG")
+        matplotlib.pyplot.imsave(path, im, format="png")
+        #imageio.imwrite(path, im, format="png")
+        #im = format_np_output(im)
+        #im = Image.fromarray(im)
+    else:
+        im.save(path, format="PNG")
 
 
 def preprocess_image(pil_im, resize_im=True):
