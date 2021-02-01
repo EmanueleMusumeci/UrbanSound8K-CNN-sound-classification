@@ -19,6 +19,8 @@ import imageio
 import torchvision
 from torchvision import transforms
 
+import pandas as pd
+
 import PyTorchVisualizations
 #from PyTorchVisualizations.src.gradcam import GradCam
 #from PyTorchVisualizations.src.misc_functions import save_class_activation_images
@@ -34,7 +36,7 @@ from utils.plot_utils import load_scores, get_best_epoch_scores
 
 def accuracy_all_classes(model_name, model_dir, 
                           tasks={"audio_classification" : "Audio classification"}, 
-                          save_to_file=False, title_prefix=None, 
+                          save_to_file=False,
                           scores_on_train=False):
 
     plt.close("all")
@@ -96,21 +98,7 @@ def accuracy_all_classes(model_name, model_dir,
         TNc = sum over all matrix - TPc-FPc-FNc
 
         """
-        '''
-        
-        confusion_matrix = np.array(confusion_matrix)
-
-        #True positive (TP) elements on the diagonal
-        true_positives = confusion_matrix.diagonal()
-
-        #True negatives (TN) other elements on the column + other elements on the diagonal
-        diagonal_sum = true_positives.sum()
-        true_negatives = []
-        for k in len(confusion_matrix):
-        '''
-
-        #False positives (FP) other elements on the row
-        
+        #sum over all matrix
         sum_over_all_matrix = 0
         for i in range(len_confusion_matrix):
             for j in range(len_confusion_matrix):
@@ -118,9 +106,9 @@ def accuracy_all_classes(model_name, model_dir,
         
         print(sum_over_all_matrix)
         counter_class = 0
-
-        TPs = {}
-        FNs = {}
+        #TPs TNs FNs FPs computing
+        TPs = dict()
+        FNs = dict()
         for i in range(len_confusion_matrix):
             row = confusion_matrix[i]
             #print(row)
@@ -157,26 +145,114 @@ def accuracy_all_classes(model_name, model_dir,
 
         ACCs = {}
         for i in range(len_confusion_matrix):
-            ACCs[i+1] = (TPs[i+1] + TNs[i+1]) /(TPs[i+1] + TNs[i+1] + FPs[i+1] + FNs[i+1])
+            Num = TPs[i+1] + TNs[i+1] 
+            Den = TPs[i+1] + TNs[i+1] + FPs[i+1] + FNs[i+1]
+            ACCs[i+1] = Num / Den
         
-
-        class_distrib = confusion_matrix.sum(axis=1)
-        total = sum(class_distrib)
-        weights = class_distrib/total
-        print("Class distribution: "+str(class_distrib))
-        print("total: "+str(class_distrib))
-        print("weights: "+str(weights))
-        
-        ACCs = [value for _, value in ACCs.items()]
         print("ACCs: ",ACCs)
-        
+        return ACCs
 
+
+def delta_accuracy_plot(data):
+    import seaborn as sns
+    import pandas as pd
+    
+    # Create DataFrame
+    df = pd.DataFrame(data)
+ 
+    g = sns.catplot(
+        data=df, kind="bar",
+        x="value", y="class", hue="augmentations",
+        ci="sd", palette="dark", alpha=.6, height=6
+    )
+    g.despine(left=True)
+    g.set_axis_labels("Δ Classification Accuracy", "class")
+    g.legend.set_title("")
+
+    plt.show()
+
+def update_data(data,delta,augmentation):
+
+    for key,value in delta.items():
+        data["class"].append(key)
+        data["value"].append(value)
+        data["augmentations"].append(augmentation)
+    return data    
+
+def get_accuracy_delta(accuracies_augmentation_method,accuracies_base):
+        
+    delta = {}
+    names = ["air_conditioner","car_horn","children_playing","dog_bark","drilling","engine_idling","gun_shot","jackhammer","siren","street_music"]
+    for key,value in accuracies_base.items():
+        delta[names[key-1]] = accuracies_augmentation_method[key] - value
+    
+    return delta   
+  
+                
 
 if __name__ == "__main__":
     model_dir = "model"
-    accuracy_all_classes("Base", model_dir, 
+    accuracies_base = accuracy_all_classes("Base", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                         save_to_file=True, 
-                                        title_prefix = "Base",
                                         scores_on_train=False
                                         )
+    
+    accuracies_PS1 = accuracy_all_classes("PitchShift", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                        save_to_file=True, 
+                                        scores_on_train=False
+                                        )
+    
+    accuracies_PS2 = accuracy_all_classes("PitchShift_PS2", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                        save_to_file=True, 
+                                        scores_on_train=False
+                                        )
+
+    accuracies_BG = accuracy_all_classes("BackgroundNoise", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                        save_to_file=True, 
+                                        scores_on_train=False
+                                        )
+    
+    accuracies_DRC = accuracy_all_classes("DynamicRangeCompression", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                        save_to_file=True, 
+                                        scores_on_train=False
+                                        )
+
+    accuracies_TS = accuracy_all_classes("TimeStretch", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                        save_to_file=True, 
+                                        scores_on_train=False
+                                        )
+    
+    data = {"class":[],"value":[],"augmentations":[]}
+
+    TS_delta = get_accuracy_delta(accuracies_TS,accuracies_base)
+    print("TS_delta: ",TS_delta)
+    data = update_data(data,TS_delta,"TS")
+    print(data)
+
+    PS1_delta = get_accuracy_delta(accuracies_PS1,accuracies_base)
+    print("PS1_delta: ",PS1_delta)
+    data = update_data(data,PS1_delta,"PS1")
+    print(data)
+    
+    PS2_delta = get_accuracy_delta(accuracies_PS2,accuracies_base)
+    print("PS2_delta: ",PS2_delta)
+    data = update_data(data,PS1_delta,"PS2")
+    print(data)
+
+    DRC_delta = get_accuracy_delta(accuracies_DRC,accuracies_base)
+    print("DRC_delta: ",DRC_delta)
+    data = update_data(data,DRC_delta,"DRC")
+    print(data)
+
+    BG_delta = get_accuracy_delta(accuracies_BG,accuracies_base)
+    print("BG_delta: ",BG_delta)
+    data = update_data(data,BG_delta,"BG")
+    print(data)
+
+    delta_accuracy_plot(data)

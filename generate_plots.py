@@ -40,11 +40,12 @@ if __name__ == "__main__":
         COMPARATIVE_PLOTS = False
         GRADIENT_FLOW = False
         BEST_SCORES = False
+        PLOT_BEST_SCORES_DELTAS = True
         PLOT_CLASS_DISTRIBUTION = False
         PLOT_PREPROCESSING_ACCURACY_RESULTS = False
-        COLLECT_AND_PREPROCESS_SAMPLES = True
+        COLLECT_AND_PREPROCESS_SAMPLES = False
         SHOW_PREPROCESSING = False
-        SALIENCY_MAPS = True
+        SALIENCY_MAPS = False
 
         ################
         # SINGLE PLOTS 
@@ -240,6 +241,24 @@ if __name__ == "__main__":
                                                 )
                                 f.write(best_scores_str)
         
+        ################
+        # BEST  SCORES #
+        ################
+        if PLOT_BEST_SCORES_DELTAS:
+                
+                model_names = {
+                        "Base" : ["BackgroundNoise", "DynamicRangeCompression"]
+                        }
+
+                plot_model_improvement_deltas(model_names, model_dir, 
+                                                tasks={"audio_classification" : "Audio classification"},
+                                                metrics={"Accuracy":["accuracy"]}, 
+                                                epoch=0, to_epoch=0, epochs_skip=0,
+                                                scores_on_train=False,
+                                                title_prefix=None,
+                                                plot_dir = None, 
+                                                show = False
+                                             )
         #############################
         #  PLOT CLASS DISTRIBUTION  #
         #############################
@@ -259,12 +278,14 @@ if __name__ == "__main__":
         if PLOT_PREPROCESSING_ACCURACY_RESULTS:
                 pass
 
+#TODO: Integrare lavoro Michele
 
         ####################################
         #  COLLECT AND PREPROCESS SAMPLES  #
         ####################################
         #Collect one sample for each class
         selected_classes = [1,2,3,4,5,6,7,8,9,10]
+        #selected_classes = [1]
         if SHOW_PREPROCESSING or SALIENCY_MAPS:
                 fold_meta, fold_raw, fold_spectrograms_raw = load_raw_compacted_dataset(dataset_dir, folds = [1])
                 samples_one_for_each_class = {}
@@ -338,8 +359,12 @@ if __name__ == "__main__":
         # SALIENCY MAPS #
         #################
         if SALIENCY_MAPS:
-                shutil.rmtree(os.path.join(plot_dir, "saliency_maps"))
-                os.makedirs(os.path.join(plot_dir, "saliency_maps"))
+                if os.path.exists(os.path.join(plot_dir, "saliency_maps")):
+                        shutil.rmtree(os.path.join(plot_dir, "saliency_maps"))
+                        os.makedirs(os.path.join(plot_dir, "saliency_maps"))
+                else:
+                        os.makedirs(os.path.join(plot_dir, "saliency_maps"))
+
                 '''
                 training_preprocessing_pipeline = transforms.Compose([
                         transforms.Resize((224,224)),

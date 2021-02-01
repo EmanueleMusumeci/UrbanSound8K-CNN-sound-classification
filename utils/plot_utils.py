@@ -653,7 +653,43 @@ def plot_class_distributions(distributions, plot_dir=None):
         fig.savefig(os.path.join(plot_dir,"class_distribution_plot.png"))
     else:
         fig.show()
-        
+
+def plot_model_improvement_deltas(model_names, model_dir, 
+                                  tasks={"audio_classification" : "Audio classification"},
+                                  metrics={"F1-macro":["f1"]}, 
+                                  epoch=0, to_epoch=0, epochs_skip=0,
+                                  scores_on_train=False,
+                                  title_prefix=None,
+                                  plot_dir = None, 
+                                  show = False 
+                                  ):
+  
+  for reference_model_name, other_model_names in model_names.items():
+    reference_scores, _, reference_best_epoch = load_scores(reference_model_name, model_dir)
+    other_models_scores = {}
+
+    for model in other_model_names:
+      other_model_scores, _, other_model_best_epoch = load_scores(model, model_dir)
+      other_model_scores[model] = {"scores" : other_model_scores, "best_epoch" : other_model_best_epoch}
+
+    seaborn.reset_orig()
+
+    for task_name, task_header in tasks.items():
+
+      for plot_header, metric_keys in metrics.items():
+
+        collected_scores = {}
+        for model in other_model_names:
+          for score_name, values in other_model_scores[model]["scores"][task_name].items():
+              if score_name in metrics.keys():
+                  if score_name == "confusion matrix" or score_name == "distribution":
+                    continue
+                  else:
+                    collected_scores[model] = other_model_scores[model]["best_epoch"]
+        print(collected_scores)
+
+#TODO: Finish the metrics delta wrt to reference model bar plot
+
 def visualize_features(model, convolutional_layers, dense_layers, sample, sample_label_idx, save_to_dir, filename=None, target_layer=0):
   if not os.path.exists(save_to_dir):
     os.makedirs(save_to_dir)
@@ -726,18 +762,18 @@ def plot_sound_waves(sound, compare_with_sound = None, preprocessing_name = None
   if compare_with_sound is None:
     horizontal = False
 
-  plot_title += "Wave plot"
+  plot_title += "\nWave plot"
   if compare_with_sound is not None:
     plot_title += "\n"+preprocessing_name
 
   if compare_with_sound is not None:
     plot_title += "s"
     if horizontal:
-      plt.subplots(1,2, figsize=(14,5))
+      fig, axes = plt.subplots(1,2, figsize=(14,5))
     else:
-      plt.subplots(2,1)
+      fig, axes = plt.subplots(2,1)
   else:
-    plt.subplots(1)
+    fig, axes = plt.subplots(1)
     
   plt.suptitle(plot_title)  
 
@@ -765,23 +801,21 @@ def plot_sound_waves(sound, compare_with_sound = None, preprocessing_name = None
       plt.subplot(2,1,2)
 
     subplot_title = "Preprocessed"
-    if preprocessing_name is not None:
-      subplot_title += " ("+preprocessing_name+")"
     plt.title(subplot_title)
     
     librosa.display.waveplot(np.array(compare_with_sound),sr=sr, x_axis = "time")
 
     #plt.ylim([1e-7, 1e2])
-    plt.xlabel('Time [sec]')
-    plt.ylabel('Magnitude (norm)')
-    plt.subplots_adjust(hspace= 0.4)
-  
-  if show: 
-    plt.show()
+    plt.xlabel('Time [sec]', size = 10)
+    plt.ylabel('Magnitude (norm)', size = 10)
+    plt.subplots_adjust(top = 0.82, hspace= 0.4)
   
   if save_to_dir is not None:
-    path = os.path.join(save_to_dir,plot_title.replace("\n", " ")+".png")
-    plt.savefig(path)
+    path = os.path.join(save_to_dir,plot_title.replace("\n", " ").replace(":"," ")+".png")
+    fig.savefig(path)
+    
+  if show: 
+    plt.show()  
 
 def plot_sound_spectrogram(sound, compare_with_sound = None, preprocessing_name = None, preprocessing_value = None,
                             horizontal = False,
@@ -793,7 +827,7 @@ def plot_sound_spectrogram(sound, compare_with_sound = None, preprocessing_name 
   if compare_with_sound is None:
     horizontal = False
 
-  plot_title += "Spectrogram"
+  plot_title += "\nSpectrogram"
   if compare_with_sound is not None:
     plot_title += "\n"+preprocessing_name
   
@@ -809,11 +843,11 @@ def plot_sound_spectrogram(sound, compare_with_sound = None, preprocessing_name 
   if compare_with_sound is not None:
     plot_title += "s"
     if horizontal:
-      plt.subplots(1,2, figsize=(14,5))
+      fig, axes = plt.subplots(1,2, figsize=(14,5))
     else:
-      plt.subplots(2,1)
+      fig, axes = plt.subplots(2,1)
   else:
-    plt.subplots(1)
+    fig, axes = plt.subplots(1)
     
   plt.suptitle(plot_title)  
 
@@ -846,8 +880,6 @@ def plot_sound_spectrogram(sound, compare_with_sound = None, preprocessing_name 
       plt.subplot(2,1,2)
 
     subplot_title = "Preprocessed"
-    if preprocessing_name is not None:
-      subplot_title += " ("+preprocessing_name+")"
     plt.title(subplot_title)
     
     librosa.display.specshow(sound, hop_length = hop_length, x_axis="time", y_axis=y_axis)
@@ -856,14 +888,14 @@ def plot_sound_spectrogram(sound, compare_with_sound = None, preprocessing_name 
     #plt.ylim([1e-7, 1e2])
     plt.xlabel('Time [sec]')
     plt.ylabel('Magnitude (norm)')
-    plt.subplots_adjust(hspace= 0.4)
-  
-  if show: 
-    plt.show()
+    plt.subplots_adjust(top = 0.82, hspace= 0.4)
   
   if save_to_dir is not None:
-    path = os.path.join(save_to_dir,plot_title.replace("\n", " ")+".png")
-    plt.savefig(path)
+    path = os.path.join(save_to_dir,plot_title.replace("\n", " ").replace(":"," ")+".png")
+    fig.savefig(path)
+    
+  if show: 
+    plt.show()  
 
 #from https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.periodogram.html
 def plot_periodogram(sound, compare_with_sound = None, preprocessing_name = None, preprocessing_value = None,
@@ -875,7 +907,7 @@ def plot_periodogram(sound, compare_with_sound = None, preprocessing_name = None
   if compare_with_sound is None:
     horizontal = False
 
-  plot_title += "Periodogram"
+  plot_title += "\nPeriodogram"
   if compare_with_sound is not None:
     plot_title += "\n"+preprocessing_name
   
@@ -883,11 +915,11 @@ def plot_periodogram(sound, compare_with_sound = None, preprocessing_name = None
   if compare_with_sound is not None:
     plot_title += "s"
     if horizontal:
-      plt.subplots(1,2, figsize=(14,5))
+      fig, axes = plt.subplots(1,2, figsize=(14,5))
     else:
-      plt.subplots(2,1)
+      fig, axes = plt.subplots(2,1)
   else:
-    plt.subplots(1)
+    fig, axes = plt.subplots(1)
     
   plt.suptitle(plot_title)
 
@@ -913,8 +945,6 @@ def plot_periodogram(sound, compare_with_sound = None, preprocessing_name = None
       plt.subplot(2,1,2)
 
     subplot_title = "Preprocessed"
-    if preprocessing_name is not None:
-      subplot_title += " ("+preprocessing_name+")"
     plt.title(subplot_title)
 
     f2, periodogram2 = signal.periodogram(compare_with_sound, sr)
@@ -923,14 +953,14 @@ def plot_periodogram(sound, compare_with_sound = None, preprocessing_name = None
     plt.ylim([1e-7, 1e2])
     plt.xlabel('Frequency [Hz]')
     plt.ylabel('Magnitude (norm)')
-    plt.subplots_adjust(hspace= 0.4)
-  
-  if show: 
-    plt.show()
+    plt.subplots_adjust(top = 0.82, hspace= 0.4)
   
   if save_to_dir is not None:
-    path = os.path.join(save_to_dir,plot_title.replace("\n", " ")+".png")
+    path = os.path.join(save_to_dir,plot_title.replace("\n", " ").replace(":"," ")+".png")
     plt.savefig(path)
+    
+  if show: 
+    plt.show()  
       
 def show_audio_preprocessing(original_clip, preprocessors, save_clips_to_dir, save_plots_to_dir, horizontal = False,
                               sound_file_name = None, sound_class = None, sample_rate = 22050,
@@ -955,7 +985,6 @@ def show_audio_preprocessing(original_clip, preprocessors, save_clips_to_dir, sa
   plot_sound_waves(original_clip, show = show, save_to_dir = output_dir, plot_title = plot_title)
   plot_sound_spectrogram(original_clip, show = show, save_to_dir = output_dir, plot_title = plot_title)
 
-  plot_title += "\n"
   for preprocessor in preprocessors:
     output_dir = os.path.join(save_plots_to_dir, preprocessor.name+" - Plots")
     if not os.path.exists(output_dir):

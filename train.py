@@ -46,8 +46,10 @@ CLIP_SECONDS = 3
 SPECTROGRAM_HOP_LENGTH = 512
 SAMPLE_RATE = 22050
 
-COMPUTE_DELTAS = False
-COMPUTE_DELTA_DELTAS = False
+COMPUTE_DELTAS = True
+COMPUTE_DELTA_DELTAS = True
+if COMPUTE_DELTA_DELTAS:
+    COMPUTE_DELTAS = True
 APPLY_IMAGE_AUGMENTATIONS = False
 
 BATCH_SIZE = 128
@@ -58,7 +60,7 @@ spectrogram_bands = 128
 
 in_channels = 1
 if COMPUTE_DELTAS:in_channels = 2
-elif COMPUTE_DELTA_DELTAS: in_channels = 3
+if COMPUTE_DELTA_DELTAS: in_channels = 3
 
 
 #Dataset
@@ -92,10 +94,14 @@ else:
     INSTANCE_NAME = args.name
 if not USE_PAPER_CNN:
     INSTANCE_NAME+="_custom"
+if COMPUTE_DELTAS:
+    INSTANCE_NAME+="_delta"
+if COMPUTE_DELTA_DELTAS:
+    INSTANCE_NAME+="_delta"
 
 
 #Check we are not overwriting any existing checkpoints
-PREVENT_OVERWRITE = True
+PREVENT_OVERWRITE = False
 if PREVENT_OVERWRITE:
     assert not os.path.exists(os.path.join(MODEL_DIR,INSTANCE_NAME)), "ATTENTION! The folder {} already exists: rename it or remove it".format(os.path.join(MODEL_DIR,INSTANCE_NAME))
 
@@ -164,8 +170,8 @@ test_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,
                             use_spectrograms = True, 
                             spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
                             spectrogram_bands = spectrogram_bands, 
-                            compute_deltas=False, 
-                            compute_delta_deltas=False, 
+                            compute_deltas=COMPUTE_DELTAS, 
+                            compute_delta_deltas=COMPUTE_DELTA_DELTAS, 
                             test = True, 
                             progress_bar = True,
                             selected_classes=selected_classes,
@@ -206,7 +212,6 @@ if isinstance(model, PaperConvolutionalNetwork):
             ], lr=1e-2)
 else:
     optimizer = torch.optim.Adam(model.parameters())
-
 
 #Training loop wrapper
 trainer = Trainer(

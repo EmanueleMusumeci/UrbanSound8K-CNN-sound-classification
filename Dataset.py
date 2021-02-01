@@ -113,8 +113,9 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             #Load dataset index (the audio files will be loaded one by one therefore training will be up to 10x slower!!!), 
             # returning only the sample_ids whose class_id is among the selected ones
             self.audio_meta = self.load_dataset_index(dataset_dir, folds=self.folds)
-            self.sample_ids = self.select_sample_ids(self.selected_classes, select_percentage = select_percentage_of_dataset)        
         
+        if self.audio_meta is not None:
+            self.sample_ids = self.select_sample_ids(self.selected_classes, select_percentage = select_percentage_of_dataset)        
             class_id_to_name, name_to_class_id, class_id_to_sample_ids = self.index_dataset()
             self.class_id_to_name = class_id_to_name
             self.name_to_class_id = name_to_class_id
@@ -535,7 +536,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             else:
                 preprocessed_log_mel_spectrogram_segment = generate_mel_spectrogram_librosa(preprocessed_signal_segment, self.spectrogram_bands, debug_time_label=("preprocessed" if self.debug_preprocessing_time else ""), show=self.debug_spectrograms)
 
-            original_spectrograms.append(log_mel_spectrogram)
+            original_spectrograms.append(log_mel_spectrogram_segment)
             preprocessed_spectrograms.append(preprocessed_log_mel_spectrogram_segment)
 
             #TO DELETE
@@ -551,13 +552,15 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         
         with code_timer("preprocessed spectrogram reshape", debug=self.debug_preprocessing_time):
             preprocessed_spectrograms = np.asarray(preprocessed_spectrograms).reshape(len(preprocessed_spectrograms),self.spectrogram_bands,self.audio_segment_selector.spectrogram_window_size,1)
-        
+
         with code_timer("deltas", debug=self.debug_preprocessing_time):
-          if self.compute_deltas:
+            preprocessed_spectrograms_shape = np.shape(preprocessed_spectrograms)
+            if self.compute_deltas:
                 #Make space for the delta features
-                preprocessed_spectrograms = np.concatenate((preprocessed_spectrograms, np.zeros(np.shape(preprocessed_spectrograms))), axis = 3)
+                preprocessed_spectrograms = np.concatenate((preprocessed_spectrograms, np.zeros(preprocessed_spectrograms_shape)), axis = 3)            
+
                 if self.compute_delta_deltas:
-                    preprocessed_spectrograms = np.concatenate((preprocessed_spectrograms, np.zeros(np.shape(preprocessed_spectrograms))), axis = 3)
+                    preprocessed_spectrograms = np.concatenate((preprocessed_spectrograms, np.zeros(preprocessed_spectrograms_shape)), axis = 3)
 
                 for i in range(len(preprocessed_spectrograms)):
                     preprocessed_spectrograms[i, :, :, 1] = librosa.feature.delta(preprocessed_spectrograms[i, :, :, 0])
@@ -567,7 +570,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
 
             #preprocessed_spectrograms is the preprocessed output with shape [N_AUDIO_SEGMENTS, N_BANDS, N_FRAMES, N_FEATURES] where
             #N_FEATURES is 1, 2 or 3 depending on our choice of computing delta and delta-delta spectrograms
-
+        
 
         with code_timer("image augmentation", debug=self.debug_preprocessing_time):
             if not self.test_mode:
