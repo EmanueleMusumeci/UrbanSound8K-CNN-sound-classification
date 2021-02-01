@@ -39,7 +39,7 @@ MODEL_DIR = os.path.join(BASE_DIR,"model")
 preprocessing_name = None
 #preprocessing_name = "PitchShift"
 #preprocessing_name = "TimeStretch"
-#preprocessing_name = "DynamicRangeCompression"
+preprocessing_name = "DynamicRangeCompression"
 #preprocessing_name = "BackgroundNoise"
 
 CLIP_SECONDS = 3
@@ -231,3 +231,5 @@ trainer = Trainer(
 
 #Launch training
 trainer.train(50, save_test_scores_every=1, save_train_scores_every=1, save_model_every=1, compute_gradient_statistics=True)
+
+
