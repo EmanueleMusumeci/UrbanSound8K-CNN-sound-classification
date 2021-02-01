@@ -654,6 +654,7 @@ def plot_class_distributions(distributions, plot_dir=None):
     else:
         fig.show()
 
+'''
 def plot_model_improvement_deltas(model_names, model_dir, 
                                   tasks={"audio_classification" : "Audio classification"},
                                   metrics={"F1-macro":["f1"]}, 
@@ -689,6 +690,7 @@ def plot_model_improvement_deltas(model_names, model_dir,
         print(collected_scores)
 
 #TODO: Finish the metrics delta wrt to reference model bar plot
+'''
 
 def visualize_features(model, convolutional_layers, dense_layers, sample, sample_label_idx, save_to_dir, filename=None, target_layer=0):
   if not os.path.exists(save_to_dir):
