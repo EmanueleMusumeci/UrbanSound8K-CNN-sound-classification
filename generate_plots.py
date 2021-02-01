@@ -24,15 +24,9 @@ if __name__ == "__main__":
 
         plot_color = "blue"
         
-<<<<<<< HEAD
-        SINGLE_PLOTS = False
-        SINGLE_TRAIN_TEST_PLOTS = False
-        CONFUSION_MATRIX = False
-=======
         SINGLE_PLOTS = True
         SINGLE_TRAIN_TEST_PLOTS = True
-        CONFUSION_MATRIX = True
->>>>>>> 080eadebbe6341317d3f15e689c84863b54015bb
+        CONFUSION_MATRIX = False
         COMPARATIVE_PLOTS = False
         GRADIENT_FLOW = False
         BEST_SCORES = False
@@ -46,6 +40,7 @@ if __name__ == "__main__":
                 #Change the xticks_step to avoid the overlapping of labels on the x axis of graphs
                 #Change the from/to_epoch and the epochs_skip to decide which score files are read
                 #Use the combine tasks flag to plot a comparative plot of the same metric for all tasks
+                """
                 plot_scores("Base", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
@@ -54,7 +49,6 @@ if __name__ == "__main__":
                                 title_prefix = "Base",
                                 color = plot_color
                                 )
-
                 plot_scores("PitchShift", model_dir,
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
@@ -63,7 +57,7 @@ if __name__ == "__main__":
                                 title_prefix = "PitchShift",
                                 color = plot_color
                                 )
-
+                """
                 plot_scores("TimeStretch", model_dir,
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
@@ -72,7 +66,7 @@ if __name__ == "__main__":
                                 title_prefix = "TimeStretch",
                                 color = plot_color
                                 )
-                
+                """
                 plot_scores("BackgroundNoise", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
@@ -81,7 +75,6 @@ if __name__ == "__main__":
                                 title_prefix = "BackgroundNoise",
                                 color = plot_color
                                 )
-                
                 plot_scores("DynamicRangeCompression", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
@@ -90,7 +83,7 @@ if __name__ == "__main__":
                                 title_prefix = "DynamicRangeCompression",
                                 color = plot_color
                                 )
-
+                """
         ###########################
         # SINGLE TRAIN/TEST PLOTS #
         ###########################
@@ -104,7 +97,7 @@ if __name__ == "__main__":
                                 "Test" : "blue",
                                 "Train" : "orange"
                         }
-
+                """
                 plot_scores_from_multiple_dirs("Base", model_dir, 
                                                 scores_dirs, tasks={"audio_classification":"Audio classification"},
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
@@ -113,7 +106,7 @@ if __name__ == "__main__":
                                                 title_prefix = "Base",
                                                 colors = colors
                                                 )
-
+                
                 plot_scores_from_multiple_dirs("PitchShift", model_dir, 
                                                 scores_dirs, tasks={"audio_classification":"Audio classification"},
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
@@ -122,6 +115,7 @@ if __name__ == "__main__":
                                                 title_prefix = "PitchShift",
                                                 colors = colors
                                                 )
+                """
                 plot_scores_from_multiple_dirs("TimeStretch", model_dir, 
                                                 scores_dirs, tasks={"audio_classification":"Audio classification"},
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
@@ -130,7 +124,7 @@ if __name__ == "__main__":
                                                 title_prefix = "TimeStretch",
                                                 colors = colors
                                                 )
-                
+                """
                 plot_scores_from_multiple_dirs("BackgroundNoise", model_dir, 
                                                 scores_dirs, tasks={"audio_classification":"Audio classification"},
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
@@ -139,6 +133,7 @@ if __name__ == "__main__":
                                                 title_prefix = "BackgroundNoise",
                                                 colors = colors
                                                 )
+                
                 plot_scores_from_multiple_dirs("DynamicRangeCompression", model_dir, 
                                                 scores_dirs, tasks={"audio_classification":"Audio classification"},
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
@@ -147,7 +142,7 @@ if __name__ == "__main__":
                                                 title_prefix = "DynamicRangeCompression",
                                                 colors = colors
                                                 )
-
+                """
         ####################
         # CONFUSION MATRIX #
         ####################

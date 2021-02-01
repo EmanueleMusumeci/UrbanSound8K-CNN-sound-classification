@@ -37,16 +37,16 @@ MODEL_DIR = os.path.join(BASE_DIR,"model")
 
 #Preprocessing
 #preprocessing_name = None
-preprocessing_name = "PitchShift"
+#preprocessing_name = "PitchShift"
 #preprocessing_name = "TimeStretch"
-#preprocessing_name = "DynamicRangeCompression"
+preprocessing_name = "DynamicRangeCompression"
 #preprocessing_name = "BackgroundNoise"
 
 CLIP_SECONDS = 3
 SPECTROGRAM_HOP_LENGTH = 512
 SAMPLE_RATE = 22050
 
-COMPUTE_DELTAS = False
+COMPUTE_DELTAS = True
 COMPUTE_DELTA_DELTAS = False
 APPLY_IMAGE_AUGMENTATIONS = False
 
@@ -164,8 +164,8 @@ test_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,
                             use_spectrograms = True, 
                             spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
                             spectrogram_bands = spectrogram_bands, 
-                            compute_deltas=False, 
-                            compute_delta_deltas=False, 
+                            compute_deltas=COMPUTE_DELTAS, 
+                            compute_delta_deltas=COMPUTE_DELTA_DELTAS, 
                             test = True, 
                             progress_bar = True,
                             selected_classes=selected_classes,
@@ -227,3 +227,5 @@ trainer = Trainer(
 
 #Launch training
 trainer.train(50, save_test_scores_every=1, save_train_scores_every=1, save_model_every=1, compute_gradient_statistics=True)
+
+
