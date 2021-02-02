@@ -34,8 +34,8 @@ if __name__ == "__main__":
 
         plot_color = "blue"
         
-        SINGLE_PLOTS = False
-        SINGLE_TRAIN_TEST_PLOTS = False
+        SINGLE_PLOTS = True
+        SINGLE_TRAIN_TEST_PLOTS = True
         CONFUSION_MATRIX = False
         COMPARATIVE_PLOTS = False
         GRADIENT_FLOW = False
