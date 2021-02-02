@@ -76,8 +76,8 @@ def save_class_activation_images(org_img, activation_map, file_name, directory, 
     path_to_file = os.path.join(directory, file_name+'_Cam_On_Image.png')
     save_image(heatmap_on_image, path_to_file)
     # Save grayscale heatmap
-    path_to_file = os.path.join(directory, file_name+'_Cam_Grayscale.png')
-    save_image(activation_map, file_name)
+    #path_to_file = os.path.join(directory, file_name+'_Cam_Grayscale.png')
+    #save_image(activation_map, path_to_file)
 
 
 def apply_colormap_on_image(org_im, activation, colormap_name, layer = None, resize_to=(128,128)):
