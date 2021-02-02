@@ -1,39 +1,25 @@
 
 import os
 import math
-
 import numpy as np
-
 import dill
-
 from natsort import natsorted
-
 import seaborn
-
 import matplotlib
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
-
 import imageio
-
 import torchvision
 from torchvision import transforms
-
 import pandas as pd
-
 import PyTorchVisualizations
 #from PyTorchVisualizations.src.gradcam import GradCam
 #from PyTorchVisualizations.src.misc_functions import save_class_activation_images
 from PyTorchVisualizations.src.misc_functions import save_class_activation_images
-
 import librosa
-
 import scipy
-
 from scipy import signal
-
 from utils.plot_utils import load_scores, get_best_epoch_scores
-
 import seaborn as sns
 import pandas as pd
 
@@ -41,16 +27,22 @@ def f1_score_models(model_name, model_dir,
                           tasks={"audio_classification" : "Audio classification"}, 
                           save_to_file=False, title_prefix=None, 
                           scores_on_train=False,best_epoch_bool=False):
-    plt.close("all")
     scores, epoch_list, best_epoch = load_scores(model_name, model_dir, scores_on_train=scores_on_train)
     
-    print("scores on : ",model_name , scores["audio_classification"]["accuracy"][best_epoch],"\n\n")
     return scores["audio_classification"]["f1"][best_epoch]
 
-def accuracy_all_classes(model_name, model_dir, 
+def acc_score_models(model_name, model_dir, 
                           tasks={"audio_classification" : "Audio classification"}, 
                           save_to_file=False, title_prefix=None, 
-                          scores_on_train=False):
+                          scores_on_train=False,best_epoch_bool=False):
+    scores, epoch_list, best_epoch = load_scores(model_name, model_dir, scores_on_train=scores_on_train)
+    
+    return scores["audio_classification"]["accuracy"][best_epoch]
+
+def method_all_classes(model_name, model_dir, 
+                          tasks={"audio_classification" : "Audio classification"}, 
+                          save_to_file=False, title_prefix=None, 
+                          scores_on_train=False,accuracy=True):
 
     plt.close("all")
 
@@ -58,37 +50,19 @@ def accuracy_all_classes(model_name, model_dir,
     best_epoch_bool = False
     if best_epoch_bool is True:scores_best,epoch_list_best,best_epoch_best = load_scores(model_name,model_dir,from_epoch=best_epoch,to_epoch=best_epoch,scores_on_train=scores_on_train)
     
-    print("scores on : ",model_name , scores["audio_classification"]["accuracy"][best_epoch],"\n\n")
-
-    #print(len(scores))
-
-    #for key, value in scores.items():
-    #    print(key, ' : ', value,"\n")
-
-    #print(scores," ",epoch_list," ",best_epoch)
-    #print(scores)
-
-    #print(epoch_list)
-    #print("best epoch: ",best_epoch)
+    #print("scores on : ",model_name , scores["audio_classification"]["f1"][best_epoch],"\n\n")
     
     plot_dir = os.path.join(model_dir,"plots","confusion_matrices")
     if not os.path.exists(plot_dir):
         os.makedirs(plot_dir)
-    #print(plot_dir)
     
     for task_key, task_header in tasks.items():
         assert task_key in scores.keys(), "Scores for task "+task_key+" not found"
         
         if best_epoch_bool : 
             confusion_matrix = scores_best[task_key]["confusion matrix"]
-            #print(scores_best[task_key]["confusion matrix"])
-            #print(scores[task_key]["confusion matrix"])
-
         else:
             confusion_matrix = scores[task_key]["confusion matrix"]
-
-      
-        #print(confusion_matrix)
         len_confusion_matrix = len(confusion_matrix)
         #print(len_confusion_matrix)
         #ACCURACY per classe, c rappresenta la classe
@@ -120,50 +94,36 @@ def accuracy_all_classes(model_name, model_dir,
         TNc = sum over all matrix - TPc-FPc-FNc
 
         """
-        #sum over all matrix
         sum_over_all_matrix = 0
         for i in range(len_confusion_matrix):
             for j in range(len_confusion_matrix):
                 sum_over_all_matrix += confusion_matrix[i][j]
         
-        #print(sum_over_all_matrix)
         counter_class = 0
-        #TPs TNs FNs FPs computing
-        TPs = dict()
-        FNs = dict()
+        TPs = {}
+        FNs = {}
         for i in range(len_confusion_matrix):
             row = confusion_matrix[i]
-            #print(row)
             FNc = sum(row)
-            #print(FNc)
             for j in range(len_confusion_matrix):
                 col = confusion_matrix[i][j]
-                #FNc = sum(row)
                 if i == j:
                     TPc = confusion_matrix[i][j]
                     TPs[i+1] = TPc
                     FNc = FNc - TPc
                     FNs[i+1] = FNc
 
-        #print("sum_over_all_matrix: ",sum_over_all_matrix)
-        #print("TPs: ",TPs,"\n")
-        #print("FNs: ",FNs,"\n")
         sum_columns = confusion_matrix.sum(axis=0)
-        #print(sum_columns)
         counter = 1
         FPs = {}
         for i in sum_columns:
             FPs[counter] = i - TPs[counter]
             counter +=1
         
-        #print("FPs: ",FPs,"\n")
 
         TNs = {}
         for i in range(len_confusion_matrix):
             TNs[i+1] = sum_over_all_matrix - TPs[i+1] - FPs[i+1] - FNs[i+1]
-            #TNs[i+1] = 0
-
-        #print("TNs: ",TNs,"\n")
 
         ACCs = {}
         for i in range(len_confusion_matrix):
@@ -171,11 +131,14 @@ def accuracy_all_classes(model_name, model_dir,
             Den = TPs[i+1] + TNs[i+1] + FPs[i+1] + FNs[i+1]
             ACCs[i+1] = Num / Den
         
-        #print("ACCs: ",ACCs)
         return ACCs
 
-def delta_plot(data,axis_labels,x,y):
-    
+def delta_plot(data,axis_labels,x,y,horizontal,metric,plot_dir = None):
+    x_hori = x
+    y_hori = y
+    if not horizontal:
+        x_hori = y
+        y_hori = x
     # Create DataFrame
     df = pd.DataFrame(data)
     if len(data) == 3 : 
@@ -183,64 +146,76 @@ def delta_plot(data,axis_labels,x,y):
 
         g = sns.catplot(
             data=df, kind="bar",
-            x=x, y=y,hue = hue,
+            x=x_hori, y=y_hori,hue = hue,
             ci="sd", palette="dark", alpha=.6, height=6
         )
     else:
         g = sns.catplot(
             data=df, kind="bar",
-            x=x, y=y,
-            ci="sd", palette="dark", alpha=.6, height=6
+            x=x_hori, y=y_hori,
+            ci="sd", palette="dark", alpha=.6, height=4
         )
     ax1 = g.axes[0]
     g.despine(left=True)
     g.set_axis_labels(axis_labels[0],axis_labels[1])
+    if not horizontal:
+        plt.xticks(rotation=45, ha="right") 
+        plt.yticks(rotation=0) 
 
-    plt.show()
-
-
-
-
-def get_accuracy_delta(accuracies_augmentation_method,accuracies_base):
-        
-    delta = {}
-    names = ["air_conditioner","car_horn","children_playing","dog_bark","drilling","engine_idling","gun_shot","jackhammer","siren","street_music", "All classes"]
-    for key,value in accuracies_base.items():
-        delta[names[key-1]] = accuracies_augmentation_method[key] - value
     
-    return delta   
+    if plot_dir is not None:
+        plot_dir = os.path.join(plot_dir,"delta plots")
+        if not os.path.exists(plot_dir):
+            os.makedirs(plot_dir)
 
 
+        path = os.path.join(plot_dir,metric+"_delta_plot")+".png"
+        g.savefig(path)
+        
+        #if plot_dir is None or show:
+        plt.show()
+        
+    plt.close("all")
 
-def plot_delta_on_metric(model_dir,compute_accuracy,aug_to_test,aug_chosen_for_comparation,
+def plot_delta_on_metric(model_dir,compute,aug_to_test,aug_chosen_for_comparation,
                       plot_axes_labels,x,y,
                       tasks={"audio_classification" : "Audio classification"},
                       save_to_file=True, 
                       title_prefix = "Base",
-                      scores_on_train=False
+                      scores_on_train=False,
+                      horizontal = True,
+                      plot_dir = None
                       
 ):
-    #compute all accuracies or f1_scores
+    #compute all accuracies or f1_score total or accuracy total
     augmentation_delta_computed = {}
     for el in aug_to_test:
-        if compute_accuracy:
-            augmentation_delta_computed[el] = accuracy_all_classes(el, model_dir, 
+        if compute is "all":
+            augmentation_delta_computed[el] = method_all_classes(el, model_dir, 
                                             tasks=tasks,
                                             save_to_file=save_to_file, 
                                             title_prefix = title_prefix,
-                                            scores_on_train=scores_on_train
+                                            scores_on_train=scores_on_train,
+                                            accuracy = True
                                             )
-            
-        else: 
+        elif compute is "f1": 
             augmentation_delta_computed[el] = f1_score_models(el,model_dir,
                                             tasks=tasks,
                                             save_to_file=save_to_file,
                                             title_prefix=title_prefix,
                                             scores_on_train=scores_on_train
                                             )
+        
+        else:
+            augmentation_delta_computed[el] = acc_score_models(el,model_dir,
+                                                            tasks=tasks,
+                                                            save_to_file=save_to_file,
+                                                            title_prefix=title_prefix,
+                                                            scores_on_train=scores_on_train
+                                                            )
 
     #compute deltas
-    if compute_accuracy:
+    if compute is "all":
         sums = {}
         for key,value in augmentation_delta_computed.items():
             sum_on_aug = 0
@@ -257,25 +232,20 @@ def plot_delta_on_metric(model_dir,compute_accuracy,aug_to_test,aug_chosen_for_c
         deltas = {}
         vocab = list(data.keys())
         for key,value in aug_to_test.items():
-            deltas[key] = get_accuracy_delta(augmentation_delta_computed[key],augmentation_delta_computed[aug_chosen_for_comparation])
+            
+            deltas[key] = {}
+            names = ["air_conditioner","car_horn","children_playing","dog_bark","drilling","engine_idling","gun_shot","jackhammer","siren","street_music", "All classes"]
+            for key_in,value_in in augmentation_delta_computed[aug_chosen_for_comparation].items():
+                deltas[key][names[key_in-1]] = augmentation_delta_computed[key][key_in] - value_in
 
             for key_in,value_in in deltas[key].items():
                 data[y].append(key_in)
                 data[x].append(value_in)
                 data[vocab[2]].append(value)
-        """
-        for key,value in deltas.items():
-            print(key," ",value,"\n\n")
-        
-        for key,value in data.items():
-            print(key," ",value,"\n\n")
-        """
-        #print(data)
-        delta_plot(data,plot_axes_labels,x,y)
-
+       
+        delta_plot(data,plot_axes_labels,x,y,horizontal,plot_axes_labels[0],plot_dir)
     
     else:
-        #print(augmentation_delta_computed)
         data = {x:[],y:[]}
 
         for key,value in augmentation_delta_computed.items():
@@ -285,14 +255,7 @@ def plot_delta_on_metric(model_dir,compute_accuracy,aug_to_test,aug_chosen_for_c
                 data[y].append(key)
                 data[x].append(value-base_value)
         
-        data_with_delta = {x:[],y:[]}
-        
-        #print(augmentation_delta_computed)
-        
-        #print(data)
-
-        delta_plot(data,plot_axes_labels,x,y)
-
+        delta_plot(data,plot_axes_labels,x,y,horizontal,plot_axes_labels[0], plot_dir)
 
 
 if __name__ == "__main__":
@@ -305,18 +268,19 @@ if __name__ == "__main__":
         "TimeStretch":"TS"
 
     }
-    """
-    def plot_delta_on_metric(model_dir,compute_accuracy,aug_to_test,aug_chosen_for_comparation,
-                      plot_axes_labels,x,y,hue,
-                      tasks={"audio_classification" : "Audio classification"},
-                      save_to_file=True, 
-                      title_prefix = "Base",
-                      scores_on_train=False
-                      
-    """
-    #x="value", y="class", 
-        #hue="augmentations",
-    plot_delta_on_metric(model_dir,False,dict_augmentation_to_test,"Base",["Δ f1-score", "augmentations"], "f1_score", "augmentations")
-    plot_delta_on_metric(model_dir,True,dict_augmentation_to_test,"Base",["Δ Classification Accuracy", "class"],"value","class")
+    #plot delta on total accuracy
+    plot_delta_on_metric(model_dir,"accuracy",dict_augmentation_to_test,
+                        "Base",["Δ Classification Accuracy", "class"],
+                        "value","class",horizontal=False,plot_dir="plots")
 
-    #plot_delta_f1_score(model_dir)
+    #plot delta on total f1
+    plot_delta_on_metric(model_dir,"f1",dict_augmentation_to_test,
+                         "Base",["Δ f1-score", "augmentations"], 
+                        "f1_score", "augmentations",horizontal=False,plot_dir="plots")
+
+    #plot delta on total accuracies
+    plot_delta_on_metric(model_dir,"all",dict_augmentation_to_test,
+                        "Base",["Δ Classification Accuracies", "class"],
+                        "value","class",horizontal=True,plot_dir="plots")
+    
+
