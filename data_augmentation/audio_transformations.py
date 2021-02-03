@@ -15,14 +15,37 @@ from utils.timing import code_timer
 import muda
 
 class PitchShift(object):
+<<<<<<< HEAD
     def __init__(self, values, debug_time = False, name="PitchShift"):
         assert isinstance(values, list) and len(values)>0, "Please provide a list of possible pitch shifting semitones values to choose from (randomly)"
         self.values = values
         self.debug_time = debug_time
         self.name = name
+=======
+    def __init__(self, values, debug_time = False):
+        '''
+        Implements the PitchShift transformation 
+        Args:
+          - values: iterable dataset that provides the samples
+          OPTIONAL:
+            - debug_time: boolean to set debug mode
+        '''
+        assert isinstance(values, list) and len(values)>0, "Please provide a list of possible pitch shifting semitones values to choose from (randomly)"
+        self.values = values
+        self.debug_time = debug_time
+        self.name = "PitchShift"
+
+>>>>>>> 70835756938517b7be008fd2fb416829d2458c1b
         
     def __call__(self, clip, sr=22050, value = None):
-        
+        '''
+        Implements the PitchShift transformation wrapping on librosa
+        Args:
+          - clip: clip on which apply transformation
+          OPTIONAL:
+            - sr: sampling rate of the clip
+            - value: numbers of semitones
+        '''
         if value is None:
             #with code_timer("PitchShift np.random.choice", debug=self.debug_time):
             value = np.random.choice(self.values)
@@ -37,13 +60,31 @@ class PitchShift(object):
         return labels
 
 class TimeStretch(object):
+<<<<<<< HEAD
     def __init__(self, values, debug_time = False, name="TimeStretch"):
+=======
+    def __init__(self, values, debug_time = False):
+        '''
+        Implements the TimeStretch transformation 
+        Args:
+          - values: iterable dataset that provides the samples
+          OPTIONAL:
+            - debug_time: boolean to set debug mode
+        '''
+>>>>>>> 70835756938517b7be008fd2fb416829d2458c1b
         assert isinstance(values, list) and len(values)>0, "Please provide a list of possible stretching factors to choose from (randomly)"
         self.values = values
         self.debug_time = debug_time
         self.name = name
 
     def __call__(self, clip, value = None):
+        '''
+        Implements the TimeStretch transformation wrapping on librosa
+        Args:
+          - clip: clip on which apply transformation
+          OPTIONAL:
+            - value: numbers of semitones
+        '''
         if value is None:
             #with code_timer("TimeStretch np.random.choice", debug=self.debug_time):
             value = np.random.choice(self.values)
@@ -54,7 +95,17 @@ class TimeStretch(object):
 
 
 class MUDADynamicRangeCompression(object):
+<<<<<<< HEAD
     def __init__(self, sample_rate = 22050, name="DynamicRangeCompression"):
+=======
+    def __init__(self, sample_rate = 22050):
+        '''
+        Implements the Dynamic Range Compression transformation 
+        Args:
+          OPTIONAL:
+            - sample_rate: sample rate of the clip
+        '''
+>>>>>>> 70835756938517b7be008fd2fb416829d2458c1b
         self.values = list(muda.deformers.PRESETS.keys())
 
         self.sample_rate = sample_rate
@@ -73,6 +124,16 @@ class MUDADynamicRangeCompression(object):
         return copy.deepcopy(self.values)
 
     def __call__(self, sound, value = None, sample_rate = 22050, debug = False):
+        '''
+        Implements the Dynamic Range Compression transformation  wrapping on muda
+        Args:
+          - sound: clip on which apply transformation
+          OPTIONAL:
+            - value:
+            - sample_rate: sample rate of the clip
+            - debug: boolean to set debug mode
+            
+        '''
         if value is None:
             value = self.values[np.random.randint(low = 0, high = len(self.values))]
         
@@ -83,7 +144,17 @@ class MUDADynamicRangeCompression(object):
         return preprocessed_clip
 
 class BackgroundNoise(object):
+<<<<<<< HEAD
     def __init__(self, background_files, files_dir, name="BackgroundNoise"):
+=======
+    def __init__(self, background_files, files_dir):
+        '''
+        Implements the BackgroundNoise transformation 
+        Args:
+          - background_files: .wav file of bacground noises
+          - files_dir: directory in which are the .wav files
+        '''
+>>>>>>> 70835756938517b7be008fd2fb416829d2458c1b
         
         self.background_clips = {}
         self.values = []
@@ -103,6 +174,18 @@ class BackgroundNoise(object):
         return copy.deepcopy(self.values)
 
     def __call__(self, sound, value = None, debug = False, play = False, weight = None):
+        '''
+        Implements the BackgroundNoise transformation  wrapping on librosa
+        Args:
+          - sound: clip on which apply transformation
+          OPTIONAL:
+            - value:
+            - debug: boolean to set debug mode
+            - play: True is you want play the sound
+            - weight : value in range [0.0, 0.5]
+
+            
+        '''
         if value is None:
             value = self.values[np.random.randint(low = 0, high = len(self.values))]
 

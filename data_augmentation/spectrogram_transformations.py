@@ -39,6 +39,15 @@ class TimeMaskSpectrogram(object):
         print("TimeMaskSpectrogram")
 
     def __call__(self,spec, T=40, num_masks=1, replace_with_zero=False):
+        '''
+        Implements the Time Mask transformation 
+        Args:
+          - spec: spectrogram on which apply the transformation
+          OPTIONAL:
+            - T: 
+            - num_mask: number of mask to use
+            - replace_with_zero:
+        '''
         cloned = spec.clone()
         len_spectro = cloned.shape[2]
         
@@ -60,6 +69,13 @@ class TimeWarpSpectrogram(object):
         print("TimeWarpSpectrogram")
 
     def __call__(self,spec, W=5):
+        '''
+        Implements the Time Warping transformation 
+        Args:
+          - spec: spectrogram on which apply the transformation
+          OPTIONAL:
+            - W: warping parameter
+        '''
         num_rows = spec.shape[1]
         spec_len = spec.shape[2]
         device = spec.device
@@ -83,6 +99,15 @@ class FrequencyMaskSpectrogram(object):
     def __init__(self):
         print("FrequencyMaskSpectrogram")
     def __call__(self,spec, F=30, num_masks=1, replace_with_zero=False):
+        '''
+        Implements the Frequency Mask transformation 
+        Args:
+          - spec: spectrogram on which apply the transformation
+          OPTIONAL:
+            - F: 
+            - num_mask: number of mask to use
+            - replace_with_zero:
+        '''
         cloned = spec.clone()
         num_mel_channels = cloned.shape[1]
         

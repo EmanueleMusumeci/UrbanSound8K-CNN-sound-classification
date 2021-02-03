@@ -1,3 +1,7 @@
+'''
+Used to do some tests 
+'''
+# TODO file to be deleted
 import librosa
 import soundfile as sf
 import os

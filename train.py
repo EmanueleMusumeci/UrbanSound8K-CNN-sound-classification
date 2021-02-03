@@ -37,11 +37,18 @@ MODEL_DIR = os.path.join(BASE_DIR,"model")
 
 #Preprocessing
 #preprocessing_name = None
+<<<<<<< HEAD
 #preprocessing_name = "PitchShift1"
 #preprocessing_name = "PitchShift2"
 #preprocessing_name = "TimeStretch"
 #preprocessing_name = "DynamicRangeCompression"
 preprocessing_name = "BackgroundNoise"
+=======
+preprocessing_name = "PitchShift"
+#preprocessing_name = "TimeStretch"
+#preprocessing_name = "DynamicRangeCompression"
+#preprocessing_name = "BackgroundNoise"
+>>>>>>> 70835756938517b7be008fd2fb416829d2458c1b
 
 CLIP_SECONDS = 3
 SPECTROGRAM_HOP_LENGTH = 512
