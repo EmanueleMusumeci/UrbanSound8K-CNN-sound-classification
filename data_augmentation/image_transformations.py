@@ -140,12 +140,4 @@ def SpectrogramReshape(object):
 
 
 
-if __name__ == "__main__":
-    #https://github.com/mariostrbac/environmental-sound-classification/blob/main/notebooks/data_preprocessing.ipynb
-    # build transformation pipelines for data augmentation for training phase and testing phase
- 
-    training_transformations_pipelines = transforms.Compose([SpectogrammRightShift(input_size=128,width_shift_range=13,shift_probability=0.9),
-                                                            SpectogramAddGaussNoise(input_size=128,prob_to_have_noise=0.55),
-                                                            SpectogramReshape(output_size=(1,128,128))])
-
-    testing_transformations_pipelines = transforms.Compose([SpectogramReshape(output_size=(1,128,128))])                                                  
+                                          

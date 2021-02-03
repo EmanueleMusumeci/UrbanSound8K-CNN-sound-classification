@@ -36,7 +36,7 @@ BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 DATASET_DIR = os.path.join(BASE_DIR,"data")
 MODEL_DIR = os.path.join(BASE_DIR,"model")
 
-#Preprocessing
+#Preprocessing applied
 preprocessing_name = None
 #preprocessing_name = "PitchShift1"
 #preprocessing_name = "PitchShift2"
@@ -48,13 +48,17 @@ CLIP_SECONDS = 3
 SPECTROGRAM_HOP_LENGTH = 512
 SAMPLE_RATE = 22050
 
+#These parameters control whether we also compute Deltas and Delta-Deltas on spectrograms 
 COMPUTE_DELTAS = False
-COMPUTE_DELTA_DELTAS = True
+COMPUTE_DELTA_DELTAS = False
+
 if not COMPUTE_DELTAS:
     COMPUTE_DELTA_DELTAS = False
 elif COMPUTE_DELTA_DELTAS:
     COMPUTE_DELTAS = True
 
+
+#These parameters control whether we apply image augmentation techniques directly on the spectrograms 
 APPLY_IMAGE_SHIFT = False
 APPLY_IMAGE_NOISE = True
 
@@ -64,6 +68,8 @@ BATCH_SIZE = 128
 spectrogram_frames_per_segment = math.ceil(CLIP_SECONDS*SAMPLE_RATE / SPECTROGRAM_HOP_LENGTH)
 spectrogram_bands = 128
 
+
+#Input shape of the CNN
 in_channels = 1
 if COMPUTE_DELTAS:in_channels = 2
 if COMPUTE_DELTA_DELTAS: in_channels = 3
