@@ -37,18 +37,13 @@ if __name__ == "__main__":
 
         plot_color = "blue"
         
-<<<<<<< HEAD
         SINGLE_PLOTS = True
-=======
-        SINGLE_PLOTS = False
->>>>>>> 70835756938517b7be008fd2fb416829d2458c1b
         SINGLE_TRAIN_TEST_PLOTS = False
         CONFUSION_MATRIX = False
         COMPARATIVE_PLOTS = False
         GRADIENT_FLOW = False
         BEST_SCORES = False
-        DELTA_SCORES = True
-        PLOT_BEST_SCORES_DELTAS = False
+        PREPROCESSING_PERFORMANCE_DELTA_COMPARISONS = True
         PLOT_TRAIN_TEST_ACCURACY_DELTAS = True
         PLOT_CLASS_DISTRIBUTION = False
         PLOT_PREPROCESSING_ACCURACY_RESULTS = False
@@ -82,36 +77,7 @@ if __name__ == "__main__":
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
-                '''
-                plot_scores("TimeStretch", model_dir,
-                                tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
-                                from_epoch=0, to_epoch=49, epochs_skip=0, 
-                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "TimeStretch",
-                                color = plot_color,
-                                plot_dir = plot_dir
-                                )
                 
-                plot_scores("BackgroundNoise", model_dir, 
-                                tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
-                                from_epoch=0, to_epoch=49, epochs_skip=0, 
-                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "BackgroundNoise",
-                                color = plot_color,
-                                plot_dir = plot_dir
-                                )
-                plot_scores("DynamicRangeCompression", model_dir, 
-                                tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
-                                from_epoch=0, to_epoch=49, epochs_skip=0, 
-                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "DynamicRangeCompression",
-                                color = plot_color,
-                                plot_dir = plot_dir
-                                )
-                '''
 
         ###########################
         # SINGLE TRAIN/TEST PLOTS #
@@ -146,36 +112,7 @@ if __name__ == "__main__":
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
-                '''
-                plot_scores_from_multiple_dirs("TimeStretch", model_dir, 
-                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
-                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
-                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
-                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "TimeStretch",
-                                                colors = colors,
-                                                plot_dir = plot_dir
-                                                )
                 
-                plot_scores_from_multiple_dirs("BackgroundNoise", model_dir, 
-                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
-                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
-                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
-                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "BackgroundNoise",
-                                                colors = colors,
-                                                plot_dir = plot_dir
-                                                )
-                plot_scores_from_multiple_dirs("DynamicRangeCompression", model_dir, 
-                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
-                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
-                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
-                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "DynamicRangeCompression",
-                                                colors = colors,
-                                                plot_dir = plot_dir
-                                                )
-                '''
 
         ####################
         # CONFUSION MATRIX #
@@ -189,15 +126,6 @@ if __name__ == "__main__":
                                         plot_dir = plot_dir
                                         )
                 
-                '''
-                plot_confusion_matrix("PitchShift_PS2", model_dir, 
-                                        tasks={"audio_classification":"Audio classification"},
-                                         
-                                        title_prefix = "PitchShift",
-                                        scores_on_train=False,
-                                        plot_dir = plot_dir
-                                        )
-                '''
 
         #####################
         # Comparative plots #
@@ -250,7 +178,7 @@ if __name__ == "__main__":
         #################
         # DELTA  SCORES #
         #################
-        if DELTA_SCORES:
+        if PREPROCESSING_PERFORMANCE_DELTA_COMPARISONS:
                 dict_augmentation_to_test = {
                                             "Base_delta_delta":"Base",
                                             "PitchShift_delta_delta":"PS1",
@@ -276,19 +204,11 @@ if __name__ == "__main__":
                                     "Base_delta_delta", ["Δ Classification Accuracies", "class"],
                                     "value", "class", classes_names = classes_names, horizontal=True, plot_dir="plots")
 
-
-
-        
-        ################
-        # BEST  SCORES #
-        ################
-        if PLOT_BEST_SCORES_DELTAS:
-                pass
         
         ###################################
         # PLOT TRAIN/TEST ACCURACY DELTAS #
         ###################################
-        if PLOT_TRAIN_TEST_ACCURACY_DELTAS:
+        if PLOT_TRAIN_TEST_DELTAS:
                 model_names = {
                                 "Base" : "No augmentations",
                                 "PitchShift" : "PS1",
@@ -364,20 +284,18 @@ if __name__ == "__main__":
                 
                 #Preprocess the collected samples
                 preprocessors = [
-                                #PitchShift(values = [-2, -1, 1, 2])
                                 PitchShift(values = [-3.5]),
                                 MUDADynamicRangeCompression(),
-                                #BackgroundNoise({
-                                #"street_scene_1" : "150993__saphe__street-scene-1.wav",
+                                BackgroundNoise({
+                                "street_scene_1" : "150993__saphe__street-scene-1.wav",
                                 #    "street_scene_3" : "173955__saphe__street-scene-3.wav",
                                 #    "street_valencia" : "207208__jormarp__high-street-of-gandia-valencia-spain.wav",
                                 #    "city_park_tel_aviv" : "268903__yonts__city-park-tel-aviv-israel.wav",
-                                #}, files_dir = os.path.join(dataset_dir, "UrbanSound8K-JAMS", "background_noise")),
+                                }, files_dir = os.path.join(dataset_dir, "UrbanSound8K-JAMS", "background_noise")),
                                 TimeStretch(values = [0.5])
                                 ]
 
                 for class_name, sample in samples_one_for_each_class.items():
-                        #clip, sr = load_audio_file(os.path.join(samples_dir,filename))
                         clip = sample["audio"]
                         sr = sample["sample_rate"]
                         class_name = sample["class_name"]
@@ -408,30 +326,6 @@ if __name__ == "__main__":
                 else:
                         os.makedirs(os.path.join(plot_dir, "saliency_maps"))
 
-                '''
-                training_preprocessing_pipeline = transforms.Compose([
-                        transforms.Resize((224,224)),
-                        transforms.ToTensor(),
-                        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-                        ])
-                validation_preprocessing_pipeline = transforms.Compose([
-                        transforms.Resize((224,224)),
-                        ])
-                
-                for image in images:
-                        #custom_model_wrapper = Trainer.load("Custom classifier 20 layers - Final", 32, None, None, None, model_dir, 48)
-                        #layer = 0
-                        #visualize_features(custom_model_wrapper.model, image[0], image[1],
-                        #                        training_preprocessing_pipeline, validation_preprocessing_pipeline, 
-                        #                        save_to_dir=os.path.join(model_dir,"plots","saliency_maps"), filename="Feature_activation_layer_"+str(layer))
-                        
-                        custom_model_wrapper = Trainer.load("Base", 32, None, None, None, model_dir, 48)
-                        visualize_features_on_layers(custom_model_wrapper.model, image[0], image[1],
-                                                training_preprocessing_pipeline, validation_preprocessing_pipeline,
-                                                save_to_dir=os.path.join(plot_dir,"saliency_maps","Custom20",image[2]),
-                                                from_layer = 0, to_layer=18,
-                                                filename_prefix="Custom_classifier_20_Feature_activation_layer_")
-                '''
                 models = {
                                 "PROVA" : {"epoch" : 2, "preprocessor" : None, "deltas" : False, "delta_deltas" : False, "to_layer" : 3},
                          }

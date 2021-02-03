@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import math
 
 import torch
 
@@ -36,19 +37,12 @@ DATASET_DIR = os.path.join(BASE_DIR,"data")
 MODEL_DIR = os.path.join(BASE_DIR,"model")
 
 #Preprocessing
-#preprocessing_name = None
-<<<<<<< HEAD
+preprocessing_name = None
 #preprocessing_name = "PitchShift1"
 #preprocessing_name = "PitchShift2"
 #preprocessing_name = "TimeStretch"
 #preprocessing_name = "DynamicRangeCompression"
-preprocessing_name = "BackgroundNoise"
-=======
-preprocessing_name = "PitchShift"
-#preprocessing_name = "TimeStretch"
-#preprocessing_name = "DynamicRangeCompression"
 #preprocessing_name = "BackgroundNoise"
->>>>>>> 70835756938517b7be008fd2fb416829d2458c1b
 
 CLIP_SECONDS = 3
 SPECTROGRAM_HOP_LENGTH = 512
@@ -61,12 +55,13 @@ if not COMPUTE_DELTAS:
 elif COMPUTE_DELTA_DELTAS:
     COMPUTE_DELTAS = True
 
-APPLY_IMAGE_AUGMENTATIONS = False
+APPLY_IMAGE_SHIFT = False
+APPLY_IMAGE_NOISE = True
 
 BATCH_SIZE = 128
 
 #Spectrogram shape
-spectrogram_frames_per_segment = CLIP_SECONDS*SAMPLE_RATE / SPECTROGRAM_HOP_LENGTH
+spectrogram_frames_per_segment = math.ceil(CLIP_SECONDS*SAMPLE_RATE / SPECTROGRAM_HOP_LENGTH)
 spectrogram_bands = 128
 
 in_channels = 1
@@ -83,7 +78,7 @@ DEBUG_TIMING = False
 selected_classes = [0,1,2,3,4,5,6,7,8,9]
 
 #Precompacted folds used for training
-SINGLE_FOLD = True
+SINGLE_FOLD = False
 if SINGLE_FOLD:
     train_fold_list = [1]
     test_fold_list = [10]
@@ -117,21 +112,24 @@ if PREVENT_OVERWRITE:
 
 
 #Image augmentations
-if APPLY_IMAGE_AUGMENTATIONS:
-    right_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9)
-    left_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, left=True)
-    random_side_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, random_side=True)
+if APPLY_IMAGE_SHIFT:
+    shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9)
+    #left_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, left=True)
+    #random_side_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, random_side=True)
+else:
+    shift_transformation = None
+    #left_shift_transformation = None
+    #random_side_shift_transformation = None
+    
+if APPLY_IMAGE_NOISE:
     background_noise_transformation = SpectrogramAddGaussNoise(input_size=CNN_INPUT_SIZE,prob_to_have_noise=0.55)
 else:
-    right_shift_transformation = None
-    left_shift_transformation = None
-    random_side_shift_transformation = None
     background_noise_transformation = None
 
 
 #Load precompacted dataset
 preprocessor = None
-LOAD_PRECOMPACTED = False
+LOAD_PRECOMPACTED = True
 if LOAD_PRECOMPACTED:
     #Load preprocessed folds
     if preprocessing_name is not None:
@@ -184,7 +182,7 @@ train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,
                             audio_spectrograms = train_audio_spectrograms,
                             shuffle = True, 
                             use_spectrograms = True, 
-                            image_shift_transformation = right_shift_transformation, 
+                            image_shift_transformation = shift_transformation, 
                             image_background_noise_transformation = background_noise_transformation, 
 
                             spectrogram_frames_per_segment = spectrogram_frames_per_segment, 

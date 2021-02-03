@@ -53,11 +53,16 @@ def _load_audio_file(path, duration = 4000, sample_rate = 22050):
 
     return raw, sample_rate
 
+'''
+Normalizes an audio clip
+'''
 def normalize_clip(audio_clip):
     normalization_factor = 1 / np.max(np.abs(audio_clip)) 
     audio_clip = audio_clip * normalization_factor
     return audio_clip
 
+'''
+NOT USED - NOT TESTED - Most probably not working
 class MultipleWindowSelector:
     def __init__(self, window_size_seconds, sampling_rate, overlap=None, spectrogram_hop_length = None, random_location=False, drop_last = True):
         self.window_size_seconds = window_size_seconds
@@ -111,11 +116,20 @@ class MultipleWindowSelector:
                     yield (None, None, spectrogram_begin, total_spectrogram_frames)
             else:
                 yield (begin, total_clip_frames, None, None)
+'''
 
-
+'''
+Callable that provides the bounds to extract sub-windows from an audio clip and/or spectrogram
+to repeat the random window extraction from the paper https://arxiv.org/pdf/1608.04363v2.pdf
+'''
 class SingleWindowSelector:
-    #if random_location is False, selects a window from the beginning of the clip,
-    #else selects from a random location
+    '''
+    Args:
+        - window_size_seconds
+    OPTIONAL:
+        - ...
+        - random_location: determines wether we extract the clip sub-window from a random beginning index
+    '''
     def __init__(self, window_size_seconds, sampling_rate = 22050, spectrogram_hop_length=None, random_location = True):
         self.window_size_seconds = window_size_seconds
         self.sampling_rate = sampling_rate
@@ -128,6 +142,14 @@ class SingleWindowSelector:
 
         self.random_location = random_location
 
+    '''
+    When called, this instance will return a tuple of 4 values (AUDIO_WINDOW_BEGIN, AUDIO_WINDOW_END, SPECTROGRAM_WINDOW_BEGIN, SPECTROGRAM_WINDOW_END)
+    providing the bounds for the selected sub-window on the audio clip and/or spectrogram
+    Args:
+    OPTIONAL
+        - total_clip_frames: if provided, the returned tuple will contain the sub-windows bounds on the audio clip
+        - total_spectrogram_frames: if provided, the returned tuple will contain the sub-windows bounds on the spectrogram
+    '''
     def __call__(self, total_clip_frames=None, total_spectrogram_frames=None):
         assert total_clip_frames is not None or total_spectrogram_frames is not None, "To generate segments at least one among the clip length or the spectrogram length should be provided"
         if total_clip_frames is not None:
@@ -144,8 +166,6 @@ class SingleWindowSelector:
 
             if total_clip_frames is None:            
                 if self.random_location:
-                    #print(total_spectrogram_frames)
-                    #print(self.spectrogram_window_size)
                     spectrogram_begin = np.random.randint(0, total_spectrogram_frames-self.spectrogram_window_size)
                 else:
                     spectrogram_begin = 0

@@ -39,7 +39,7 @@ class SpectrogramAddGaussNoise(object):
           - img: input spectrogram
           OPTIONAL:
             - std_factor: float for standard deviation factor
-            - noise_mask: noise to be apply
+            - noise_mask: noise to be applied
             - debug : boolean to set debug mode
         '''
         if np.random.random() > self.prob_to_have_noise <= 1.0:
@@ -61,14 +61,14 @@ class SpectrogramAddGaussNoise(object):
 class SpectrogramShift(object):
     def __init__(self, input_size, width_shift_range, shift_prob=1.0, left = False, random_side = False):
         '''
-        Apply Shifting on spectrogram using numpy
+        Callable that shift a spectrogram using numpy
         Args:
           - input_size: size of the spectrogram
-          - width_shift_range: range of shifting 
+          - width_shift_range: range of the shift
           OPTIONAL:
             - shift_prob: probability to have shifting
             - left: True if left shifting
-            - random_side: True if apply random factor 
+            - random_side: True to decide randomly if left or right shift
         '''
 
         assert isinstance(input_size, tuple), "Input size must be a tuple (input_width, input_height)"
@@ -92,11 +92,11 @@ class SpectrogramShift(object):
 
     def __call__(self, img, shift_position = None, debug=False):
         '''
-        Add Shifting to the spectrogram using numpy
+        Shifts the spectrogram using numpy
         Args:
           - img: input spectrogram
           OPTIONAL:
-            - shift_position: shift's position
+            - shift_position: shift amount
             - debug : boolean to set debug mode
         '''
         if debug: print(shift_position)

@@ -2,8 +2,9 @@ import torch
 from torch import nn
 from torchsummary import summary
 
-##Modello nuovo usando classe ConvolutionalLayer:
-#per figura dell' architettura vedere https://github.com/mariostrbac/environmental-sound-classification sezione CNN Model
+'''
+CNN model used in the paper https://arxiv.org/pdf/1608.04363v2.pdf
+'''
 class PaperConvolutionalNetwork(nn.Module):
     def __init__(self, input_size):
         super(PaperConvolutionalNetwork, self).__init__()

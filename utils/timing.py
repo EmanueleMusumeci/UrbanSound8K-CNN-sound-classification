@@ -21,7 +21,8 @@ def function_timer(func):
 
     return wrapper
 
-
+#Function timer that accumulates execution time statistics. To print these statistics use the print_code_stats()
+#function below
 @contextlib.contextmanager
 def code_timer(ident, debug = True, print_single_block_info=False):
     if debug:
@@ -37,6 +38,7 @@ def code_timer(ident, debug = True, print_single_block_info=False):
     else:
         yield
 
+#Prints the statistics accumulated by the context manager function code_timer (see above)
 def print_code_stats():
     table = PrettyTable(['Name','Avg. time', 'Total time'])
     sort_by_row_value_index = 3

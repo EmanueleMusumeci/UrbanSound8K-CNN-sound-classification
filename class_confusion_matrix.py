@@ -337,20 +337,8 @@ if __name__ == "__main__":
         "BackgroundNoise":"BG",
         "DynamicRangeCompression":"DRC",
         "TimeStretch":"TS"
-
     }
-    """
-    def plot_delta_on_metric(model_dir,compute_accuracy,aug_to_test,aug_chosen_for_comparation,
-                      plot_axes_labels,x,y,hue,
-                      tasks={"audio_classification" : "Audio classification"},
-                      save_to_file=True, 
-                      title_prefix = "Base",
-                      scores_on_train=False
-                      
-    """
-    #x="value", y="class", 
-        #hue="augmentations",
+
     plot_delta_on_metric(model_dir, False, dict_augmentation_to_test, "Base", ["Δ f1-score", "augmentations"], "f1_score", "augmentations")
     plot_delta_on_metric(model_dir, True, dict_augmentation_to_test, "Base", ["Δ Classification Accuracy", "class"], "value", "class")
 
-    #plot_delta_f1_score(model_dir)

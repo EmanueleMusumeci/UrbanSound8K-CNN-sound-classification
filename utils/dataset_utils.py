@@ -9,15 +9,30 @@ import csv
 import json
 
 from tqdm import tqdm
-try:
-    from utils.timing import function_timer, code_timer
-    from utils.model_utils import unpickle_data, pickle_data
-    from utils.audio_utils import load_audio_file
-    from utils.spectrogram_utils import generate_mel_spectrogram_librosa, display_heatmap, compute_spectrogram_frames
-except Exception as e:
-    raise e
-    pass 
+from utils.timing import function_timer, code_timer
+from utils.model_utils import unpickle_data, pickle_data
+from utils.audio_utils import load_audio_file
+from utils.spectrogram_utils import generate_mel_spectrogram_librosa, display_heatmap, compute_spectrogram_frames
 
+'''
+This file contains utilities used to preprocess and compact the raw UrbanSound8K dataset to memory-mapped files.
+The randomness in the preprocessing is "simulated" by creating a preprocessed and compacted version of a fold 
+for each one of the possible preprocessing values (which therefore have to be discrete, as in the paper 
+https://arxiv.org/pdf/1608.04363v2.pdf). At training time the sample will be chosen from one of these folds.
+Also spectrograms can be pre-generated (from the raw or preprocessed audio clip) and stored in a memory-mapped file
+to further improve training time.
+
+Please see Dataset.py for more.
+
+This solution reduced training time from 40 minutes per epoch to just around 3 minutes per epoch (more than 13X speedup).
+
+NOTICE: When compacting the dataset, a index.json file is generated to keep track of the generated folds and
+preprocessing applied to them
+'''
+
+'''
+Saves a numpy array as a memory-mapped file
+'''
 def save_compacted_data(data, file_name, shape):
     mm = np.memmap(file_name, dtype='float32', mode='w+', shape=shape)
     mm[:] = data[:]
@@ -25,11 +40,20 @@ def save_compacted_data(data, file_name, shape):
 
     return mm
 
+'''
+Loads a memory-mapped numpy array
+'''
 def load_compacted_data(file_name, shape):
     mm = np.memmap(file_name, dtype="float32", mode="r", shape=shape)
     return mm
 
-
+'''
+Loads a memory-mapped UrbanSound8K compacted dataset
+Args:
+OPTIONAL
+    - folds: compacted folds to be loaded
+    - only_spectrograms: load and return only the compacted pre-generated spectrograms
+'''
 #from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
 @function_timer
 def load_raw_compacted_dataset(dataset_dir, folds = [], only_spectrograms = False):
@@ -84,6 +108,13 @@ def load_raw_compacted_dataset(dataset_dir, folds = [], only_spectrograms = Fals
 
     return audio_meta, audio_raw, audio_spectrograms_raw
 
+'''
+Loads a preprocessed memory-mapped UrbanSound8K compacted dataset
+Args:
+OPTIONAL
+    - folds: compacted folds to be loaded
+    - only_spectrograms: load and return only the compacted pre-generated spectrograms
+'''
 #from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
 @function_timer
 def load_preprocessed_compacted_dataset(dataset_dir, preprocessing_name, folds = [], only_spectrograms=False):
@@ -147,6 +178,17 @@ def load_preprocessed_compacted_dataset(dataset_dir, preprocessing_name, folds =
     
     return audio_meta, audio_preprocessed, audio_spectrograms_preprocessed
 
+'''
+Compact a raw fold from the original UrbanSound8K dataset, saving it as a memory-mapped file
+(This was necessary to train in acceptable times)
+Args:
+    - fold_number: fold number to be loaded
+OPTIONAL
+    - resample_to: new sampling rate for loaded clips
+    - skip_first_line: skips the first (header) line when reading the csv
+    - duration_seconds: cut or pad all clips to be of this length (at the specified sampling rate)
+    - only_first_n_samples: load only the first N samples
+'''
 #from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
 def compact_raw_fold(dataset_dir, fold_number, resample_to = 22050, skip_first_line = True, duration_seconds = 4, only_first_n_samples=0):
     """Load raw audio and metadata content from the UrbanSound8K dataset and generate a .dat file"""
@@ -252,6 +294,15 @@ def compact_raw_fold(dataset_dir, fold_number, resample_to = 22050, skip_first_l
     print("Finished compacting fold {}!".format(fold_number))
     return audio_meta, audio_mm
 
+'''
+Generate all spectrograms for a fold
+Args:
+    - fold_meta: fold meta-data
+    - fold_audio: fold raw or preprocessed clips (loaded in memory)
+OPTIONAL
+    - spectrogram_bands, sample_rate, hop_length, seconds: info used to generate spectrograms
+    - log_mel: generate a log mel spectrogram
+'''
 def generate_fold_spectrograms(fold_meta, fold_audio, spectrogram_bands = 128, log_mel=True, 
                                 sample_rate=22050, hop_length=512, seconds = 4):
     
@@ -268,6 +319,16 @@ def generate_fold_spectrograms(fold_meta, fold_audio, spectrogram_bands = 128, l
 
     return spectrograms
 
+'''
+Generate all spectrograms for a fold and compact them into a memory mapped file
+Args:
+    - fold_meta: fold meta-data
+    - fold_audio: fold raw or preprocessed clips (loaded in memory)
+OPTIONAL
+    - spectrogram_bands, sample_rate, hop_length, seconds: info used to generate spectrograms
+    - log_mel: generate a log mel spectrogram
+    - preprocessing_name: preprocessing to apply to the fold before generating spectrograms
+'''
 def generate_compacted_fold_spectrograms(dataset_dir, fold_number, spectrogram_bands = 128, log_mel=True, 
                                          sample_rate=22050, hop_length=512, seconds = 4, preprocessing_name=None):
 
@@ -451,6 +512,10 @@ def generate_compacted_preprocessed_fold(dataset_dir, fold_number, preprocessing
     del fold_meta
     del fold_raw
 
+
+'''
+Deletes all compacted folds in the dataset dir
+'''
 def delete_compacted_dataset(dataset_dir):
     try:
         os.remove(os.path.join(dataset_dir, "index.json"))
@@ -467,6 +532,10 @@ def delete_compacted_dataset(dataset_dir):
     except Exception as e:
         print(e)
 
+'''
+Extract preprocessing values used on already compacted folds (uses the index.json file generated when compacting
+the dataset)
+'''
 def get_preprocessing_values(dataset_dir, preprocessing_name, folds):
     assert len(folds)>0, "Empty folds array"
     assert os.path.exists(os.path.join(dataset_dir,"index.json")), "Please compact dataset first to generate the index.json file"
@@ -490,6 +559,9 @@ def get_preprocessing_values(dataset_dir, preprocessing_name, folds):
     
     return preprocessing_values
 
+'''
+Chooses a random preprocessing value among the available ones
+'''
 def extract_preprocessing_value(preprocessing_values):
     return np.random.choice(preprocessing_values)
 

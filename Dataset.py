@@ -27,16 +27,36 @@ from csv import reader
 
 from tqdm import tqdm
 
-try:
-    from data_augmentation.image_transformations import *
-    from data_augmentation.audio_transformations import *
+from data_augmentation.image_transformations import *
+from data_augmentation.audio_transformations import *
 
-    from utils.dataset_utils import *
-    from utils.audio_utils import *
-    from utils.spectrogram_utils import *
-    from utils.timing import *
-except:
-    pass
+from utils.dataset_utils import *
+from utils.audio_utils import *
+from utils.spectrogram_utils import *
+from utils.timing import *
+
+
+
+'''
+The original training time amounted to 40 minutes per epoch (without preprocessing), making training unfeasible
+on low-end computers. To improve the training time the dataset was therefore pre-processed (also by pre-generating)
+spectrograms) and "compacted" into memory-mapped files using the functions in utils.dataset_utils.
+
+These compacted folds are then loaded when the dataset is instantiated.
+
+To simulate the "randomness" in preprocessing, during the pre-preocessing and compacting phase, given a raw fold,
+a preprocessed is generated for each preprocessing value in the preprocessing method (therefore the list of possible)
+preprocessing values is discrete, as in the paper https://arxiv.org/pdf/1608.04363v2.pdf). 
+Then, at training time, the preprocessing value is extracted randomly and therefore the relative sample is returned.
+
+Please see dataset_utils.py for more.
+
+This solution reduced training time from 40 minutes per epoch (without preprocessing) to just around 3 minutes
+per epoch (more than 13X speedup).
+
+NOTICE: When compacting the dataset, a index.json file is generated to keep track of the generated folds and
+preprocessing applied to them
+'''
 
 
 class SoundDatasetFold(torch.utils.data.IterableDataset):
@@ -57,8 +77,6 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 image_shift_transformation = None,
                 image_background_noise_transformation = None,
                 
-                #time_stretch_transformation = None,
-                #pitch_shift_transformation = None,
 
                 audio_clip_duration = 4000,
                 sample_rate = 22050,
@@ -66,8 +84,6 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 spectrogram_bands = 60,
                 spectrogram_hop_length = 512,
                 spectrogram_frames_per_segment = 41,
-                #spectrogram_window_overlap = 0.5,
-                #drop_last_spectrogram_frame = True,
                 normalize_audio = False,
                 silent_clip_cutoff_dB = -70,
 
@@ -153,21 +169,10 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         self.image_shift_transformation = image_shift_transformation
         self.image_background_noise_transformation = image_background_noise_transformation
 
-        #self.time_stretch_transformation = time_stretch_transformation
-        #self.pitch_shift_transformation = pitch_shift_transformation
-
         self.audio_clip_duration = audio_clip_duration
         self.sample_rate = sample_rate
         
-        #as in https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb
-        #self.spectrogram_frames_per_segment = spectrogram_frames_per_segment
-        #self.spectrogram_hop_length = spectrogram_hop_length
-        #self.spectrogram_window_size = self.spectrogram_hop_length * (spectrogram_frames_per_segment-1)
-        #assert spectrogram_window_overlap > 0 and spectrogram_window_overlap < 1, "spectrogram_window_overlap should be between 0 and 1"
-        #self.spectrogram_window_overlap = spectrogram_window_overlap
-        #self.spectrogram_window_step_size = math.floor(self.spectrogram_window_size * (1-spectrogram_window_overlap))
         self.spectrogram_bands = spectrogram_bands
-        #self.drop_last_spectrogram_frame = drop_last_spectrogram_frame
 
         #If no audio segment selector is specified, a SingleWindowSelector will be constructed to return the whole clip 
         if audio_segment_selector is None:
@@ -221,8 +226,8 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
     
     '''
     Selects the "legal" samples based on various criteria:
-    1) Select only samples of the selecte classes
-    2) Select only a certain percentage of the datase samples (if specified)
+    1) Select only samples of the selected classes
+    2) Select only a certain percentage of the dataset samples (if specified)
     '''
     def select_sample_ids(self, selected_classes, select_percentage = 1.0):
         assert select_percentage<=1 and select_percentage>=0, "Please specify a percentage in range [0,1]"
@@ -239,6 +244,8 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
     def get_num_classes(self): return self.num_classes
     def get_id_to_class(self): return self.class_id_to_name
 
+    #The following 3 methods are used in the DataLoader to select which batch fields are going
+    #to be collated and tensorized
     def get_preprocessed_fields(self): 
         if self.use_spectrograms:
             return ["preprocessed_spectrogram"]
@@ -248,33 +255,10 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
     def get_unpreprocessed_fields(self): return ["class_name", "meta_data", "original_spectrogram"]
     def get_gold_fields(self): return ["class_id"]
 
-    def __call__(self, sound, sample_rate=22050):
-        if self.use_spectrograms:
-            original_spectrograms, preprocessed_spectrograms = self.preprocess(sound,spectrograms=True)
-            returned_samples = []
-            for orig_spec, prep_spec in zip(original_spectrograms, preprocessed_spectrograms):
-
-                returned_samples.append({
-                        "original_spectrogram" : orig_spec, 
-                        "preprocessed_spectrogram" : prep_spec, 
-                        "class_id" : None, 
-                        "class_name" : None, 
-                        "meta_data" : None
-                        })
-            return returned_samples
-        else:
-            mfccs, chroma, mel, contrast, tonnetz = self.preprocess(sound,spectrogram=False)
-            return [{
-                    "mfccs" : mfccs, 
-                    "chroma" : chroma, 
-                    "mel" : mel, 
-                    "contrast" : contrast, 
-                    "tonnetz" : tonnetz, 
-                    "class_id" : None, 
-                    "class_name" : None, 
-                    "meta_data" : None
-                    }]
-
+    '''
+    Makes this instance callable, returning a preprocessed version on sound, based on how this
+    instance was initialized
+    '''
     #@function_timer
     def __call__(self, sample_meta, preprocessing_value = None):
         debug = self.debug_preprocessing
@@ -323,10 +307,12 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     "meta_data" : meta_data
                     }]
     
+    '''
+    Returns the sound clip at index, preprocessed according to how this instance was initialized
+    '''
     #@function_timer
     def __getitem__(self, index):
         debug = self.debug_preprocessing
-        #Decidere come salvare dati -> estrarre sample
         sample = self.audio_meta[index]
 
         class_id = sample["class_id"]
@@ -397,19 +383,19 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     "class_name" : class_name, 
                     "meta_data" : meta_data
                     }]
-    
+        
+    '''
+    Makes this instance iterable, iterating through all the sample whose id is considered in this dataset
+    (see select_sample_ids) and preprocessing these samples according to how this instance was initialized
+    '''
     def __iter__(self):
         if self.shuffle: self.shuffle_dataset()
 
         if self.progress_bar:
             progress_bar = tqdm(total=len(self.sample_ids), desc="Sample", position=0)
         for index in self.sample_ids:
-            #try:
             preprocessed_samples = self[index]
             previous_samples = preprocessed_samples
-            #This is a temporary fix to a decoding error with files from clip 36429: we provide the last sample twice 
-            #except pydub.exceptions.CouldntDecodeError:
-            #    preprocessed_samples = previous_samples
 
             if self.progress_bar:
                 progress_bar.update(1)
@@ -418,7 +404,11 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
 
         if self.progress_bar:
             progress_bar.close()
-
+        
+    '''
+    NOT TESTED - NOT USED
+    Applies the preprocessing required for the feed forward network
+    '''
     def preprocess_feed_forward(self, audio_clip, debug=False):
     
         sample_rate = self.sample_rate
@@ -459,8 +449,10 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         if debug: print("tonnetz:\n"+str(tonnetz))
         
         return mfccs, chroma, mel, contrast, tonnetz
-
-#TODO add preprocessed_audio_clip and preprocessed_log_mel_spectrogram as arguments and change code accordingly
+    
+    '''
+    Applies the preprocessing required for the convolutional networks
+    '''
     #@function_timer
     def preprocess_convolutional(self, audio_clip = None, log_mel_spectrogram = None, preprocessor = None, preprocessing_value = None, debug = False):
         
@@ -481,13 +473,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             audio_clip_length = len(preprocessed_audio_clip)
         elif log_mel_spectrogram is not None:
             spectrogram_length = log_mel_spectrogram.shape[1]
-        
-        #TO DELETE
-        #if self.time_stretch_transformation is not None:
-        #    if not self.test_mode:
-        #        with code_timer("audio time stretch", debug=self.debug_preprocessing_time):
-        #            audio_clip = self.time_stretch_transformation(audio_clip)
-        
+      
         original_spectrograms = []
         preprocessed_spectrograms = []
         
@@ -505,7 +491,6 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             #Only accept audio clip segments that are:
             #1) Of a fixed window size (self.spectrogram_window_size)
             #2) Fully contained in the audio clip (segments that go "out of bounds" wrt the audio clip are not considered)
-            #if len(original_signal_segment) == math.floor(self.spectrogram_window_size) and segment_end<len(audio_clip): 
             if debug: 
                 print("audio segment ("+str(segment_start)+", "+str(segment_end)+")")
                 if log_mel_spectrogram is not None:
@@ -518,8 +503,6 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 log_mel_spectrogram_segment = generate_mel_spectrogram_librosa(original_signal_segment, self.spectrogram_bands, debug_time_label=("original" if self.debug_preprocessing_time else ""), show=self.debug_spectrograms)
                 preprocessed_signal_segment = preprocessed_audio_clip[segment_start:segment_end]
                 
-            #display_heatmap(original_mel_spectrogram_librosa)
-            #raise
             
             with code_timer("drop silent", debug=self.debug_preprocessing_time):
                 if self.silent_clip_cutoff_dB is not None:
@@ -538,12 +521,6 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             original_spectrograms.append(log_mel_spectrogram_segment)
             preprocessed_spectrograms.append(preprocessed_log_mel_spectrogram_segment)
 
-            #TO DELETE
-            #if self.pitch_shift_transformation is not None:
-            #    if not self.test_mode:
-            #        with code_timer("audio pitch shift", debug=self.debug_preprocessing_time):
-            #            preprocessed_signal_segment = self.pitch_shift_transformation(preprocessed_signal_segment)
-        
         if log_mel_spectrogram is not None:
             with code_timer("original spectrogram reshape", debug=self.debug_preprocessing_time):
             #Reshape the spectrograms from [N_AUDIO_SEGMENT, N_BANDS, N_FRAMES] to [N_AUDIO_SEGMENT, N_BANDS, N_FRAMES, 1]
@@ -594,17 +571,26 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         
 
         return original_spectrograms, preprocessed_spectrograms
-
+    
+    '''
+    Decode integer class ids to strings
+    '''
     def decode_class_names(self, class_indices):
         return [self.class_id_to_name[idx] for idx in class_indices]
 
+    '''
+    Shuffle the dataset. To avoid shuffling the whole dataset, which might be using memory-mapped files,
+    a index list is shuffled instead and then the samples are iterated through or extracted by index
+    according to the order of indices in this list
+    '''
     def shuffle_dataset(self):
         p = np.random.permutation(len(self.sample_ids))
         self.sample_ids = self.sample_ids[p.astype(int)]
 
-    #lista data, ogni elemento della lista è
-    #un dizionario con campi : filepath,classeId,className,
-    #                           metadata= dizionario con altri dati
+    '''
+    Loads the UrbanSound8K dataset, storing its meta-data (including the sound clip file path) and its indices
+    (that will be later used for shuffling)
+    '''
     def load_dataset_index(self, sample, folds = [], skip_first_line=True):
         with open(os.path.join(self.dataset_dir,'UrbanSound8K','metadata','UrbanSound8K.csv'), 'r') as read_obj:
             csv_reader = reader(read_obj)
@@ -640,178 +626,3 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     audio_ids.append(index)
                     index += 1
         return audio_meta, audio_ids     
-            
-    #def __len__(self):
-    #    #if self.use_spectrograms:
-    #    #    return len(self.data) * self.fixed_segment_size
-    #    #else:
-    #    return len(self.data)
-
-if __name__ == "__main__":
-    import os
-
-    import torch
-    try:
-        from Dataset import SoundDatasetFold
-        from DataLoader import DataLoader
-        from nn.convolutional_model import ConvolutionalNetwork
-        from nn.feed_forward_model import FeedForwardNetwork
-        from data_augmentation.image_transformations import *
-        from data_augmentation.audio_transformations import *
-        from Trainer import *
-        from utils.audio_utils import SingleWindowSelector, MultipleWindowSelector
-    except:
-        pass
-
-    INSTANCE_NAME = "PROVA"
-    BATCH_SIZE = 128
-    USE_CNN = True
-    APPLY_IMAGE_AUGMENTATIONS = False
-    APPLY_AUDIO_AUGMENTATIONS = False
-
-    DEBUG_PREPROCESSING = True
-    DEBUG_TIMING = True
-
-    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    try:
-        from google.colab import drive
-        base_dir = "/content/drive/My Drive/Neural Networks Project"
-        DATASET_DIR = "/content/drive/data"
-    except:
-        base_dir = os.path.dirname(os.path.realpath(__file__))
-        DATASET_DIR = os.path.join(base_dir,"data")
-
-    DATASET_NAME = "UrbanSound8K"
-    DATASET_PERCENTAGE = 1.0
-
-    MODEL_DIR = os.path.join(base_dir,"model")
-
-    selected_classes = [0,1,2,3,4,5,6,7,8,9]
-
-    spectrogram_frames_per_segment = 128
-    spectrogram_bands = 128
-    in_channels = (3 if USE_CNN else 1)
-
-    CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment, in_channels)
-    FFN_INPUT_SIZE = 154
-
-    #Image augmentations
-    if APPLY_IMAGE_AUGMENTATIONS:
-        right_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9)
-        left_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, left=True)
-        random_side_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, random_side=True)
-        background_noise_transformation = SpectrogramAddGaussNoise(input_size=CNN_INPUT_SIZE,prob_to_have_noise=0.55)
-    else:
-        right_shift_transformation = None
-        left_shift_transformation = None
-        random_side_shift_transformation = None
-        background_noise_transformation = None
-
-    #Audio augmentations
-    #if APPLY_AUDIO_AUGMENTATIONS:
-    #    random_pitch_shift = PitchShift([-3.5, -2.5, 2.5, 3.5], debug_time=DEBUG_TIMING)
-    #    random_time_stretch = TimeStretch([0.81, 0.93, 1.07, 1.23], debug_time=DEBUG_TIMING)
-    #else:
-    #    random_pitch_shift = None
-    #    random_time_stretch = None
-
-    preprocessing_name = None
-    preprocessing_name = "PitchShift"
-
-    train_fold_list = [1]
-    train_fold_list = [1,2,3,4,5,6,7,8,9]
-    test_fold_list = [10]
-
-    if preprocessing_name is not None:
-        train_audio_meta, train_audio_clips, train_audio_spectrograms = load_preprocessed_compacted_dataset(DATASET_DIR, preprocessing_name, folds = train_fold_list)
-        #_, _, raw_train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list)
-    else:
-        train_audio_meta, train_audio_clips, train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list)
-
-    test_audio_meta, test_audio_clips, test_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = test_fold_list)
-
-    train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
-                                folds = train_fold_list, 
-                                preprocessing_name = preprocessing_name,
-                                audio_meta = train_audio_meta,
-                                audio_clips = None,
-                                audio_spectrograms = train_audio_spectrograms,
-                                shuffle = True, 
-                                use_spectrograms = USE_CNN, 
-                                image_shift_transformation = right_shift_transformation, 
-                                image_background_noise_transformation = background_noise_transformation, 
-                                #time_stretch_transformation = random_time_stretch,
-                                #pitch_shift_transformation = random_pitch_shift, 
-                                spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
-                                spectrogram_bands = spectrogram_bands, 
-                                compute_deltas=False, 
-                                compute_delta_deltas=False, 
-                                test = False, 
-                                progress_bar = False,
-                                selected_classes=selected_classes,
-                                select_percentage_of_dataset=DATASET_PERCENTAGE,
-                                audio_segment_selector=SingleWindowSelector(3, spectrogram_hop_length=512, random_location = True),
-                                debug_preprocessing=DEBUG_PREPROCESSING,
-                                debug_preprocessing_time=DEBUG_TIMING,
-                                silent_clip_cutoff_dB = None
-                                )   
-
-    test_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,  
-                                folds = test_fold_list, 
-                                preprocessing_name = preprocessing_name,
-                                audio_meta = test_audio_meta,
-                                audio_clips = None,
-                                audio_spectrograms = test_audio_spectrograms,
-                                shuffle = False, 
-                                use_spectrograms = USE_CNN, 
-                                spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
-                                spectrogram_bands = spectrogram_bands, 
-                                compute_deltas=False, 
-                                compute_delta_deltas=False, 
-                                test = True, 
-                                progress_bar = True,
-                                selected_classes=selected_classes,
-                                select_percentage_of_dataset=DATASET_PERCENTAGE,
-                                audio_segment_selector=SingleWindowSelector(3, spectrogram_hop_length=512),
-                                debug_preprocessing=DEBUG_PREPROCESSING,
-                                debug_preprocessing_time=DEBUG_TIMING,
-                                silent_clip_cutoff_dB = None
-                                )
-
-    '''
-    display_heatmap(raw_train_audio_spectrograms[train_dataset.sample_ids[0]])
-    train_sample = train_dataset[0]
-    display_heatmap(train_sample[0]["original_spectrogram"])
-    print(train_sample[0]["original_spectrogram"].shape)
-    display_heatmap(train_sample[0]["preprocessed_spectrogram"][:,:,0])
-    print(train_sample[0]["preprocessed_spectrogram"][:,:,0].shape)
-    
-
-    display_heatmap(test_audio_spectrograms[test_dataset.sample_ids[0]])
-    test_sample = test_dataset[0]
-    display_heatmap(test_sample[0]["original_spectrogram"])
-    print(test_sample[0]["original_spectrogram"].shape)
-    display_heatmap(test_sample[0]["preprocessed_spectrogram"][:,:,0])
-    print(test_sample[0]["preprocessed_spectrogram"][:,:,0].shape)
-    '''
-
-    
-    #progress_bar = tqdm(total=len(dataset), desc="Sample", position=0)
-    with code_timer("OVERALL"):
-        for i, obj in enumerate(train_dataset):
-            print("{}: {}".format(i,obj["preprocessed_spectrogram"].shape))
-            try:
-                print("preprocessing_value: {}".format(obj["preprocessing_value"]))
-            except:
-                pass
-        #progress_bar.update(1)
-    #progress_bar.close()
-
-
-    print_code_stats()
-    
-    #TODO Disattivare drop silent
-
-
-    

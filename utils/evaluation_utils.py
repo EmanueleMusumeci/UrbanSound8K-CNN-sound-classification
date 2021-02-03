@@ -51,9 +51,10 @@ def print_table(title, results, fields):
   
 def print_distribution(results):
     '''Prints the prediction/gold distribution in results'''
+        
     distribution = results["distribution"]
     
-    output = ""
+    output = "\t(PREDICTED, GROUND-TRUTH)\n"
     for k in distribution.keys():
         output+="\t# "+str(k)+": ("+str(distribution.get(k, 0)[0])+", "+str(distribution.get(k, 0)[1])+")\n"
     

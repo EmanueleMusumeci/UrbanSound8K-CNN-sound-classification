@@ -36,6 +36,10 @@ from utils.model_utils import get_children
 import librosa
 import seaborn as sns
 
+
+  '''
+  Loads scores saved by the Trainer
+  '''
 def load_scores(model_name, model_dir, 
                 from_epoch=0, to_epoch=0, epochs_skip=0, 
                 scores_subdir=None, 
@@ -126,6 +130,8 @@ def plot_scores(model_name, model_dir, tasks={"audio_classification" : "Audio cl
     - xticks_step: used to print a "tick" on the graph x axis every n ticks 
       (with a value of 5 we would have 0,5,10... on the x axis)
     - combine_tasks: allows plotting scores for all tasks on the same plot (False)
+    - to_epoch: plot scores starting until a certain episode (default: 0, plot all scores)
+    - combine_tasks: combine plots from multiple tasks (for multi-task network evaluation)
   '''
 
   plt.close("all")
@@ -205,7 +211,6 @@ def plot_scores(model_name, model_dir, tasks={"audio_classification" : "Audio cl
     for k,plot in plots.items():
       plot.show()
 
-  
 def plot_confusion_matrix(model_name, model_dir, 
                           tasks={"audio_classification" : "Audio classification"}, 
                           title_prefix=None, scores_on_train=False, 
@@ -243,8 +248,6 @@ def plot_confusion_matrix(model_name, model_dir,
     avg_val = sum(sum(confusion_matrix))/(len(confusion_matrix)*len(confusion_matrix[0]))
     fig, axes = plt.subplots(figsize=(8,8))
 
-    #seaborn.set(font_scale=2)
-    # TODO Michele Confusion matrix , discalie oblique (no orizzontali)
     ax = seaborn.heatmap(confusion_matrix, 
                     norm = LogNorm(vmin=min_val, vmax=max_val),
                     cbar_kws={"shrink": 0.5, "ticks":[0,1,10,1e2,1e3,1e4,1e5]},#"orientation": "oblique"}, 
@@ -255,8 +258,6 @@ def plot_confusion_matrix(model_name, model_dir,
 
     plt.xticks(rotation=45, ha="right") 
     plt.yticks(rotation=0) 
-    #heatmap.set_xticklabels(heatmap.get_xticklabels(), rotation=30) 
-    #ax.set_xticklabels(ax.get_xticklabels(), rotation=10) 
 
     # labels, title and ticks
     axes.set_xlabel('Predicted labels', size = 10)
@@ -449,7 +450,6 @@ def comparative_plots(model_names, model_dir,
   plots = {}
   seaborn.reset_orig()
   for task_key, task_header in tasks.items():
-    #print(task_key)
     for plot_header, metric_keys in metrics.items():
       current_plot = plt.figure("Combined ("+names+") - "+task_header+"_"+plot_header)
       if title_prefix is None:
@@ -473,7 +473,6 @@ def comparative_plots(model_names, model_dir,
           #2.1) Collect scores for this metric in a list
           values = []
           if len(model_scores[task_key])==0: continue
-          #print(model_scores[task_key][metric])
           for _, value in sorted(model_scores[task_key][metric].items()):
             values.append(value)
           label=model_names[model_name]
@@ -529,7 +528,6 @@ def plot_grad_flow(gradient_magnitudes, epoch, show=False, save_to_dir=None):
   for layer_name, _ in gradient_magnitudes.items():
     layers.append(layer_name.split(".")[0])
   max_grads = [entry["max_grads"] for layer_name, entry in gradient_magnitudes.items()]
-  #min_grads = [entry["min_grad"] for layer_name, entry in gradient_magnitudes.items()]
   avg_grads = [entry["avg_grads"] for layer_name, entry in gradient_magnitudes.items()]
 
   plt.rc('xtick',labelsize=15)
@@ -588,13 +586,11 @@ def create_gradient_flow_gif(model_name, model_dir, plot_dir,
   for filename in natsorted(os.listdir(plot_dir)):
     if not filename.endswith(".png") or not os.path.isfile(os.path.join(plot_dir,filename)):
       continue
-    #print(os.path.join(plot_dir,filename))
     image = imageio.imread(os.path.join(plot_dir, filename))
     if cropX is not None:
       image = image[cropX[0]:cropX[1],:,:]
     if cropY is not None:
       image = image[:,cropY[0]:cropY[1],:]
-    #plt.imshow(image)
     gradient_images.append(image)
   imageio.mimsave(os.path.join(plot_dir, model_name+"_Gradient_flow.gif"), gradient_images, duration = frame_duration)
 
@@ -625,7 +621,6 @@ def show_image_preprocessing(transformations, image, title_prefix="", progressiv
             os.makedirs(save_to_dir)
     for transformation_name, image in images.items():
         print(transformation_name)
-        #plot.show()
         path = os.path.join(save_to_dir,title_prefix+" - Preprocessed image - "+transformation_name)+".png"
         image.savefig(path)
 
@@ -633,12 +628,10 @@ def plot_class_distributions(distributions, plot_dir=None):
     plt.rc('xtick',labelsize=15)
     plt.rc('ytick',labelsize=15)
 
-    #fig = plt.figure(figsize=(18,7))
     fig, ax = plt.subplots(figsize=(18,7))
     seaborn.barplot(data = pd.DataFrame(distributions, index=[0]).melt(), 
                     x = "variable", y="value", hue="variable").legend_.remove()
     
-    #plt.hlines(0, 0, len(distributions)+1, lw=2, color="k" )
     plt.xticks(range(0,len(distributions), 1), distributions.keys(), rotation=45, ha="right")
     
     plt.xlabel("Class name", size = 15)
@@ -656,44 +649,6 @@ def plot_class_distributions(distributions, plot_dir=None):
         fig.savefig(os.path.join(plot_dir,"class_distribution_plot.png"))
     else:
         fig.show()
-
-'''
-def plot_model_improvement_deltas(model_names, model_dir, 
-                                  tasks={"audio_classification" : "Audio classification"},
-                                  metrics={"F1-macro":["f1"]}, 
-                                  epoch=0, to_epoch=0, epochs_skip=0,
-                                  scores_on_train=False,
-                                  title_prefix=None,
-                                  plot_dir = None, 
-                                  show = False 
-                                  ):
-  
-  for reference_model_name, other_model_names in model_names.items():
-    reference_scores, _, reference_best_epoch = load_scores(reference_model_name, model_dir)
-    other_models_scores = {}
-
-    for model in other_model_names:
-      other_model_scores, _, other_model_best_epoch = load_scores(model, model_dir)
-      other_model_scores[model] = {"scores" : other_model_scores, "best_epoch" : other_model_best_epoch}
-
-    seaborn.reset_orig()
-
-    for task_name, task_header in tasks.items():
-
-      for plot_header, metric_keys in metrics.items():
-
-        collected_scores = {}
-        for model in other_model_names:
-          for score_name, values in other_model_scores[model]["scores"][task_name].items():
-              if score_name in metrics.keys():
-                  if score_name == "confusion matrix" or score_name == "distribution":
-                    continue
-                  else:
-                    collected_scores[model] = other_model_scores[model]["best_epoch"]
-        print(collected_scores)
-
-#TODO: Finish the metrics delta wrt to reference model bar plot
-'''
 
 def visualize_features(model, convolutional_layers, dense_layers, sample, sample_label_idx, save_to_dir, filename=None, target_layer=0):
   if not os.path.exists(save_to_dir):
@@ -744,12 +699,8 @@ def visualize_features_on_layers(model, convolutional_layers, dense_layers,
   if to_layer==0:
     to_layer = len(layers)-1
   for layer in range(from_layer, to_layer):
-    #try:
     print("Visualizing features on layer {}".format(layer))
     visualize_features(model, convolutional_layers, dense_layers, image, image_label_idx, save_to_dir, filename=filename_prefix+str(layer), target_layer=layer)
-    #except Exception as e:
-    #  print(e)
-    #  pass
   
   if make_gif:
     create_gif(save_to_dir, "", file_endswith="On_Image.png", gif_name="Layer_activations", save_to_dir = save_to_dir)
@@ -791,7 +742,6 @@ def plot_sound_waves(sound, compare_with_sound = None, preprocessing_name = None
 
   librosa.display.waveplot(np.array(sound),sr=sr, x_axis="time")
   
-  #plt.ylim([1e-7, 1e2])
   plt.ylabel('Magnitude (norm)')
 
   if compare_with_sound is None or horizontal:
@@ -810,7 +760,6 @@ def plot_sound_waves(sound, compare_with_sound = None, preprocessing_name = None
     
     librosa.display.waveplot(np.array(compare_with_sound),sr=sr, x_axis = "time")
 
-    #plt.ylim([1e-7, 1e2])
     plt.xlabel('Time [sec]', size = 10)
     plt.ylabel('Magnitude (norm)', size = 10)
     plt.subplots_adjust(top = 0.82, hspace= 0.4)
@@ -864,10 +813,7 @@ def plot_sound_spectrogram(sound, compare_with_sound = None, preprocessing_name 
     plt.title("Original")
 
   librosa.display.specshow(sound, hop_length = hop_length, x_axis="time", y_axis=y_axis)
-  #if not horizontal:
-  #  plt.colorbar(format=colorbar_format)
-  
-  #plt.ylim([1e-7, 1e2])
+
   plt.ylabel('Magnitude (norm)')
 
   if compare_with_sound is None or horizontal:
@@ -888,9 +834,7 @@ def plot_sound_spectrogram(sound, compare_with_sound = None, preprocessing_name 
     plt.title(subplot_title)
     
     librosa.display.specshow(sound, hop_length = hop_length, x_axis="time", y_axis=y_axis)
-    #plt.colorbar(format=colorbar_format)
 
-    #plt.ylim([1e-7, 1e2])
     plt.xlabel('Time [sec]')
     plt.ylabel('Magnitude (norm)')
     plt.subplots_adjust(top = 0.82, hspace= 0.4)
@@ -1006,8 +950,6 @@ def show_audio_preprocessing(original_clip, preprocessors, save_clips_to_dir, sa
     plot_sound_spectrogram(original_clip, show = show, compare_with_sound = preprocessed_clip, preprocessing_name = preprocessing_name, horizontal = horizontal, save_to_dir = output_dir, plot_title = plot_title)
 
 
-#plots for deltas
-
 def f1_score_models(model_name, model_dir, 
                           scores_on_train=False):
     '''
@@ -1017,7 +959,7 @@ def f1_score_models(model_name, model_dir,
         - model_dir: directory containing all models
 
         OPTIONAL
-        - scores_on_train
+        - scores_on_train: load scores on training set
         Returns
         - returns the f1-score of the model choosen at best epoch
     ''' 
@@ -1034,7 +976,7 @@ def acc_score_models(model_name, model_dir,
         - model_dir: directory containing all models
 
         OPTIONAL
-        - scores_on_train
+        - scores_on_train: load scores on training set
         Returns
         - returns the accuracy of the model choosen at best epoch
     ''' 

@@ -10,6 +10,19 @@ try:
 except:
   pass
 
+'''
+Implements a custom DataLoader to do the following (see the __iter__ method for
+a detailed descriptions of all the operations involved in data preparation)
+Args:
+  - dataset: iterable dataset that provides the samples
+  OPTIONAL:
+  - batch_size: (default: 1)
+  - batch_first: determines if the batch is batch-major or time-major (default: True)
+  - device
+  - tensorize_gold_data: allows preventing gold data from being turned into tensor form
+  - padding_symbol_index
+
+'''
 class DataLoader():
     def __init__(self,
                  dataset,
@@ -20,19 +33,6 @@ class DataLoader():
                  tensorize_gold_data = False,
                  verbose = False,
                  ):
-        '''
-        Implements a custom DataLoader to do the following (see the __iter__ method for
-        a detailed descriptions of all the operations involved in data preparation)
-        Args:
-          - dataset: iterable dataset that provides the samples
-          OPTIONAL:
-          - batch_size: (default: 1)
-          - batch_first: determines if the batch is batch-major or time-major (default: True)
-          - device
-          - tensorize_gold_data: allows preventing gold data from being turned into tensor form
-          - padding_symbol_index
-
-        '''
 
         self.dataset = dataset
         self.batch_size = batch_size      
@@ -47,6 +47,8 @@ class DataLoader():
 
         self.unpreprocessed_fields = self.dataset.get_unpreprocessed_fields()
 
+    #NOTICE: len was not implemented in this instance because the dataset length is not always predictable
+    # (depending on the window sampling methods chosen) 
     '''
     def __len__(self):
       return math.ceil(len(self.dataset)/self.batch_size)
@@ -71,21 +73,14 @@ class DataLoader():
       batch = self.preprocess_batch(batch)
       return batch
 
+    '''
+    __iter__ method for this custom DataLoader class, prepares data by performing
+    the following operations:
+      Collation function:
+      1) Collects a batch of self.batch_size samples from the Dataset instance
+      2) Collates and preprocesses this batch (turns fields into tensors)
+    '''
     def __iter__(self):
-      '''
-      __iter__ method for this custom DataLoader class, prepares data by performing
-      the following operations:
-        Collation function:
-        1) Collects a batch of self.batch_size samples from the Dataset instance
-        Preprocessing function:
-        1) Detect the maximum sentence length in the batch
-        2) Pad all other sentences up to the same length
-        3) Optionally, shuffle samples in the batch
-        4) Initialize tensors from sample components on the correct device
-        5) Optionally, if time-major format is requested, transpose the first two dimensions
-          of the tensors in the batch
-      '''
-      
       dataset_iterator = iter(self.dataset)
       j = 0
       samples = []
@@ -199,6 +194,8 @@ class DataLoader():
 
       return batch
 
+    '''
+    NOT USED - NOT TESTED
     def parse_batch(batch,batch_size):
         for i in range(batch_size):
             mfccs = batch["mfccs"][i]
@@ -230,40 +227,4 @@ class DataLoader():
             except:
                 print("Error processing " + fn + " - skipping")
         return np.array(features), np.array(labels, dtype = np.int)   
-
-if __name__=="__main__":
-  base_dir = os.path.dirname(os.path.realpath(__file__))
-  DATASET_DIR = os.path.join(base_dir,"data")
-  DATASET_NAME = "UrbanSound8K"
-  
-  spectrogram_frames_per_segment = 41
-  spectrogram_bands = 60
-
-  CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment)
-
-  right_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9)
-  left_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, left=True)
-  random_side_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, random_side=True)
-
-  background_noise_transformation = SpectrogramAddGaussNoise(input_size=CNN_INPUT_SIZE,prob_to_have_noise=0.55)
-
-  dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
-                            folds = [1], shuffle_dataset = True, 
-                            generate_spectrograms = False, 
-                            shift_transformation = right_shift_transformation, 
-                            background_noise_transformation = background_noise_transformation, 
-                            audio_augmentation_pipeline = [], 
-                            spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
-                            spectrogram_bands = spectrogram_bands, 
-                            compute_deltas=True, 
-                            compute_delta_deltas=True, 
-                            test = False, 
-                            progress_bar = True
-                            )
-
-  dataloader = DataLoader(dataset, batch_size=8, shuffle=False)
-
-  batch = next(iter(dataloader))
- 
-
-
+    '''

@@ -8,18 +8,25 @@ from matplotlib import pyplot as plt
 import scipy
 from scipy import signal
 
-try:
-    from utils.timing import *
-except:
-    pass
+from utils.timing import *
 
+'''
+Display a matrix as a heatmap
+'''
 def display_heatmap(data):
     plt.imshow(data, cmap="hot", interpolation='nearest')
     plt.show()
 
+'''
+Compute the number of frames in a log mel spectrogram according to its duration (seconds),
+sample rate and hop length
+'''
 def compute_spectrogram_frames(clip_seconds, sample_rate, hop_length):
     return math.ceil((clip_seconds*sample_rate)/hop_length)
 
+'''
+Generates a (log) mel spectrogram using the librosa library
+'''
 def generate_mel_spectrogram_librosa(signal, spectrogram_bands, log_mel=True, debug_time_label="", show=False, flatten=False):
 
     debug_time = len(debug_time_label)>0

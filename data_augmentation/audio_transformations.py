@@ -15,14 +15,7 @@ from utils.timing import code_timer
 import muda
 
 class PitchShift(object):
-<<<<<<< HEAD
-    def __init__(self, values, debug_time = False, name="PitchShift"):
-        assert isinstance(values, list) and len(values)>0, "Please provide a list of possible pitch shifting semitones values to choose from (randomly)"
-        self.values = values
-        self.debug_time = debug_time
-        self.name = name
-=======
-    def __init__(self, values, debug_time = False):
+    def __init__(self, values, debug_time = False, name = "PitchShift"):
         '''
         Implements the PitchShift transformation 
         Args:
@@ -35,7 +28,6 @@ class PitchShift(object):
         self.debug_time = debug_time
         self.name = "PitchShift"
 
->>>>>>> 70835756938517b7be008fd2fb416829d2458c1b
         
     def __call__(self, clip, sr=22050, value = None):
         '''
@@ -60,10 +52,7 @@ class PitchShift(object):
         return labels
 
 class TimeStretch(object):
-<<<<<<< HEAD
-    def __init__(self, values, debug_time = False, name="TimeStretch"):
-=======
-    def __init__(self, values, debug_time = False):
+    def __init__(self, values, debug_time = False, name = "TimeStretch"):
         '''
         Implements the TimeStretch transformation 
         Args:
@@ -71,7 +60,6 @@ class TimeStretch(object):
           OPTIONAL:
             - debug_time: boolean to set debug mode
         '''
->>>>>>> 70835756938517b7be008fd2fb416829d2458c1b
         assert isinstance(values, list) and len(values)>0, "Please provide a list of possible stretching factors to choose from (randomly)"
         self.values = values
         self.debug_time = debug_time
@@ -95,17 +83,13 @@ class TimeStretch(object):
 
 
 class MUDADynamicRangeCompression(object):
-<<<<<<< HEAD
-    def __init__(self, sample_rate = 22050, name="DynamicRangeCompression"):
-=======
-    def __init__(self, sample_rate = 22050):
+    def __init__(self, sample_rate = 22050, name = "DynamicRangeCompression"):
         '''
         Implements the Dynamic Range Compression transformation 
         Args:
           OPTIONAL:
             - sample_rate: sample rate of the clip
         '''
->>>>>>> 70835756938517b7be008fd2fb416829d2458c1b
         self.values = list(muda.deformers.PRESETS.keys())
 
         self.sample_rate = sample_rate
@@ -144,17 +128,13 @@ class MUDADynamicRangeCompression(object):
         return preprocessed_clip
 
 class BackgroundNoise(object):
-<<<<<<< HEAD
-    def __init__(self, background_files, files_dir, name="BackgroundNoise"):
-=======
-    def __init__(self, background_files, files_dir):
+    def __init__(self, background_files, files_dir, name = "BackgroundNoise"):
         '''
         Implements the BackgroundNoise transformation 
         Args:
           - background_files: .wav file of bacground noises
           - files_dir: directory in which are the .wav files
         '''
->>>>>>> 70835756938517b7be008fd2fb416829d2458c1b
         
         self.background_clips = {}
         self.values = []
@@ -216,8 +196,6 @@ class BackgroundNoise(object):
 
         #Overlay the two clips
         preprocessed_clip = ((1-weight)*sound + weight*bg_noise)/2
-
-        #sr=int((sample_rate1+sample_rate2)/2)
 
         if play:
             print("Playing original clip")

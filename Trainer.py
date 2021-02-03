@@ -21,12 +21,18 @@ from utils.evaluation_utils import *
 
 """
 Args:
+    - instance_name: name of the training instance (also name of the checkpoint directory)
+    - batch_size
     - train_loader: iterable providing training set data in batches 
-    - dev_loader: iterable providing dev set data in batches 
     - test_loader: iterable providing test set data in batches 
     - model: model to train
+    - loss_function
     - optimizer: optimizer used for loss_function optimization
     - device: device to train on
+    - model_dir: directory that will contain all checkpoints
+OPTIONAL:
+    - lr_scheduler: learning rate scheduler
+    - cnn (default: True): determines if we're wrapping the sound classification cnn or the ffn
 """
 class Trainer:
     def __init__(
@@ -70,7 +76,9 @@ class Trainer:
     - epochs: number of training epochs.
     OPTIONAL:
     - save_test_scores_every: number of epochs intercurring between two evaluations on test set
+    - save_test_scores_every: number of epochs intercurring between two evaluations on training set
     - save_model_every: number of epochs intercurring between two model checkpoints
+    - compute_gradient_statistics: add gradient statistics to the saved scores (used to plot gradient flows later)
     """
     def train(self, epochs, save_test_scores_every=0, save_train_scores_every=0, save_model_every=0, compute_gradient_statistics = False):
 
@@ -83,17 +91,11 @@ class Trainer:
             self.model.train()
 
             first_batch = True
-            #if total_batches>0:
-            #    progress_bar = tqdm(total=len(total_batches), desc='Epoch: '+str(epoch), position=0)
-            #else:
-            #    progress_bar = None
             total_batches = 0     
             total_samples = 0
             running_loss = 0
             batch_losses = []
-            
-            #self.train_loader.dataset.test_mode = False
-            
+                        
             for batch in self.train_loader:
                 if batch is None:
                     break
@@ -101,7 +103,6 @@ class Trainer:
                 self.optimizer.zero_grad()
 
                 if self.cnn:
-                    #original_spectrogram = batch["original_spectrogram"]
                     preprocessed_spectrogram = batch["preprocessed_spectrogram"].to(self.device)
                     predictions = self.model(preprocessed_spectrogram)
                 else:
@@ -112,17 +113,14 @@ class Trainer:
                     tonnetz = batch["tonnetz"].to(self.device)
                     predictions = self.model(mfccs, chroma, mel, contrast, tonnetz)
                     
-                #labels = batch["class_id"].to(self.device)                
                 labels = batch["class_id"].to(self.device)             
                 
                 loss = self.loss_function(predictions, labels)
 
-                #loss.backward(retain_graph=True)
                 loss.backward()
                 
                 #Only for first batch, plot the gradient flow
                 if first_batch and compute_gradient_statistics: 
-                    #self.plot_gradient_flow(self.model.named_parameters(), save_to_dir = os.path.join(self.checkpoint_path,self.instance_name))
                     gradient_stats = self.get_gradient_stats(self.model.named_parameters())
                     first_batch = False
 
@@ -135,14 +133,9 @@ class Trainer:
                 total_samples += len(batch)
                 total_batches += 1
 
-                #if progress_bar is not None:
-                #    progress_bar.update(1)
 
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
-
-            #if progress_bar is not None:
-            #    progress_bar.close()
 
             #Batch scores computation
             #Average loss per sample
@@ -196,19 +189,19 @@ class Trainer:
             self.last_epoch += 1    
             #return self.scores
 
+    '''
+    Evaluate model performance on various performance metrics
+    Args:
+    OPTIONAL:
+    - compute_confusion_matrix
+    - train: test on training set (True)
+    - log_output_directory: allows printing a score log if not None
+    - print_scores: print scores on console (True)
+    '''
+
     def evaluate(self, compute_confusion_matrix=False, log_output_directory=None, print_scores=True, train = False):
-        '''
-        Evaluate model performance on precision, recall and f1-score
-        Args:
-        OPTIONAL:
-        - compute_confusion_matrix
-        - dev: test on dev set (True)
-        - log_output_directory: allows printing a score log if not None
-        - print_scores: print scores on console (True)
-        '''
 
         if train:
-          #self.train_loader.dataset.test_mode = True
           loader = self.train_loader
         else:
           loader = self.test_loader
@@ -226,13 +219,11 @@ class Trainer:
 
         with torch.no_grad():
 
-            #progress_bar = tqdm(total=len(loader), desc='Evaluating', position=0)
             for batch in loader:
 
                 labels = batch["class_id"].cpu().detach().numpy()
                 
                 if self.cnn:
-                    #original_spectrogram = batch["original_spectrogram"]
                     preprocessed_spectrogram = batch["preprocessed_spectrogram"].to(self.device)
                     predictions = self.model(preprocessed_spectrogram)
                 else:
@@ -252,16 +243,11 @@ class Trainer:
                 #Accumulate batch entries
                 all_class_predictions.extend(decoded_predictions)
                 all_class_labels.extend(decoded_labels)
-
-                #progress_bar.update(1)
-
-            #progress_bar.close()
             
         audio_classification_results = evaluate_class_prediction(all_class_labels, all_class_predictions)
         audio_classification_table = print_table('Audio classification', audio_classification_results, fields=["accuracy", "precision", "recall", "f1"])
         audio_classification_distribution = print_distribution(audio_classification_results)
         if print_scores: print(audio_classification_table)
-        #if print_scores: print_confusion_matrix(audio_classification_results)
         if print_scores: print(audio_classification_distribution)
 
         if log_output_directory is not None:
@@ -271,10 +257,10 @@ class Trainer:
 
         return audio_classification_results
 
+    '''
+    Serializes all data necessary to load this model (includes all objects that concur to training)
+    '''
     def save_model_structure(self):
-        '''
-        Serializes all data necessary to restore this model (includes all objects that concur to training)
-        '''
         path = os.path.join(self.checkpoint_path,self.instance_name)
         
         try:
@@ -292,6 +278,9 @@ class Trainer:
             'lr_scheduler': self.lr_scheduler
         }, os.path.join(path,"model_structure.pt"), pickle_module=dill)
 
+    '''
+    Saves only weights
+    '''
     def save_model_weights(self):
         path = os.path.join(self.checkpoint_path,self.instance_name)
         try:
@@ -313,6 +302,9 @@ class Trainer:
                 'lr_scheduler_state_dict': self.lr_scheduler.state_dict(),
             }, os.path.join(path,"_{}.pt".format(self.last_epoch)), pickle_module=dill)
 
+    '''
+    Save model scores
+    '''
     def save_scores(self, scores, train=False):
         epoch = scores["Epoch"]
         
@@ -345,25 +337,24 @@ class Trainer:
                     pass
                 f.write("\n")
 
+    '''
+    Returns an instance of Trainer by loading a previously saved model structure and checkpoint
+    Args:
+    - train_loader: dataloader used in this trainer
+    - test_loader: dataloader used in this trainer
+    - instance_name: instance name of the training session (also the name of the subdirectory containing the model)
+    - model_dir: directory containing all models
+    - checkpoint_epoch: training epoch to load
+    OPTIONAL
+    - device
+    - is_cnn (default: True): are we in cnn training mode
+    Returns
+    - an instance of Trainer containing the loaded training session
+    ''' 
     @classmethod
     def load(cls, train_loader, test_loader, instance_name, model_dir, checkpoint_epoch, 
                 device="cuda", batch_size = 128, loss_function=None, is_cnn = True):
-        '''
-        Returns an instance of Trainer by loading a previously saved model structure and checkpoint
-        Args:
-        - instance_name: instance name of the training session (also the name of the subdirectory containing the model)
-        - model_dir: directory containing all models
-        - checkpoint_epoch: training epoch to load
-        OPTIONAL
-        - dataset_path: path of the dataset (used when not in prediction mode)
-        - device
-        - prediction_mode: specifies that no gold data is going to be provided (used
-            in the docker framework)
-        - bert_model: provide an already built bert model
-        - bert_tokenizer: provide an already built bert tokenizer
-        Returns
-        - an instance of Trainer containing the loaded training session
-        ''' 
+
         if loss_function is None:
             loss_function = nn.CrossEntropyLoss()
 
@@ -445,16 +436,16 @@ class Trainer:
         print("Loading process completed\n")
         return trainer
 
+    '''
+    Loads only the model weights in the current training session (looking for \
+    the subdirectory with name 'self.instance_name' of the current instance in 'path') 
+    Args:
+    - checkpoint_epoch: training epoch to load
+    OPTIONAL
+    - path: path of the directory containing all model subdirectories
+    - device
+    '''
     def load_without_structure(self, checkpoint_epoch, path=None, device="cuda"):
-        '''
-        Loads only the model weights in the current training session (looking for \
-        the subdirectory with name 'self.instance_name' of the current instance in 'path') 
-        Args:
-        - checkpoint_epoch: training epoch to load
-        OPTIONAL
-        - path: path of the directory containing all model subdirectories
-        - device
-        '''
         if path is None:
             path = os.path.join(self.checkpoint_path,self.instance_name)
         
@@ -480,14 +471,14 @@ class Trainer:
         if checkpoint is None:
             raise FileNotFoundError
     
+    '''
+    Computes various statistics about the gradients flowing through the net during training.
+    Can be used for checking for possible gradient vanishing / exploding problems.
+    
+    Usage: Plug this function in Trainer class after loss.backwards() as 
+    "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow
+    '''
     def get_gradient_stats(self, named_parameters):
-        '''
-        Plots the gradients flowing through different layers in the net during training.
-        Can be used for checking for possible gradient vanishing / exploding problems.
-        
-        Usage: Plug this function in Trainer class after loss.backwards() as 
-        "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow
-        '''
         gradient_stats = {}
         layer_names = []
         for layer_name, layer_parameters in named_parameters:
@@ -499,9 +490,10 @@ class Trainer:
                 gradient_stats[layer_name]["min_grads"] = layer_parameters.grad.abs().min().cpu().detach().numpy()
         return gradient_stats
 
+'''
+Runnable that creates a small "preview" of the scores for a certain epoch
+'''
 class ResultsWriterThread(threading.Thread):
-    '''Creates a small "preview" of the scores for a certain epoch
-    '''
     def __init__(self, predictions, gold, key, results, directory, filename, 
                 epoch=None, overwrite=True, verbose=False):
         threading.Thread.__init__(self)
@@ -527,105 +519,3 @@ class ResultsWriterThread(threading.Thread):
             for id, (prediction, label) in enumerate(zip(self.predictions, self.gold)):
                 f.write("Image: "+str(id)+"\tClass prediction:"+str(prediction)+"\tClass label:"+str(label)+"\n")
         return
-
-
-if __name__ == "__main__":
-
-    INSTANCE_NAME = "PROVA"
-    BATCH_SIZE = 128
-    USE_CNN = True
-
-    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    base_dir = os.path.dirname(os.path.realpath(__file__))
-    DATASET_DIR = os.path.join(base_dir,"data")
-    DATASET_NAME = "UrbanSound8K"
-
-    DATASET_PERCENTAGE = 1.0
-
-    MODEL_DIR = os.path.join(base_dir,"model")
-
-    selected_classes = [0,1,2,3,4,5,6,7,8,9]
-
-    spectrogram_frames_per_segment = 128
-    spectrogram_bands = 128
-    in_channels = (3 if USE_CNN else 1)
-
-    CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment, in_channels)
-    FFN_INPUT_SIZE = 154
-
-    right_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9)
-    left_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, left=True)
-    random_side_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, random_side=True)
-
-    background_noise_transformation = SpectrogramAddGaussNoise(input_size=CNN_INPUT_SIZE,prob_to_have_noise=0.55)
-
-    train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
-                                folds = [1], 
-                                shuffle = True, 
-                                generate_spectrograms = USE_CNN, 
-                                shift_transformation = right_shift_transformation, 
-                                background_noise_transformation = background_noise_transformation, 
-                                audio_augmentation_pipeline = [], 
-                                spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
-                                spectrogram_bands = spectrogram_bands, 
-                                compute_deltas=True, 
-                                compute_delta_deltas=True, 
-                                test = False, 
-                                progress_bar = True,
-                                selected_classes=selected_classes,
-                                select_percentage_of_dataset=DATASET_PERCENTAGE
-                                )   
-
-    test_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
-                                folds = [2], 
-                                shuffle = False, 
-                                generate_spectrograms = USE_CNN, 
-                                shift_transformation = right_shift_transformation, 
-                                background_noise_transformation = background_noise_transformation, 
-                                audio_augmentation_pipeline = [], 
-                                spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
-                                spectrogram_bands = spectrogram_bands, 
-                                compute_deltas=True, 
-                                compute_delta_deltas=True, 
-                                test = True, 
-                                progress_bar = True,
-                                selected_classes=selected_classes,
-                                select_percentage_of_dataset=DATASET_PERCENTAGE
-                                )
-
-
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
-    
-    if USE_CNN:
-        model = ConvolutionalNetwork(CNN_INPUT_SIZE)
-    else:
-        model = FeedForwardNetwork(FFN_INPUT_SIZE, 256, train_dataset.get_num_classes())
-    
-    num_classes = train_dataset.get_num_classes()
-    print("Number of classes: ", train_dataset.get_num_classes())
-    print("Class names: ",train_dataset.class_distribution.keys())
-
-    loss_function = nn.CrossEntropyLoss()
-
-    optimizer = optim.Adam(model.parameters())
-    #optimizer = optim.SGD(model.parameters(), lr=0.001)
-    #lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
-
-    trainer = Trainer(
-                        INSTANCE_NAME,
-                        BATCH_SIZE,
-                        train_loader,
-                        test_loader,
-                        train_dataset.get_id_to_class(),
-                        model,
-                        loss_function,
-                        optimizer,
-                        DEVICE,
-                        MODEL_DIR,
-                        lr_scheduler=None,
-                        cnn = USE_CNN
-                    )
-    
-    trainer.train(30, save_test_scores_every=1, save_train_scores_every=1, save_model_every=1, compute_gradient_statistics=True)
