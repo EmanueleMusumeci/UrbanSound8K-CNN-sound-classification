@@ -5,10 +5,17 @@ from torchvision import transforms
 import numpy as np
 
 class SpectrogramAddGaussNoise(object):
-    """Aggiunge rumore Gaussiano al vettore dello spettogramma"""
-
+ 
     def __init__(self, input_size, gaussian_mean=0.0, gaussian_std=None, prob_to_have_noise=1.0):
-
+        '''
+        Add Gaussian Noise to the spectrogram using numpy
+        Args:
+          - input_size: size of the spectrogram
+          OPTIONAL:
+            - gaussian_mean: gaussian mean to apply
+            - gaussian_std: gaussian standard deviation to apply
+            - prob_to_have_noise: probability to have noise
+        '''
         assert isinstance(input_size, tuple), "Input size must be a tuple (input_width, input_height)"
         self.input_size = input_size[:2]
         
@@ -26,6 +33,15 @@ class SpectrogramAddGaussNoise(object):
         self.gaussian_mean = gaussian_mean 
     
     def __call__(self, img, std_factor = 0.03, noise_mask = None, debug = False):
+        '''
+        Add Gaussian Noise to the spectrogram using numpy
+        Args:
+          - img: input spectrogram
+          OPTIONAL:
+            - std_factor: float for standard deviation factor
+            - noise_mask: noise to be apply
+            - debug : boolean to set debug mode
+        '''
         if np.random.random() > self.prob_to_have_noise <= 1.0:
             return img, np.zeros(self.input_size)
         
@@ -43,9 +59,17 @@ class SpectrogramAddGaussNoise(object):
         return img_with_noise, noise_mask
 
 class SpectrogramShift(object):
-    """Calcola il vettore dell' immagine dello spettrogramma shiftato"""
     def __init__(self, input_size, width_shift_range, shift_prob=1.0, left = False, random_side = False):
-
+        '''
+        Apply Shifting on spectrogram using numpy
+        Args:
+          - input_size: size of the spectrogram
+          - width_shift_range: range of shifting 
+          OPTIONAL:
+            - shift_prob: probability to have shifting
+            - left: True if left shifting
+            - random_side: True if apply random factor 
+        '''
 
         assert isinstance(input_size, tuple), "Input size must be a tuple (input_width, input_height)"
         self.input_size = input_size[:2]
@@ -67,6 +91,14 @@ class SpectrogramShift(object):
         self.random_side = random_side
 
     def __call__(self, img, shift_position = None, debug=False):
+        '''
+        Add Shifting to the spectrogram using numpy
+        Args:
+          - img: input spectrogram
+          OPTIONAL:
+            - shift_position: shift's position
+            - debug : boolean to set debug mode
+        '''
         if debug: print(shift_position)
 
         if np.random.random() > self.shift_prob or shift_position==0:

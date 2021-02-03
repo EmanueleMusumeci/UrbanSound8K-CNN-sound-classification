@@ -23,6 +23,8 @@ if __name__ == "__main__":
         from tqdm import tqdm
 
         from utils.plot_utils import *
+        # TODO put it in plot_utils
+        from class_confusion_matrix import *
         from utils.dataset_utils import *
         from utils.audio_utils import load_audio_file, play_sound, SingleWindowSelector
         from data_augmentation.audio_transformations import *
@@ -34,12 +36,13 @@ if __name__ == "__main__":
 
         plot_color = "blue"
         
-        SINGLE_PLOTS = True
-        SINGLE_TRAIN_TEST_PLOTS = True
+        SINGLE_PLOTS = False
+        SINGLE_TRAIN_TEST_PLOTS = False
         CONFUSION_MATRIX = False
         COMPARATIVE_PLOTS = False
         GRADIENT_FLOW = False
         BEST_SCORES = False
+        DELTA_SCORES = True
         PLOT_BEST_SCORES_DELTAS = False
         PLOT_CLASS_DISTRIBUTION = False
         PLOT_PREPROCESSING_ACCURACY_RESULTS = False
@@ -238,6 +241,37 @@ if __name__ == "__main__":
                                                 }
                                                 )
                                 f.write(best_scores_str)
+        #################
+        # DELTA  SCORES #
+        #################
+        if DELTA_SCORES:
+                dict_augmentation_to_test = {
+                                            "Base_delta_delta":"Base",
+                                            "PitchShift_delta_delta":"PS1",
+                                            "BackgroundNoise_delta_delta":"BG",
+                                            "DynamicRangeCompression_delta_delta":"DRC",
+                                            "TimeStretch_delta_delta":"TS"
+                                        }
+            
+                #plot delta on total accuracy
+                plot_delta_on_metric(model_dir, "accuracy", dict_augmentation_to_test, 
+                                    "Base_delta_delta", ["Δ Classification Accuracy", "class"],
+                                    "value", "class", horizontal=False, plot_dir="plots")
+
+                #plot delta on total f1
+                plot_delta_on_metric(model_dir, "f1",dict_augmentation_to_test,
+                                    "Base_delta_delta", ["Δ f1-score", "augmentations"], 
+                                    "f1_score" , "augmentations",horizontal=False,plot_dir="plots")
+                
+                classes_names = ["air_conditioner","car_horn","children_playing","dog_bark","drilling","engine_idling","gun_shot","jackhammer","siren","street_music", "All classes"]
+
+                #plot delta on total accuracies
+                plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test,
+                                    "Base_delta_delta", ["Δ Classification Accuracies", "class"],
+                                    "value", "class", classes_names = classes_names, horizontal=True, plot_dir="plots")
+
+
+
         
         ################
         # BEST  SCORES #

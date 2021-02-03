@@ -24,17 +24,35 @@ import seaborn as sns
 import pandas as pd
 
 def f1_score_models(model_name, model_dir, 
-                          tasks={"audio_classification" : "Audio classification"}, 
-                          save_to_file=False, title_prefix=None, 
-                          scores_on_train=False,best_epoch_bool=False):
+                          scores_on_train=False):
+    '''
+        returns  the f1 of the model choosen
+        Args:
+        - model_name: directory of the model choosen
+        - model_dir: directory containing all models
+
+        OPTIONAL
+        - scores_on_train
+        Returns
+        - returns the f1-score of the model choosen at best epoch
+    ''' 
     scores, epoch_list, best_epoch = load_scores(model_name, model_dir, scores_on_train=scores_on_train)
     
     return scores["audio_classification"]["f1"][best_epoch]
 
 def acc_score_models(model_name, model_dir, 
-                          tasks={"audio_classification" : "Audio classification"}, 
-                          save_to_file=False, title_prefix=None, 
-                          scores_on_train=False,best_epoch_bool=False):
+                          scores_on_train=False):
+    '''
+        returns  the accuracy of the model choosen
+        Args:
+        - model_name: directory of the model choosen
+        - model_dir: directory containing all models
+
+        OPTIONAL
+        - scores_on_train
+        Returns
+        - returns the accuracy of the model choosen at best epoch
+    ''' 
     scores, epoch_list, best_epoch = load_scores(model_name, model_dir, scores_on_train=scores_on_train)
     
     return scores["audio_classification"]["accuracy"][best_epoch]
@@ -43,6 +61,21 @@ def method_all_classes(model_name, model_dir,
                           tasks={"audio_classification" : "Audio classification"}, 
                           save_to_file=False, title_prefix=None, 
                           scores_on_train=False,accuracy=True):
+    '''
+        Computes the accuracy for each class
+        Args:
+        - data: pandas data frame on which doing the plot
+        - plot_axes_labes: tuple with the axis labels on the plot
+        - x: var on x axis
+        - y: var on y axis 
+        - horizontal: True or False determines the orientation of the barplot
+        - metric : title for the plot
+        OPTIONAL
+        - plot_dir = directory in which save the file
+        Returns
+        - saves in directory plots/delta plots the plot created
+    ''' 
+    
 
     plt.close("all")
 
@@ -70,30 +103,6 @@ def method_all_classes(model_name, model_dir,
         #-----------------------
         #TPc + TNc + FPc + FNc
 
-        """
-        called on Base:
-
-        [[72  0  6  1  0 10  0  5  2  4]    air_conditioner(and 1st column)
-        [ 0 27  0  0  0  2  3  0  0  1]     car_horn
-        [ 0  0 84  5  2  4  0  0  5  0]     children_playing
-        [ 0  4  6 69  4  0  8  2  2  5]     dog_bark
-        [ 7  3  2  0 77  1  0  3  7  0]     drilling
-        [19  0  0  1  3 64  1  0  0  5]     engine_idling
-        [ 0  2  0  1  0  0 29  0  0  0]     gun_shot
-        [ 0  1  0  0 10  2  0 83  0  0]     jackhammer
-        [ 4  0 12 13  3  3  0  0 48  0]     siren
-        [ 1  2 13  0  4  0  0  0  3 77]]    street music
-
-
-        c = accuracy_air_condtioner:
-        (class c identified as class c)
-        TPc = 72      
-        (samples of classes != c but identified as class c)  
-        FPc = 7+19+4+1  
-        FNc = 6+1+10+5+2+4
-        TNc = sum over all matrix - TPc-FPc-FNc
-
-        """
         sum_over_all_matrix = 0
         for i in range(len_confusion_matrix):
             for j in range(len_confusion_matrix):
@@ -133,12 +142,26 @@ def method_all_classes(model_name, model_dir,
         
         return ACCs
 
-def delta_plot(data,axis_labels,x,y,horizontal,metric,plot_dir = None):
-    x_hori = x
-    y_hori = y
+def delta_plot(data, axis_labels, x_label, y_label, horizontal, metric, plot_dir = None):
+    '''
+        Creates delta plot
+        Args:
+        - data: pandas data frame on which doing the plot
+        - plot_axes_labes: tuple with the axis labels on the plot
+        - x_label: label on x axis
+        - y_label: label on y axis 
+        - horizontal: True or False determines the orientation of the barplot
+        - metric : title for the plot
+        OPTIONAL
+        - plot_dir = directory in which save the file
+        Returns
+        - saves in directory plots/delta plots the plot created
+    ''' 
+    x_hori = x_label
+    y_hori = y_label
     if not horizontal:
-        x_hori = y
-        y_hori = x
+        x_hori = y_label
+        y_hori = x_label
     # Create DataFrame
     df = pd.DataFrame(data)
     if len(data) == 3 : 
@@ -177,8 +200,8 @@ def delta_plot(data,axis_labels,x,y,horizontal,metric,plot_dir = None):
         
     plt.close("all")
 
-def plot_delta_on_metric(model_dir,compute,aug_to_test,aug_chosen_for_comparation,
-                      plot_axes_labels,x,y,
+def plot_delta_on_metric(model_dir, compute, aug_to_test, aug_chosen_for_comparation, 
+                      plot_axes_labels, x, y, classes_names = None,
                       tasks={"audio_classification" : "Audio classification"},
                       save_to_file=True, 
                       title_prefix = "Base",
@@ -187,6 +210,28 @@ def plot_delta_on_metric(model_dir,compute,aug_to_test,aug_chosen_for_comparatio
                       plot_dir = None
                       
 ):
+    '''
+        Returns the delta plot chosen
+        Args:
+        - model_dir: directory containing all models
+        - compute: which type of delta between "all" (all accuracies),"accuracy" and "f1"
+        - aug_chosen_for: list of augmentation to test
+        - aug_chosen_for_comparation: augmentation choosen as ground comparation
+        - plot_axes_labes: tuple with the axis labels on the plot
+        - x: var on x axis
+        - y: var on y axis
+
+        OPTIONAL
+        - classes_names: required if compute = "all", list of classes
+        - tasks
+        - save_to_file
+        - title_prefix
+        - scores_on_train
+        - horizontal: True or False determines the orientation of the barplot
+        - plot_dir = directory in which save the file
+        Returns
+        - saves in directory plots/delta plots the plot created
+    ''' 
     #compute all accuracies or f1_score total or accuracy total
     augmentation_delta_computed = {}
     for el in aug_to_test:
@@ -199,18 +244,12 @@ def plot_delta_on_metric(model_dir,compute,aug_to_test,aug_chosen_for_comparatio
                                             accuracy = True
                                             )
         elif compute is "f1": 
-            augmentation_delta_computed[el] = f1_score_models(el,model_dir,
-                                            tasks=tasks,
-                                            save_to_file=save_to_file,
-                                            title_prefix=title_prefix,
+            augmentation_delta_computed[el] = f1_score_models(el, model_dir,
                                             scores_on_train=scores_on_train
                                             )
         
         else:
-            augmentation_delta_computed[el] = acc_score_models(el,model_dir,
-                                                            tasks=tasks,
-                                                            save_to_file=save_to_file,
-                                                            title_prefix=title_prefix,
+            augmentation_delta_computed[el] = acc_score_models(el, model_dir,
                                                             scores_on_train=scores_on_train
                                                             )
 
@@ -234,9 +273,9 @@ def plot_delta_on_metric(model_dir,compute,aug_to_test,aug_chosen_for_comparatio
         for key,value in aug_to_test.items():
             
             deltas[key] = {}
-            names = ["air_conditioner","car_horn","children_playing","dog_bark","drilling","engine_idling","gun_shot","jackhammer","siren","street_music", "All classes"]
+            #names = ["air_conditioner","car_horn","children_playing","dog_bark","drilling","engine_idling","gun_shot","jackhammer","siren","street_music", "All classes"]
             for key_in,value_in in augmentation_delta_computed[aug_chosen_for_comparation].items():
-                deltas[key][names[key_in-1]] = augmentation_delta_computed[key][key_in] - value_in
+                deltas[key][classes_names[key_in-1]] = augmentation_delta_computed[key][key_in] - value_in
 
             for key_in,value_in in deltas[key].items():
                 data[y].append(key_in)
@@ -259,7 +298,7 @@ def plot_delta_on_metric(model_dir,compute,aug_to_test,aug_chosen_for_comparatio
 
 
 if __name__ == "__main__":
-    model_dir = "model/test_on_fold_10"
+    model_dir = "model/base_test_on_fold_10"
     dict_augmentation_to_test = {
         "Base":"Base",
         "PitchShift":"PS1",
@@ -269,18 +308,20 @@ if __name__ == "__main__":
 
     }
     #plot delta on total accuracy
-    plot_delta_on_metric(model_dir,"accuracy",dict_augmentation_to_test,
-                        "Base",["Δ Classification Accuracy", "class"],
-                        "value","class",horizontal=False,plot_dir="plots")
+    plot_delta_on_metric(model_dir, "accuracy", dict_augmentation_to_test, 
+                        "Base", ["Δ Classification Accuracy", "class"],
+                        "value", "class", horizontal=False, plot_dir="plots")
 
     #plot delta on total f1
-    plot_delta_on_metric(model_dir,"f1",dict_augmentation_to_test,
-                         "Base",["Δ f1-score", "augmentations"], 
-                        "f1_score", "augmentations",horizontal=False,plot_dir="plots")
+    plot_delta_on_metric(model_dir, "f1",dict_augmentation_to_test,
+                         "Base", ["Δ f1-score", "augmentations"], 
+                        "f1_score" , "augmentations",horizontal=False,plot_dir="plots")
+    
+    classes_names = ["air_conditioner","car_horn","children_playing","dog_bark","drilling","engine_idling","gun_shot","jackhammer","siren","street_music", "All classes"]
 
     #plot delta on total accuracies
-    plot_delta_on_metric(model_dir,"all",dict_augmentation_to_test,
-                        "Base",["Δ Classification Accuracies", "class"],
-                        "value","class",horizontal=True,plot_dir="plots")
+    plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test,
+                        "Base", ["Δ Classification Accuracies", "class"],
+                        "value", "class", classes_names = classes_names, horizontal=True, plot_dir="plots")
     
 
