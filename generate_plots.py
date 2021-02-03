@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
         from utils.plot_utils import *
         # TODO put it in plot_utils
-        from class_confusion_matrix import *
+        #from class_confusion_matrix import *
         from utils.dataset_utils import *
         from utils.audio_utils import load_audio_file, play_sound, SingleWindowSelector
         from data_augmentation.audio_transformations import *
