@@ -36,8 +36,8 @@ DATASET_DIR = os.path.join(BASE_DIR,"data")
 MODEL_DIR = os.path.join(BASE_DIR,"model")
 
 #Preprocessing
-#preprocessing_name = None
-preprocessing_name = "PitchShift"
+preprocessing_name = None
+#preprocessing_name = "PitchShift"
 #preprocessing_name = "TimeStretch"
 #preprocessing_name = "DynamicRangeCompression"
 #preprocessing_name = "BackgroundNoise"
@@ -47,7 +47,7 @@ SPECTROGRAM_HOP_LENGTH = 512
 SAMPLE_RATE = 22050
 
 COMPUTE_DELTAS = False
-COMPUTE_DELTA_DELTAS = True
+COMPUTE_DELTA_DELTAS = False
 if COMPUTE_DELTA_DELTAS:
     COMPUTE_DELTAS = True
 APPLY_IMAGE_AUGMENTATIONS = False

@@ -156,9 +156,3 @@ class CustomConvolutionalNetwork(nn.Module):
 
 #Class alias for previous versions of this class
 ConvolutionalNetwork = CustomConvolutionalNetwork
-
-if __name__ == "__main__":
-    """
-    net = ConvolutionalNetwork(1)
-    print(net)
-    """

@@ -9,8 +9,8 @@ import soundfile as sf
 
 import numpy as np
 
-from utils.audio_utils import play_sound, load_audio_file
-from utils.timing import code_timer
+#from utils.audio_utils import play_sound, load_audio_file
+#from utils.timing import code_timer
 
 import muda
 
@@ -208,30 +208,3 @@ class BackgroundNoise(object):
 
         return preprocessed_clip
 
-if __name__ == "__main__":
-
-    import sounddevice as sd
-
-    import librosa
-    import librosa.display
-    import IPython as ip
-
-    from os import listdir
-    from os.path import isfile, join
-    
-    base_dir = os.path.dirname(os.path.realpath(__file__))
-    DATASET_DIR = os.path.join(base_dir,"data")
-    print(librosa.__version__)
-
-    name_file = "7061-6-0-0"
-    type_file = ".wav"
-    
-    sound_file = os.path.join(DATASET_DIR,"UrbanSound8K","audio","fold1",name_file+type_file)
-    noise_file = os.path.join(DATASET_DIR,"UrbanSound8K-JAMS","background_noise","150993__saphe__street-scene-1.wav")
-    print("sound_file: ",sound_file)
-    print("noise_file: ",noise_file)
-
-    #set it to generate the corresponding shift ( in article :steps (semitones) PS1 = {-2,-1,1,2} , PS2 = {-3.5,-2.5, 2.5,3.5} )
-    sound_file = sound_file.replace("data_augmentation\\","")
-    y1, sample_rate1 = load_audio_file(sound_file)
-    

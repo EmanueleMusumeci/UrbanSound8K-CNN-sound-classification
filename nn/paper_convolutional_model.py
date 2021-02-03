@@ -51,6 +51,4 @@ class PaperConvolutionalNetwork(nn.Module):
 
         return x
 
-if __name__ == "__main__":
-    model = PaperConvolutionalNetwork((128,128,1)).to("cuda")
-    summary(model, (128,128,1))
+
