@@ -19,6 +19,15 @@ from utils.evaluation_utils import *
 #except:
     #pass
 
+"""
+Args:
+    - train_loader: iterable providing training set data in batches 
+    - dev_loader: iterable providing dev set data in batches 
+    - test_loader: iterable providing test set data in batches 
+    - model: model to train
+    - optimizer: optimizer used for loss_function optimization
+    - device: device to train on
+"""
 class Trainer:
     def __init__(
         self,
@@ -34,15 +43,6 @@ class Trainer:
         lr_scheduler=None,
         cnn = True
     ):
-        """
-        Args:
-            - train_loader: iterable providing training set data in batches 
-            - dev_loader: iterable providing dev set data in batches 
-            - test_loader: iterable providing test set data in batches 
-            - model: model to train
-            - optimizer: optimizer used for loss_function optimization
-            - device: device to train on
-        """
         self.instance_name = instance_name
         self.model = model
 
@@ -63,16 +63,17 @@ class Trainer:
         self.lr_scheduler = lr_scheduler   
 
         self.cnn = cnn
-
+    
+    """
+    Contains the training loop
+    Args:
+    - epochs: number of training epochs.
+    OPTIONAL:
+    - save_test_scores_every: number of epochs intercurring between two evaluations on test set
+    - save_model_every: number of epochs intercurring between two model checkpoints
+    """
     def train(self, epochs, save_test_scores_every=0, save_train_scores_every=0, save_model_every=0, compute_gradient_statistics = False):
-        """
-        Contains the training loop
-        Args:
-        - epochs: number of training epochs.
-        OPTIONAL:
-        - save_test_scores_every: number of epochs intercurring between two evaluations on test set
-        - save_model_every: number of epochs intercurring between two model checkpoints
-        """
+
                 
         self.save_model_structure()
 

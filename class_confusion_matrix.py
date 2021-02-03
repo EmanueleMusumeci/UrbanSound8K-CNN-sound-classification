@@ -51,9 +51,7 @@ def accuracy_all_classes(model_name, model_dir,
                           tasks={"audio_classification" : "Audio classification"}, 
                           save_to_file=False, title_prefix=None, 
                           scores_on_train=False):
-
     plt.close("all")
-
     scores, epoch_list, best_epoch = load_scores(model_name, model_dir, scores_on_train=scores_on_train)
     best_epoch_bool = False
     if best_epoch_bool is True:scores_best,epoch_list_best,best_epoch_best = load_scores(model_name,model_dir,from_epoch=best_epoch,to_epoch=best_epoch,scores_on_train=scores_on_train)
@@ -174,8 +172,10 @@ def accuracy_all_classes(model_name, model_dir,
         #print("ACCs: ",ACCs)
         return ACCs
 
-def delta_plot(data,axis_labels,x,y):
+def delta_plot(data, axis_labels, x, y, show=False, save_to_dir = None):
     
+    plt.close("all")
+
     # Create DataFrame
     df = pd.DataFrame(data)
     if len(data) == 3 : 
@@ -186,19 +186,53 @@ def delta_plot(data,axis_labels,x,y):
             x=x, y=y,hue = hue,
             ci="sd", palette="dark", alpha=.6, height=6
         )
+        ax1 = g.axes[0]
+        g.despine(left=True)
+        g.set_axis_labels(axis_labels[0],axis_labels[1])
     else:
-        g = sns.catplot(
-            data=df, kind="bar",
-            x=x, y=y,
-            ci="sd", palette="dark", alpha=.6, height=6
-        )
-    ax1 = g.axes[0]
-    g.despine(left=True)
-    g.set_axis_labels(axis_labels[0],axis_labels[1])
-
-    plt.show()
+        #g = sns.catplot(
+        #    data=df, kind="bar",
+        #    x=x, y=y,
+        #    ci="sd", palette="dark", alpha=.6, height=6, dodge = False
+        #)
+        plt.bar(data[x], data[y], width=0.3)
 
 
+    if save_to_dir is not None:
+        path = os.path.join(save_to_dir,plot_title.replace("\n", " ").replace(":"," ")+".png")
+        fig.savefig(path)
+    
+    if show: 
+        plt.show()  
+
+    plt.close("all")
+
+def plot_train_test_accuracy_delta(model_dir, model_names, 
+                                    metrics = {"accuracy" : "Accuracy"},
+                                    tasks = {"audio_classification" : "Audio classification"},
+                                    show = False,
+                                    save_to_dir = None,
+                                    plot_title = ""
+                                    ):
+
+    deltas = {}
+    for metric_name, metric_label in metrics.items():
+        for task_name, task_header in tasks.items():
+            deltas[task_name] = {}
+            for model_name, model_plot_label in model_names.items():
+                test_scores, _, best_epoch = load_scores(model_name, model_dir, scores_on_train=False)
+                train_scores, _, _ = load_scores(model_name, model_dir, scores_on_train=True)
+                
+                assert task_name in test_scores.keys(), "Test scores for task "+task_name+" not found"
+                assert task_name in train_scores.keys(), "Train scores for task "+task_name+" not found"
+                
+                test_metric_value = test_scores[task_name][metric_name][best_epoch]
+                train_metric_value = train_scores[task_name][metric_name][best_epoch]
+
+                deltas[task_name][model_plot_label] = train_metric_value - test_metric_value
+        
+            pd_data = {"augmentations": list(deltas[task_name].keys()), "deltas" : list(deltas[task_name].values())}
+            delta_plot(pd_data, ("Augmentation","Train-Test {} delta".format(metric_label)), "augmentations", "deltas", show=show)
 
 
 def get_accuracy_delta(accuracies_augmentation_method,accuracies_base):
@@ -316,7 +350,7 @@ if __name__ == "__main__":
     """
     #x="value", y="class", 
         #hue="augmentations",
-    plot_delta_on_metric(model_dir,False,dict_augmentation_to_test,"Base",["Δ f1-score", "augmentations"], "f1_score", "augmentations")
-    plot_delta_on_metric(model_dir,True,dict_augmentation_to_test,"Base",["Δ Classification Accuracy", "class"],"value","class")
+    plot_delta_on_metric(model_dir, False, dict_augmentation_to_test, "Base", ["Δ f1-score", "augmentations"], "f1_score", "augmentations")
+    plot_delta_on_metric(model_dir, True, dict_augmentation_to_test, "Base", ["Δ Classification Accuracy", "class"], "value", "class")
 
     #plot_delta_f1_score(model_dir)

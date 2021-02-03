@@ -36,24 +36,20 @@ DATASET_DIR = os.path.join(BASE_DIR,"data")
 MODEL_DIR = os.path.join(BASE_DIR,"model")
 
 #Preprocessing
-#preprocessing_name = None
-#preprocessing_name = "PitchShift1"
-#preprocessing_name = "PitchShift2"
+preprocessing_name = None
+#preprocessing_name = "PitchShift"
 #preprocessing_name = "TimeStretch"
-#preprocessing_name = "DynamicRangeCompression"
-preprocessing_name = "BackgroundNoise"
+preprocessing_name = "DynamicRangeCompression"
+#preprocessing_name = "BackgroundNoise"
 
 CLIP_SECONDS = 3
 SPECTROGRAM_HOP_LENGTH = 512
 SAMPLE_RATE = 22050
 
-COMPUTE_DELTAS = False
+COMPUTE_DELTAS = True
 COMPUTE_DELTA_DELTAS = True
-if not COMPUTE_DELTAS:
-    COMPUTE_DELTA_DELTAS = False
-elif COMPUTE_DELTA_DELTAS:
+if COMPUTE_DELTA_DELTAS:
     COMPUTE_DELTAS = True
-
 APPLY_IMAGE_AUGMENTATIONS = False
 
 BATCH_SIZE = 128
@@ -76,17 +72,17 @@ DEBUG_TIMING = False
 selected_classes = [0,1,2,3,4,5,6,7,8,9]
 
 #Precompacted folds used for training
-SINGLE_FOLD = True
+SINGLE_FOLD = False
 if SINGLE_FOLD:
     train_fold_list = [1]
-    test_fold_list = [10]
+    test_fold_list = [1]
 else:
     train_fold_list = [1,2,3,4,5,6,7,8,9]
     test_fold_list = [10]
 
 
 #Model
-USE_PAPER_CNN = False
+USE_PAPER_CNN = True
 CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment, in_channels)
 FFN_INPUT_SIZE = 154
 
@@ -102,6 +98,7 @@ if COMPUTE_DELTAS:
     INSTANCE_NAME+="_delta"
 if COMPUTE_DELTA_DELTAS:
     INSTANCE_NAME+="_delta"
+
 
 #Check we are not overwriting any existing checkpoints
 PREVENT_OVERWRITE = False
@@ -123,58 +120,27 @@ else:
 
 
 #Load precompacted dataset
-preprocessor = None
-LOAD_PRECOMPACTED = False
-if LOAD_PRECOMPACTED:
-    #Load preprocessed folds
-    if preprocessing_name is not None:
-        train_audio_meta, train_audio_clips, train_audio_spectrograms = load_preprocessed_compacted_dataset(DATASET_DIR, preprocessing_name, folds = train_fold_list, only_spectrograms=True)
-        #_, _, raw_train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list)
-    else:
-        train_audio_meta, train_audio_clips, train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list, only_spectrograms=True)
-
-    #Load raw folds
-    test_audio_meta, test_audio_clips, test_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = test_fold_list, only_spectrograms=True)
-    #Free up memory
-    del train_audio_clips
-    del test_audio_clips
+#Load preprocessed folds
+if preprocessing_name is not None:
+    train_audio_meta, train_audio_clips, train_audio_spectrograms = load_preprocessed_compacted_dataset(DATASET_DIR, preprocessing_name, folds = train_fold_list, only_spectrograms=True)
+    #_, _, raw_train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list)
 else:
-    train_audio_meta = None
-    train_audio_clips = None
-    train_audio_spectrograms = None
+    train_audio_meta, train_audio_clips, train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list, only_spectrograms=True)
 
-    test_audio_meta = None
-    test_audio_clips = None
-    test_audio_spectrograms = None
-                                
-    if preprocessing_name == "PitchShift1":
-        preprocessor = PitchShift(values = [-2, -1, 1, 2], name="PitchShift1")
+#Load raw folds
+test_audio_meta, test_audio_clips, test_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = test_fold_list, only_spectrograms=True)
+#Free up memory
+del train_audio_clips
+del test_audio_clips
 
-    elif preprocessing_name == "PitchShift2":
-        preprocessor = PitchShift(values = [-3.5, -2.5, 2.5, 3.5], name="PitchShift2")
-    
-    elif preprocessing_name == "TimeStretch":
-        preprocessor = TimeStretch(values = [0.81, 0.93, 1.07, 1.23])
-
-    elif preprocessing_name == "DynamicRangeCompression":
-        preprocessor = MUDADynamicRangeCompression()
-
-    elif preprocessing_name == "BackgroundNoise":
-        preprocessor = BackgroundNoise({
-                                        "street_scene_1" : "150993__saphe__street-scene-1.wav",
-                                        #"street_scene_3" : "173955__saphe__street-scene-3.wav",
-                                        #"street_valencia" : "207208__jormarp__high-street-of-gandia-valencia-spain.wav",
-                                        #"city_park_tel_aviv" : "268903__yonts__city-park-tel-aviv-israel.wav",
-                                    }, files_dir = os.path.join(DATASET_DIR, "UrbanSound8K-JAMS", "background_noise"))
 
 #Dataset instances
 train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
                             folds = train_fold_list, 
                             preprocessing_name = preprocessing_name,
-                            preprocessor=preprocessor,
-                            audio_meta = train_audio_meta,
+                            audio_meta = None,
                             audio_clips = None,
-                            audio_spectrograms = train_audio_spectrograms,
+                            audio_spectrograms = None,
                             shuffle = True, 
                             use_spectrograms = True, 
                             image_shift_transformation = right_shift_transformation, 
@@ -196,7 +162,7 @@ train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,
 
 test_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,  
                             folds = test_fold_list, 
-                            preprocessing_name = None,
+                            preprocessing_name = preprocessing_name,
                             audio_meta = test_audio_meta,
                             audio_clips = None,
                             audio_spectrograms = test_audio_spectrograms,

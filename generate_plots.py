@@ -25,6 +25,7 @@ if __name__ == "__main__":
         from utils.plot_utils import *
         from utils.dataset_utils import *
         from utils.audio_utils import load_audio_file, play_sound, SingleWindowSelector
+        from class_confusion_matrix import *
         from data_augmentation.audio_transformations import *
         from Trainer import *
 
@@ -35,17 +36,18 @@ if __name__ == "__main__":
         plot_color = "blue"
         
         SINGLE_PLOTS = True
-        SINGLE_TRAIN_TEST_PLOTS = True
+        SINGLE_TRAIN_TEST_PLOTS = False
         CONFUSION_MATRIX = False
         COMPARATIVE_PLOTS = False
         GRADIENT_FLOW = False
         BEST_SCORES = False
         PLOT_BEST_SCORES_DELTAS = False
+        PLOT_TRAIN_TEST_ACCURACY_DELTAS = True
         PLOT_CLASS_DISTRIBUTION = False
         PLOT_PREPROCESSING_ACCURACY_RESULTS = False
-        COLLECT_AND_PREPROCESS_SAMPLES = True
+        COLLECT_AND_PREPROCESS_SAMPLES = False
         SHOW_PREPROCESSING = False
-        SALIENCY_MAPS = True
+        SALIENCY_MAPS = False
 
         ################
         # SINGLE PLOTS 
@@ -244,6 +246,21 @@ if __name__ == "__main__":
         ################
         if PLOT_BEST_SCORES_DELTAS:
                 pass
+        
+        ###################################
+        # PLOT TRAIN/TEST ACCURACY DELTAS #
+        ###################################
+        if PLOT_TRAIN_TEST_ACCURACY_DELTAS:
+                model_names = {
+                                "Base" : "No augmentations",
+                                "PitchShift" : "PS1",
+                                "BackgroundNoise" : "BG"
+                             }
+                plot_train_test_accuracy_delta(model_dir, model_names, 
+                                                metrics = {"accuracy" : "Accuracy"},
+                                                tasks = {"audio_classification" : "Audio classification"},
+                                                show = True
+                                                )
 
 #TODO : Integrare con Michele
 

@@ -107,12 +107,11 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         self.audio_meta = audio_meta
         self.audio_clips = audio_clips
         self.audio_spectrograms = audio_spectrograms
-
         if self.audio_meta is None and folds is not None and len(folds)>0:
             assert self.audio_clips is None and self.audio_spectrograms is None, "If audio_clips or audio_spectrograms were provided, audio_meta should have been provided as well"
             #Load dataset index (the audio files will be loaded one by one therefore training will be up to 10x slower!!!), 
             # returning only the sample_ids whose class_id is among the selected ones
-            self.audio_meta = self.load_dataset_index(dataset_dir, folds=self.folds)
+            self.audio_meta, self.sample_ids = self.load_dataset_index(dataset_dir, folds=self.folds)
         
         if self.audio_meta is not None:
             self.sample_ids = self.select_sample_ids(self.selected_classes, select_percentage = select_percentage_of_dataset)        
@@ -136,7 +135,6 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             self.preprocessing_name = preprocessing_name
             
         if self.preprocessor is not None:
-            raise
             self.preprocessing_values = self.preprocessor.values
             self.preprocessing_name = self.preprocessor.name
         elif self.preprocessing_name is not None:
@@ -339,6 +337,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
 
         clip = None
         spectrogram = None
+        preprocessing_value = None
         #If audio_clips were loaded, we load the correct audio clip at index
         if self.audio_clips is not None:
             #If we are not using a preprocessing, we just select the unpreprocessed audio clip at index
@@ -607,7 +606,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
     #un dizionario con campi : filepath,classeId,className,
     #                           metadata= dizionario con altri dati
     def load_dataset_index(self, sample, folds = [], skip_first_line=True):
-        with open(os.path.join(self.dataset_dir,'metadata','UrbanSound8K.csv'), 'r') as read_obj:
+        with open(os.path.join(self.dataset_dir,'UrbanSound8K','metadata','UrbanSound8K.csv'), 'r') as read_obj:
             csv_reader = reader(read_obj)
             
             #next skips the first line that contains the header info
@@ -621,8 +620,8 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             audio_ids = []
             audio_meta = []
             for audio in audios_data_from_csv:
-                fold_number = audio[5]
-                if fold_number not in self.folds:
+                fold_number = int(audio[5])
+                if fold_number in self.folds:
                     
                     metadata = {
                         "fsID":audio[1],

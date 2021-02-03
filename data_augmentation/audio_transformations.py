@@ -15,11 +15,11 @@ from utils.timing import code_timer
 import muda
 
 class PitchShift(object):
-    def __init__(self, values, debug_time = False):
+    def __init__(self, values, debug_time = False, name="PitchShift"):
         assert isinstance(values, list) and len(values)>0, "Please provide a list of possible pitch shifting semitones values to choose from (randomly)"
         self.values = values
         self.debug_time = debug_time
-        self.name = "PitchShift"
+        self.name = name
         
     def __call__(self, clip, sr=22050, value = None):
         
@@ -37,11 +37,11 @@ class PitchShift(object):
         return labels
 
 class TimeStretch(object):
-    def __init__(self, values, debug_time = False):
+    def __init__(self, values, debug_time = False, name="TimeStretch"):
         assert isinstance(values, list) and len(values)>0, "Please provide a list of possible stretching factors to choose from (randomly)"
         self.values = values
         self.debug_time = debug_time
-        self.name = "TimeStretch"
+        self.name = name
 
     def __call__(self, clip, value = None):
         if value is None:
@@ -54,7 +54,7 @@ class TimeStretch(object):
 
 
 class MUDADynamicRangeCompression(object):
-    def __init__(self, sample_rate = 22050):
+    def __init__(self, sample_rate = 22050, name="DynamicRangeCompression"):
         self.values = list(muda.deformers.PRESETS.keys())
 
         self.sample_rate = sample_rate
@@ -67,7 +67,7 @@ class MUDADynamicRangeCompression(object):
                 self.presets = json.load(f)
         '''
         
-        self.name = "DynamicRangeCompression"
+        self.name = name
     
     def get_value_labels(self):
         return copy.deepcopy(self.values)
@@ -83,7 +83,7 @@ class MUDADynamicRangeCompression(object):
         return preprocessed_clip
 
 class BackgroundNoise(object):
-    def __init__(self, background_files, files_dir):
+    def __init__(self, background_files, files_dir, name="BackgroundNoise"):
         
         self.background_clips = {}
         self.values = []
@@ -96,7 +96,7 @@ class BackgroundNoise(object):
             self.background_clips[background_file_id], _ = load_audio_file(background_file_dir)
             self.values.append(background_file_id)
 
-        self.name = "BackgroundNoise"
+        self.name = name
         print("Clips loaded")
     
     def get_value_labels(self):
