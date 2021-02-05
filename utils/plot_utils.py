@@ -37,9 +37,9 @@ import librosa
 import seaborn as sns
 
 
-  '''
-  Loads scores saved by the Trainer
-  '''
+'''
+Loads scores saved by the Trainer
+'''
 def load_scores(model_name, model_dir, 
                 from_epoch=0, to_epoch=0, epochs_skip=0, 
                 scores_subdir=None, 
@@ -1069,7 +1069,7 @@ def method_all_classes(model_name, model_dir,
         
         return ACCs
 
-def delta_plot(data, axis_labels, x_label, y_label, horizontal, metric, plot_dir = None):
+def delta_plot(data, axis_labels, x_label, y_label, horizontal=True, metric="accuracy", plot_dir = None, show=False):
     '''
         Creates delta plot
         Args:
@@ -1108,9 +1108,9 @@ def delta_plot(data, axis_labels, x_label, y_label, horizontal, metric, plot_dir
     ax1 = g.axes[0]
     g.despine(left=True)
     g.set_axis_labels(axis_labels[0],axis_labels[1])
-    if not horizontal:
-        plt.xticks(rotation=45, ha="right") 
-        plt.yticks(rotation=0) 
+    
+    plt.xticks(rotation=45, ha="right") 
+    plt.yticks(rotation=0) 
 
     
     if plot_dir is not None:
@@ -1122,7 +1122,7 @@ def delta_plot(data, axis_labels, x_label, y_label, horizontal, metric, plot_dir
         path = os.path.join(plot_dir,metric+"_delta_plot")+".png"
         g.savefig(path)
         
-        #if plot_dir is None or show:
+    if show:
         plt.show()
         
     plt.close("all")
@@ -1134,9 +1134,7 @@ def plot_delta_on_metric(model_dir, compute, aug_to_test, aug_chosen_for_compara
                       title_prefix = "Base",
                       scores_on_train=False,
                       horizontal = True,
-                      plot_dir = None
-                      
-):
+                      plot_dir = None):
     '''
         Returns the delta plot chosen
         Args:
@@ -1209,7 +1207,7 @@ def plot_delta_on_metric(model_dir, compute, aug_to_test, aug_chosen_for_compara
                 data[x].append(value_in)
                 data[vocab[2]].append(value)
        
-        delta_plot(data,plot_axes_labels,x,y,horizontal,plot_axes_labels[0],plot_dir)
+        delta_plot(data,plot_axes_labels,x,y,horizontal,aug_chosen_for_comparation+" "+plot_axes_labels[0],plot_dir)
     
     else:
         data = {x:[],y:[]}
@@ -1217,10 +1215,42 @@ def plot_delta_on_metric(model_dir, compute, aug_to_test, aug_chosen_for_compara
         for key,value in augmentation_delta_computed.items():
             if key is aug_chosen_for_comparation:
                 base_value = value
+
+        for key,value in augmentation_delta_computed.items():
+            if key is aug_chosen_for_comparation:
+                continue
             else:
                 data[y].append(key)
                 data[x].append(value-base_value)
         
-        delta_plot(data,plot_axes_labels,x,y,horizontal,plot_axes_labels[0], plot_dir)
+        delta_plot(data,plot_axes_labels,x,y,horizontal,aug_chosen_for_comparation+" "+plot_axes_labels[0], plot_dir)
+
+def plot_train_test_accuracy_delta(model_dir, model_names, 
+                                    metrics = {"accuracy" : "Accuracy"},
+                                    tasks = {"audio_classification" : "Audio classification"},
+                                    show = False,
+                                    save_to_dir = None,
+                                    plot_title = ""
+                                    ):
+
+    deltas = {}
+    for metric_name, metric_label in metrics.items():
+        for task_name, task_header in tasks.items():
+            deltas[task_name] = {}
+            for model_name, model_plot_label in model_names.items():
+                test_scores, _, best_epoch = load_scores(model_name, model_dir, scores_on_train=False)
+                train_scores, _, _ = load_scores(model_name, model_dir, scores_on_train=True)
+                
+                assert task_name in test_scores.keys(), "Test scores for task "+task_name+" not found"
+                assert task_name in train_scores.keys(), "Train scores for task "+task_name+" not found"
+                
+                test_metric_value = test_scores[task_name][metric_name][best_epoch]
+                train_metric_value = train_scores[task_name][metric_name][best_epoch]
+
+                deltas[task_name][model_plot_label] = train_metric_value - test_metric_value
+        
+            pd_data = {"augmentations": list(deltas[task_name].keys()), "deltas" : list(deltas[task_name].values())}
+
+            delta_plot(pd_data, ("Augmentation","Train-Test {} delta".format(metric_label)), "augmentations", "deltas", metric = "accuracy", show=show)
 
     

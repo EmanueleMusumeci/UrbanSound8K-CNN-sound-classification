@@ -9,7 +9,7 @@ import soundfile as sf
 
 import numpy as np
 
-#from utils.audio_utils import play_sound, load_audio_file
+from utils.audio_utils import play_sound, load_audio_file
 #from utils.timing import code_timer
 
 import muda

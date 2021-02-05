@@ -37,8 +37,8 @@ DATASET_DIR = os.path.join(BASE_DIR,"data")
 MODEL_DIR = os.path.join(BASE_DIR,"model")
 
 #Preprocessing applied
-preprocessing_name = None
-#preprocessing_name = "PitchShift1"
+#preprocessing_name = None
+preprocessing_name = "PitchShift"
 #preprocessing_name = "PitchShift2"
 #preprocessing_name = "TimeStretch"
 #preprocessing_name = "DynamicRangeCompression"
@@ -49,7 +49,7 @@ SPECTROGRAM_HOP_LENGTH = 512
 SAMPLE_RATE = 22050
 
 #These parameters control whether we also compute Deltas and Delta-Deltas on spectrograms 
-COMPUTE_DELTAS = False
+COMPUTE_DELTAS = True
 COMPUTE_DELTA_DELTAS = False
 
 if not COMPUTE_DELTAS:
@@ -60,7 +60,7 @@ elif COMPUTE_DELTA_DELTAS:
 
 #These parameters control whether we apply image augmentation techniques directly on the spectrograms 
 APPLY_IMAGE_SHIFT = False
-APPLY_IMAGE_NOISE = True
+APPLY_IMAGE_NOISE = False
 
 BATCH_SIZE = 128
 
@@ -94,14 +94,14 @@ else:
 
 
 #Model
-USE_PAPER_CNN = False
+USE_PAPER_CNN = True
 CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment, in_channels)
 FFN_INPUT_SIZE = 154
 
 
 #Training instance name
 if args.name is None:
-    INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base")
+    INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base_IMAGE_SHIFT_NOISE")
 else:
     INSTANCE_NAME = args.name
 if not USE_PAPER_CNN:
@@ -273,8 +273,7 @@ trainer = Trainer(
                     cnn = True
                 )
 
+#trainer = Trainer.load(train_loader, test_loader, INSTANCE_NAME, MODEL_DIR, 26, device=DEVICE, batch_size = BATCH_SIZE, loss_function=loss_function, is_cnn = True)
 
 #Launch training
 trainer.train(50, save_test_scores_every=1, save_train_scores_every=1, save_model_every=1, compute_gradient_statistics=True)
-
-
