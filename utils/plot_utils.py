@@ -20,21 +20,24 @@ import imageio
 
 import torchvision
 from torchvision import transforms
-"""
+
 import PyTorchVisualizations
 from PyTorchVisualizations.src.gradcam import GradCam
 from PyTorchVisualizations.src.misc_functions import save_class_activation_images
-"""
+
 import librosa.display
 
 import scipy
 
 from scipy import signal
 
-#from utils.model_utils import get_children
+from utils.model_utils import get_children
 
 import librosa
 import seaborn as sns
+
+import re
+from re import search
 
 
 '''
@@ -479,8 +482,10 @@ def comparative_plots(model_names, model_dir,
           plt.plot(values, label=label)
           plt.legend(loc="lower right")
           plt.ylabel(metric.capitalize())
+      plt.subplots_adjust(top=0.82)
       plots[task_header+"_"+plot_header] = current_plot
-    
+
+  
   if plot_dir is not None:
     plot_dir = os.path.join(plot_dir, "comparative plots")
     if not os.path.exists(plot_dir):
@@ -568,7 +573,7 @@ def plot_grad_flow(gradient_magnitudes, epoch, show=False, save_to_dir=None):
 
 def create_gradient_flow_gif(model_name, model_dir, plot_dir,
                               tasks={"audio_classification" : "Audio classification"},
-                              cropX = None, cropY = None, frame_duration = 0.3):
+                              cropX = None, cropY = None, frame_duration = 0.1):
 
   scores, epochs_list, best_epoch = load_scores(model_name, model_dir)
   
@@ -630,7 +635,7 @@ def plot_class_distributions(distributions, plot_dir=None):
 
     fig, ax = plt.subplots(figsize=(18,7))
     seaborn.barplot(data = pd.DataFrame(distributions, index=[0]).melt(), 
-                    x = "variable", y="value", hue="variable").legend_.remove()
+                    x = "variable", y="value", hue="variable", dodge = False).legend_.remove()
     
     plt.xticks(range(0,len(distributions), 1), distributions.keys(), rotation=45, ha="right")
     
@@ -742,10 +747,10 @@ def plot_sound_waves(sound, compare_with_sound = None, preprocessing_name = None
 
   librosa.display.waveplot(np.array(sound),sr=sr, x_axis="time")
   
-  plt.ylabel('Magnitude (norm)')
+  plt.ylabel('Magnitude (norm)', size = 12)
 
   if compare_with_sound is None or horizontal:
-    plt.xlabel('Time [sec]')
+    plt.xlabel('Time [sec]', size = 12)
   else:
     plt.xlabel('')
   
@@ -754,14 +759,14 @@ def plot_sound_waves(sound, compare_with_sound = None, preprocessing_name = None
       plt.subplot(1,2,2)
     else:
       plt.subplot(2,1,2)
+      plt.ylabel('Magnitude (norm)', size = 12)
 
     subplot_title = "Preprocessed"
     plt.title(subplot_title)
     
     librosa.display.waveplot(np.array(compare_with_sound),sr=sr, x_axis = "time")
 
-    plt.xlabel('Time [sec]', size = 10)
-    plt.ylabel('Magnitude (norm)', size = 10)
+    plt.xlabel('Time [sec]', size = 12)
     plt.subplots_adjust(top = 0.82, hspace= 0.4)
   
   if save_to_dir is not None:
@@ -814,10 +819,10 @@ def plot_sound_spectrogram(sound, compare_with_sound = None, preprocessing_name 
 
   librosa.display.specshow(sound, hop_length = hop_length, x_axis="time", y_axis=y_axis)
 
-  plt.ylabel('Magnitude (norm)')
+  plt.ylabel('Frequency (Hz)', size = 12)
 
   if compare_with_sound is None or horizontal:
-    plt.xlabel('Time [sec]')
+    plt.xlabel('Time [sec]', size = 12)
   else:
     plt.xlabel('')
 
@@ -827,16 +832,17 @@ def plot_sound_spectrogram(sound, compare_with_sound = None, preprocessing_name 
 
     if horizontal:
       plt.subplot(1,2,2)
+      plt.ylabel('')
     else:
       plt.subplot(2,1,2)
+      plt.ylabel('Frequency (Hz)', size = 12)
 
     subplot_title = "Preprocessed"
     plt.title(subplot_title)
     
     librosa.display.specshow(sound, hop_length = hop_length, x_axis="time", y_axis=y_axis)
 
-    plt.xlabel('Time [sec]')
-    plt.ylabel('Magnitude (norm)')
+    plt.xlabel('Time [sec]', size = 12)
     plt.subplots_adjust(top = 0.82, hspace= 0.4)
   
   if save_to_dir is not None:
@@ -883,15 +889,16 @@ def plot_periodogram(sound, compare_with_sound = None, preprocessing_name = None
   f1, periodogram1 = signal.periodogram(sound, sr)
   plt.semilogy(f1, periodogram1)
   plt.ylim([1e-7, 1e2])
-  plt.ylabel('Magnitude (norm)')
+  plt.ylabel('Magnitude (norm)', size = 12)
   if compare_with_sound is None or horizontal:
-    plt.xlabel('Frequency [Hz]')
+    plt.xlabel('Frequency [Hz]', size = 12)
 
   if compare_with_sound is not None:
     if horizontal:
       plt.subplot(1,2,2)
     else:
       plt.subplot(2,1,2)
+      plt.ylabel('Magnitude (norm)', size = 12)
 
     subplot_title = "Preprocessed"
     plt.title(subplot_title)
@@ -900,8 +907,7 @@ def plot_periodogram(sound, compare_with_sound = None, preprocessing_name = None
     plt.semilogy(f2, periodogram2)
 
     plt.ylim([1e-7, 1e2])
-    plt.xlabel('Frequency [Hz]')
-    plt.ylabel('Magnitude (norm)')
+    plt.xlabel('Frequency [Hz]', size = 12)
     plt.subplots_adjust(top = 0.82, hspace= 0.4)
   
   if save_to_dir is not None:
@@ -1069,7 +1075,7 @@ def method_all_classes(model_name, model_dir,
         
         return ACCs
 
-def delta_plot(data, axis_labels, x_label, y_label, horizontal=True, metric="accuracy", plot_dir = None, show=False):
+def delta_plot(data, axis_labels, x_label, y_label, horizontal=True, metric="accuracy", title_prefix = "", plot_dir = None, show=False):
     '''
         Creates delta plot
         Args:
@@ -1091,26 +1097,38 @@ def delta_plot(data, axis_labels, x_label, y_label, horizontal=True, metric="acc
         y_hori = x_label
     # Create DataFrame
     df = pd.DataFrame(data)
+
     if len(data) == 3 : 
         hue = "augmentations"
-
+        
         g = sns.catplot(
             data=df, kind="bar",
             x=x_hori, y=y_hori,hue = hue,
-            ci="sd", palette="dark", alpha=.6, height=6
+            ci="sd", palette="dark", alpha=.6, height=6,
+            legend = True, legend_out = False
         )
+        plt.title(title_prefix+"\nPer-class")
+        title_prefix = "Per_class "+title_prefix
+        #plt.legend(bbox_to_anchor=(1.05, 1), loc=8, borderaxespad=0.)
+
+        #plt.subplot_adjust(top=0.86)
     else:
+        plt.xlim(0, 0.5)
         g = sns.catplot(
             data=df, kind="bar",
             x=x_hori, y=y_hori,
             ci="sd", palette="dark", alpha=.6, height=4
         )
+        plt.title(title_prefix+"\nOverall")
+        title_prefix = "Overall "+title_prefix
+        #plt.subplot_adjust(top=0.86)
     ax1 = g.axes[0]
     g.despine(left=True)
     g.set_axis_labels(axis_labels[0],axis_labels[1])
     
     plt.xticks(rotation=45, ha="right") 
-    plt.yticks(rotation=0) 
+    plt.yticks(rotation=0)
+    
 
     
     if plot_dir is not None:
@@ -1118,8 +1136,7 @@ def delta_plot(data, axis_labels, x_label, y_label, horizontal=True, metric="acc
         if not os.path.exists(plot_dir):
             os.makedirs(plot_dir)
 
-
-        path = os.path.join(plot_dir,metric+"_delta_plot")+".png"
+        path = os.path.join(plot_dir,title_prefix+"_delta_plot")+".png"
         g.savefig(path)
         
     if show:
@@ -1131,10 +1148,10 @@ def plot_delta_on_metric(model_dir, compute, aug_to_test, aug_chosen_for_compara
                       plot_axes_labels, x, y, classes_names = None,
                       tasks={"audio_classification" : "Audio classification"},
                       save_to_file=True, 
-                      title_prefix = "Base",
                       scores_on_train=False,
                       horizontal = True,
-                      plot_dir = None):
+                      plot_dir = None,
+                      title_prefix = ""):
     '''
         Returns the delta plot chosen
         Args:
@@ -1196,7 +1213,8 @@ def plot_delta_on_metric(model_dir, compute, aug_to_test, aug_chosen_for_compara
         deltas = {}
         vocab = list(data.keys())
         for key,value in aug_to_test.items():
-            
+            if key is aug_chosen_for_comparation:
+                continue
             deltas[key] = {}
             #names = ["air_conditioner","car_horn","children_playing","dog_bark","drilling","engine_idling","gun_shot","jackhammer","siren","street_music", "All classes"]
             for key_in,value_in in augmentation_delta_computed[aug_chosen_for_comparation].items():
@@ -1206,12 +1224,16 @@ def plot_delta_on_metric(model_dir, compute, aug_to_test, aug_chosen_for_compara
                 data[y].append(key_in)
                 data[x].append(value_in)
                 data[vocab[2]].append(value)
-       
-        delta_plot(data,plot_axes_labels,x,y,horizontal,aug_chosen_for_comparation+" "+plot_axes_labels[0],plot_dir)
+        #print("######################## data: ")
+        #print(data)
+        delta_plot(data, plot_axes_labels, x, y, horizontal=horizontal, metric=aug_chosen_for_comparation, plot_dir=plot_dir, title_prefix=title_prefix)
+        #delta_plot(data,plot_axes_labels,x,y,horizontal,aug_chosen_for_comparation+" "+plot_axes_labels[0],plot_dir)
+        #delta_plot(data,plot_axes_labels,x,y,horizontal,plot_axes_labels[0],plot_dir)
     
     else:
+        #in x the metric chosen, y the name of the model
         data = {x:[],y:[]}
-
+        
         for key,value in augmentation_delta_computed.items():
             if key is aug_chosen_for_comparation:
                 base_value = value
@@ -1220,17 +1242,27 @@ def plot_delta_on_metric(model_dir, compute, aug_to_test, aug_chosen_for_compara
             if key is aug_chosen_for_comparation:
                 continue
             else:
+
+                if search("PS1",key) : key = "PS1"
+                elif search("PS2",key): key = "PS2"
+                elif search("BackgroundNoise",key) : key = "BG"
+                elif search("DynamicRangeCompression",key): key = "DRC"
+                elif search("TimeStretch",key) : key = "TS"
+                else:  key = "Base"
+
                 data[y].append(key)
                 data[x].append(value-base_value)
-        
-        delta_plot(data,plot_axes_labels,x,y,horizontal,aug_chosen_for_comparation+" "+plot_axes_labels[0], plot_dir)
+        delta_plot(data, plot_axes_labels, x, y, horizontal=horizontal, metric=aug_chosen_for_comparation, plot_dir=plot_dir,title_prefix=title_prefix)
+        #delta_plot(data,plot_axes_labels,x,y,horizontal,aug_chosen_for_comparation+" "+plot_axes_labels[0],plot_dir)
+        #delta_plot(data,plot_axes_labels,x,y,horizontal,plot_axes_labels[0], plot_dir)
 
 def plot_train_test_accuracy_delta(model_dir, model_names, 
                                     metrics = {"accuracy" : "Accuracy"},
                                     tasks = {"audio_classification" : "Audio classification"},
                                     show = False,
                                     save_to_dir = None,
-                                    plot_title = ""
+                                    plot_dir=None,
+                                    title_prefix = ""
                                     ):
 
     deltas = {}
@@ -1251,6 +1283,6 @@ def plot_train_test_accuracy_delta(model_dir, model_names,
         
             pd_data = {"augmentations": list(deltas[task_name].keys()), "deltas" : list(deltas[task_name].values())}
 
-            delta_plot(pd_data, ("Augmentation","Train-Test {} delta".format(metric_label)), "augmentations", "deltas", metric = "accuracy", show=show)
+            delta_plot(pd_data, ("Augmentation","Train-Test {} delta".format(metric_label)), "augmentations", "deltas", horizontal = True, metric = "accuracy", plot_dir = plot_dir, show=show, title_prefix=title_prefix)
 
     
