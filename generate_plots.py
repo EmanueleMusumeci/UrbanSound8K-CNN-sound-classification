@@ -27,7 +27,6 @@ if __name__ == "__main__":
         #from class_confusion_matrix import *
         from utils.dataset_utils import *
         from utils.audio_utils import load_audio_file, play_sound, SingleWindowSelector
-        from class_confusion_matrix import *
         from data_augmentation.audio_transformations import *
         from Trainer import *
 
@@ -37,18 +36,18 @@ if __name__ == "__main__":
 
         plot_color = "blue"
         
-        SINGLE_PLOTS = True
+        SINGLE_PLOTS = False
         SINGLE_TRAIN_TEST_PLOTS = False
         CONFUSION_MATRIX = False
         COMPARATIVE_PLOTS = False
         GRADIENT_FLOW = False
         BEST_SCORES = False
-        PREPROCESSING_PERFORMANCE_DELTA_COMPARISONS = True
-        PLOT_TRAIN_TEST_ACCURACY_DELTAS = True
+        PREPROCESSING_PERFORMANCE_DELTA_COMPARISONS = False
+        PLOT_TRAIN_TEST_ACCURACY_DELTAS = False
         PLOT_CLASS_DISTRIBUTION = False
         PLOT_PREPROCESSING_ACCURACY_RESULTS = False
-        COLLECT_AND_PREPROCESS_SAMPLES = False
-        SHOW_PREPROCESSING = False
+        COLLECT_AND_PREPROCESS_SAMPLES = True
+        SHOW_PREPROCESSING = True
         SALIENCY_MAPS = False
 
         ################

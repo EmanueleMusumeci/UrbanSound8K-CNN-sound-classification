@@ -4,11 +4,9 @@ import math
 import numpy as np
 import torch
 
-try:
-  from Dataset import SoundDatasetFold
-  from data_augmentation.image_transformations import SpectrogramAddGaussNoise, SpectrogramReshape, SpectrogramShift
-except:
-  pass
+from Dataset import SoundDatasetFold
+from data_augmentation.image_transformations import SpectrogramAddGaussNoise, SpectrogramReshape, SpectrogramShift
+
 
 '''
 Implements a custom DataLoader to do the following (see the __iter__ method for

@@ -8,7 +8,6 @@ from torchaudio import transforms
 from spec_augment_master import *
 from spec_augment_master.exp.nb_SparseImageWarp import sparse_image_warp
 
-from IPython.display import * #IPython.display.display and IPython.display.Audio
 from collections import namedtuple
 
 import matplotlib.pyplot as plt

@@ -87,7 +87,7 @@ class MultipleWindowSelector:
         #If random_location is True, the step size will be chosen randomly using the computed step size as an upper bound
         self.random_location = random_location
 
-#TODO sistemare il caso in cui total_clip_frames=None
+    #TODO fix case where cui total_clip_frames=None
     def __call__(self, total_clip_frames=None, total_spectrogram_frames=None):
         assert total_clip_frames is not None or total_spectrogram_frames is not None, "To generate segments at least one among the clip length or the spectrogram length should be provided"
         if total_clip_frames is not None:
@@ -134,7 +134,7 @@ class SingleWindowSelector:
         self.window_size_seconds = window_size_seconds
         self.sampling_rate = sampling_rate
 
-        self.window_size = window_size_seconds * sampling_rate
+        self.window_size = int(math.floor(window_size_seconds * sampling_rate))
 
         self.spectrogram_hop_length = spectrogram_hop_length
         if self.spectrogram_hop_length is not None:
@@ -157,7 +157,7 @@ class SingleWindowSelector:
         
         if total_clip_frames is not None:
             if self.random_location:
-                begin = np.random.randint(0, total_clip_frames-self.window_size)
+                begin = int(np.random.randint(0, total_clip_frames-self.window_size))
             else:
                 begin = 0
 
@@ -166,7 +166,7 @@ class SingleWindowSelector:
 
             if total_clip_frames is None:            
                 if self.random_location:
-                    spectrogram_begin = np.random.randint(0, total_spectrogram_frames-self.spectrogram_window_size)
+                    spectrogram_begin = int(np.random.randint(0, total_spectrogram_frames-self.spectrogram_window_size))
                 else:
                     spectrogram_begin = 0
             else:

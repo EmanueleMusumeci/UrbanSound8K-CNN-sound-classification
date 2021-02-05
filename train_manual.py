@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import math
 
 import torch
 
@@ -14,6 +15,11 @@ from data_augmentation.audio_transformations import *
 from Trainer import *
 from utils.dataset_utils import *
 from utils.audio_utils import *
+
+"""
+NOTICE: While train.py offers a command-line interface to control the training process,
+this file allows manually controlling training, by manually setting training parameters
+"""
 
 
 parser = argparse.ArgumentParser(description='Launch training with pre-compacted folds (use compact_dataset to \
@@ -35,29 +41,40 @@ BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 DATASET_DIR = os.path.join(BASE_DIR,"data")
 MODEL_DIR = os.path.join(BASE_DIR,"model")
 
-#Preprocessing
+#Preprocessing applied
 preprocessing_name = None
-#preprocessing_name = "PitchShift"
+#preprocessing_name = "PitchShift1"
+#preprocessing_name = "PitchShift2"
 #preprocessing_name = "TimeStretch"
-preprocessing_name = "DynamicRangeCompression"
+#preprocessing_name = "DynamicRangeCompression"
 #preprocessing_name = "BackgroundNoise"
 
 CLIP_SECONDS = 3
 SPECTROGRAM_HOP_LENGTH = 512
 SAMPLE_RATE = 22050
 
-COMPUTE_DELTAS = True
-COMPUTE_DELTA_DELTAS = True
-if COMPUTE_DELTA_DELTAS:
+#These parameters control whether we also compute Deltas and Delta-Deltas on spectrograms 
+COMPUTE_DELTAS = False
+COMPUTE_DELTA_DELTAS = False
+
+if not COMPUTE_DELTAS:
+    COMPUTE_DELTA_DELTAS = False
+elif COMPUTE_DELTA_DELTAS:
     COMPUTE_DELTAS = True
-APPLY_IMAGE_AUGMENTATIONS = False
+
+
+#These parameters control whether we apply image augmentation techniques directly on the spectrograms 
+APPLY_IMAGE_SHIFT = True
+APPLY_IMAGE_NOISE = False
 
 BATCH_SIZE = 128
 
 #Spectrogram shape
-spectrogram_frames_per_segment = CLIP_SECONDS*SAMPLE_RATE / SPECTROGRAM_HOP_LENGTH
+spectrogram_frames_per_segment = math.ceil(CLIP_SECONDS*SAMPLE_RATE / SPECTROGRAM_HOP_LENGTH)
 spectrogram_bands = 128
 
+
+#Input shape of the CNN
 in_channels = 1
 if COMPUTE_DELTAS:in_channels = 2
 if COMPUTE_DELTA_DELTAS: in_channels = 3
@@ -75,14 +92,14 @@ selected_classes = [0,1,2,3,4,5,6,7,8,9]
 SINGLE_FOLD = False
 if SINGLE_FOLD:
     train_fold_list = [1]
-    test_fold_list = [1]
+    test_fold_list = [10]
 else:
     train_fold_list = [1,2,3,4,5,6,7,8,9]
     test_fold_list = [10]
 
 
 #Model
-USE_PAPER_CNN = True
+USE_PAPER_CNN = False
 CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment, in_channels)
 FFN_INPUT_SIZE = 154
 
@@ -99,7 +116,6 @@ if COMPUTE_DELTAS:
 if COMPUTE_DELTA_DELTAS:
     INSTANCE_NAME+="_delta"
 
-
 #Check we are not overwriting any existing checkpoints
 PREVENT_OVERWRITE = False
 if PREVENT_OVERWRITE:
@@ -107,43 +123,77 @@ if PREVENT_OVERWRITE:
 
 
 #Image augmentations
-if APPLY_IMAGE_AUGMENTATIONS:
-    right_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9)
-    left_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, left=True)
-    random_side_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, random_side=True)
+if APPLY_IMAGE_SHIFT:
+    shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9)
+    #left_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, left=True)
+    #random_side_shift_transformation = SpectrogramShift(input_size=CNN_INPUT_SIZE,width_shift_range=4,shift_prob=0.9, random_side=True)
+else:
+    shift_transformation = None
+    #left_shift_transformation = None
+    #random_side_shift_transformation = None
+    
+if APPLY_IMAGE_NOISE:
     background_noise_transformation = SpectrogramAddGaussNoise(input_size=CNN_INPUT_SIZE,prob_to_have_noise=0.55)
 else:
-    right_shift_transformation = None
-    left_shift_transformation = None
-    random_side_shift_transformation = None
     background_noise_transformation = None
 
 
 #Load precompacted dataset
-#Load preprocessed folds
-if preprocessing_name is not None:
-    train_audio_meta, train_audio_clips, train_audio_spectrograms = load_preprocessed_compacted_dataset(DATASET_DIR, preprocessing_name, folds = train_fold_list, only_spectrograms=True)
-    #_, _, raw_train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list)
+preprocessor = None
+LOAD_PRECOMPACTED = True
+if LOAD_PRECOMPACTED:
+    #Load preprocessed folds
+    if preprocessing_name is not None:
+        train_audio_meta, train_audio_clips, train_audio_spectrograms = load_preprocessed_compacted_dataset(DATASET_DIR, preprocessing_name, folds = train_fold_list, only_spectrograms=True)
+        #_, _, raw_train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list)
+    else:
+        train_audio_meta, train_audio_clips, train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list, only_spectrograms=True)
+
+    #Load raw folds
+    test_audio_meta, test_audio_clips, test_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = test_fold_list, only_spectrograms=True)
+    #Free up memory
+    del train_audio_clips
+    del test_audio_clips
 else:
-    train_audio_meta, train_audio_clips, train_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = train_fold_list, only_spectrograms=True)
+    train_audio_meta = None
+    train_audio_clips = None
+    train_audio_spectrograms = None
 
-#Load raw folds
-test_audio_meta, test_audio_clips, test_audio_spectrograms = load_raw_compacted_dataset(DATASET_DIR, folds = test_fold_list, only_spectrograms=True)
-#Free up memory
-del train_audio_clips
-del test_audio_clips
+    test_audio_meta = None
+    test_audio_clips = None
+    test_audio_spectrograms = None
+                                
+    if preprocessing_name == "PitchShift1":
+        preprocessor = PitchShift(values = [-2, -1, 1, 2], name="PitchShift1")
 
+    elif preprocessing_name == "PitchShift2":
+        preprocessor = PitchShift(values = [-3.5, -2.5, 2.5, 3.5], name="PitchShift2")
+    
+    elif preprocessing_name == "TimeStretch":
+        preprocessor = TimeStretch(values = [0.81, 0.93, 1.07, 1.23])
+
+    elif preprocessing_name == "DynamicRangeCompression":
+        preprocessor = MUDADynamicRangeCompression()
+
+    elif preprocessing_name == "BackgroundNoise":
+        preprocessor = BackgroundNoise({
+                                        "street_scene_1" : "150993__saphe__street-scene-1.wav",
+                                        #"street_scene_3" : "173955__saphe__street-scene-3.wav",
+                                        #"street_valencia" : "207208__jormarp__high-street-of-gandia-valencia-spain.wav",
+                                        #"city_park_tel_aviv" : "268903__yonts__city-park-tel-aviv-israel.wav",
+                                    }, files_dir = os.path.join(DATASET_DIR, "UrbanSound8K-JAMS", "background_noise"))
 
 #Dataset instances
 train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME, 
                             folds = train_fold_list, 
                             preprocessing_name = preprocessing_name,
-                            audio_meta = None,
+                            preprocessor=preprocessor,
+                            audio_meta = train_audio_meta,
                             audio_clips = None,
-                            audio_spectrograms = None,
+                            audio_spectrograms = train_audio_spectrograms,
                             shuffle = True, 
                             use_spectrograms = True, 
-                            image_shift_transformation = right_shift_transformation, 
+                            image_shift_transformation = shift_transformation, 
                             image_background_noise_transformation = background_noise_transformation, 
 
                             spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
@@ -162,7 +212,7 @@ train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,
 
 test_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,  
                             folds = test_fold_list, 
-                            preprocessing_name = preprocessing_name,
+                            preprocessing_name = None,
                             audio_meta = test_audio_meta,
                             audio_clips = None,
                             audio_spectrograms = test_audio_spectrograms,

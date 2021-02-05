@@ -5,19 +5,15 @@ import dill
 import torch
 from torch import optim, nn
 
-#try:
 from Dataset import SoundDatasetFold
 from DataLoader import DataLoader
 
 from data_augmentation.image_transformations import *
 from data_augmentation.image_transformations import *
 
-#from nn.feed_forward_model import FeedForwardNetwork
 from nn.paper_convolutional_model import PaperConvolutionalNetwork
 
 from utils.evaluation_utils import *
-#except:
-    #pass
 
 """
 Args:

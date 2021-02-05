@@ -5,9 +5,6 @@ import math
 
 import copy
 
-#import warnings
-#warnings.filterwarnings("once", category=UserWarning)
-
 import torch, torchvision
 
 from torchvision import transforms
@@ -34,7 +31,6 @@ from utils.dataset_utils import *
 from utils.audio_utils import *
 from utils.spectrogram_utils import *
 from utils.timing import *
-
 
 
 '''
@@ -81,9 +77,8 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 audio_clip_duration = 4000,
                 sample_rate = 22050,
 
-                spectrogram_bands = 60,
+                spectrogram_bands = 128,
                 spectrogram_hop_length = 512,
-                spectrogram_frames_per_segment = 41,
                 normalize_audio = False,
                 silent_clip_cutoff_dB = -70,
 
@@ -202,22 +197,39 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             class_distribution[class_id] = len(samples)
         return class_distribution
 
-    def index_dataset(self):
+    def collect_class_ids(self, skip_first_line=True):
         class_id_to_name = {}
         name_to_class_id = {}
+
+        #run through the whole dataset meta-data csv to detect all class ids and class names
+        with open(os.path.join(self.dataset_dir,'UrbanSound8K','metadata','UrbanSound8K.csv'), 'r') as read_obj:
+            csv_reader = reader(read_obj)
+            
+            #next skips the first line that contains the header info
+            if skip_first_line: next(csv_reader)
+
+            audios_data_from_csv = []
+            for row in csv_reader:
+                sample_class_id = int(row[6])
+                sample_class_name = row[7]  
+
+                if sample_class_id not in class_id_to_name:
+                    class_id_to_name[sample_class_id] = sample_class_name
+                    name_to_class_id[sample_class_id] = sample_class_id
+
+        return class_id_to_name, name_to_class_id
+
+    def index_dataset(self):
         
+        class_id_to_name, name_to_class_id = self.collect_class_ids()
+
         class_id_to_sample_ids = {}
         for class_id in self.selected_classes:
             class_id_to_sample_ids[class_id] = []
 
         for index, sample_meta in enumerate(self.audio_meta):
             sample_meta = self.audio_meta[index]
-            sample_class_id = int(sample_meta["class_id"])
-            sample_class_name = sample_meta["class_name"]
-
-            if sample_class_id not in class_id_to_name:
-                class_id_to_name[sample_class_id] = sample_class_name
-                name_to_class_id[sample_class_id] = sample_class_id
+            sample_class_id = sample_meta["class_id"]
             
             if sample_class_id in self.selected_classes:
                 class_id_to_sample_ids[sample_class_id].append(index)
@@ -267,7 +279,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         class_name = sample_meta["class_name"]
         meta_data = sample_meta["meta_data"]
         
-        if debug: print(sample_meta["file_path"], end="")
+        self.print_debug(sample_meta["file_path"], debug=debug)
     
         try:
             clip, sample_rate = load_audio_file(sample_meta["file_path"], sample_rate=self.sample_rate)
@@ -291,11 +303,11 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                         "preprocessing_value" : preprocessing_value
                         })
             
-            if debug: print(" Returned samples: "+str(len(returned_samples)))
+            self.print_debug(" Returned samples: "+str(len(returned_samples)), debug=debug)
             return returned_samples
         else:
             mfccs, chroma, mel, contrast, tonnetz = self.preprocess_feed_forward(sound, debug=self.debug_preprocessing)
-            if debug: print(" Returned samples: "+str(1))
+            self.print_debug(" Returned samples: "+str(1), debug=debug)
             return [{
                     "mfccs" : mfccs, 
                     "chroma" : chroma, 
@@ -311,7 +323,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
     Returns the sound clip at index, preprocessed according to how this instance was initialized
     '''
     #@function_timer
-    def __getitem__(self, index):
+    def __getitem__(self, index, debug=False):
         debug = self.debug_preprocessing
         sample = self.audio_meta[index]
 
@@ -319,7 +331,7 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         class_name = sample["class_name"]
         meta_data = sample["meta_data"]
         
-        if debug: print(sample["file_path"], end="")
+        self.print_debug(sample["file_path"], debug=debug)
 
         clip = None
         spectrogram = None
@@ -368,11 +380,11 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                         "preprocessing_value" : preprocessing_value
                         })
             
-            if debug: print(" Returned samples: "+str(len(returned_samples)))
+            self.print_debug(" Returned samples: "+str(len(returned_samples)), debug=debug)
             return returned_samples
         else:
             mfccs, chroma, mel, contrast, tonnetz = self.preprocess_feed_forward(sound, debug=self.debug_preprocessing)
-            if debug: print(" Returned samples: "+str(1))
+            self.print_debug(" Returned samples: "+str(1), debug=debug)
             return [{
                     "mfccs" : mfccs, 
                     "chroma" : chroma, 
@@ -395,6 +407,13 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             progress_bar = tqdm(total=len(self.sample_ids), desc="Sample", position=0)
         for index in self.sample_ids:
             preprocessed_samples = self[index]
+
+            #In case the sample was dropped because too silent
+            if len(preprocessed_samples) == 0:
+                if self.progress_bar:
+                    progress_bar.update(1)
+                continue
+
             previous_samples = preprocessed_samples
 
             if self.progress_bar:
@@ -416,20 +435,20 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         if self.normalize_audio:
             audio_clip = normalize_clip(audio_clip)
 
-        if debug: print("Features :"+str(len(audio_clip))+"sampled at "+str(sample_rate)+"hz")
+        self.print_debug("Features :"+str(len(audio_clip))+"sampled at "+str(sample_rate)+"hz", debug=debug)
         #Short-time Fourier transform(STFT)
 
         stft = np.abs(librosa.stft(audio_clip))
-        if debug: print("stft:\n"+str(stft))
+        self.print_debug("stft:\n"+str(stft), debug=debug)
         #Mel-frequency cepstral coefficients (MFCCs)
-        if debug: print("before mfccs:\n"+str(stft))
+        self.print_debug("before mfccs:\n"+str(stft), debug=debug)
         mfccs = np.mean(librosa.feature.mfcc(S=audio_clip, sr=sample_rate, n_mfcc=40).T,axis=0)
         mfccs = mfccs[..., np.newaxis]
-        if debug: print("mfccs:\n"+str(mfccs))
+        self.print_debug("mfccs:\n"+str(mfccs), debug=debug)
 
         #Compute a chromagram from a waveform or power spectrogram.
         chroma = np.mean(librosa.feature.chroma_stft(S=stft, sr=sample_rate).T,axis=0)
-        if debug: print("chroma:\n"+str(chroma))
+        self.print_debug("chroma:\n"+str(chroma), debug=debug)
 
         #Compute a mel-scaled spectrogram.
         #SLOWER mel = np.mean(librosa.feature.melspectrogram(audio_clip, sr=sample_rate).T,axis=0)
@@ -438,15 +457,15 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         #avoid repeating stft computation in mel_spectrogram
         power_spectrogram = np.abs(stft)**2
         mel = np.mean(librosa.feature.melspectrogram(S=power_spectrogram, sr=sample_rate).T,axis=0)
-        if debug: print("mel:\n"+str(mel))
+        self.print_debug("mel:\n"+str(mel), debug=debug)
 
         contrast = np.mean(librosa.feature.spectral_contrast(S=stft, sr=sample_rate).T,axis=0)
-        if debug: print("contrast:\n"+str(contrast))
+        self.print_debug("contrast:\n"+str(contrast), debug=debug)
 
         #The warning is triggered by this problem: https://github.com/librosa/librosa/issues/1214
         #Computes the tonal centroid features (tonnetz)
         tonnetz = np.mean(librosa.feature.tonnetz(y=librosa.effects.harmonic(audio_clip), sr=sample_rate).T,axis=0)
-        if debug: print("tonnetz:\n"+str(tonnetz))
+        self.print_debug("tonnetz:\n"+str(tonnetz), debug=debug)
         
         return mfccs, chroma, mel, contrast, tonnetz
     
@@ -463,9 +482,11 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         spectrogram_length = None
         if audio_clip is not None:
             if self.normalize_audio:
+                self.print_debug("Normalizing audio clip", debug=debug)
                 preprocessed_audio_clip = normalize_clip(audio_clip)
             
             if preprocessor is not None and not self.test_mode:
+                self.print_debug("Preprocessing audio clip", debug=debug)
                 preprocessed_audio_clip = preprocessor(audio_clip, value = preprocessing_value)
             else:
                 preprocessed_audio_clip = audio_clip
@@ -477,12 +498,12 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
         original_spectrograms = []
         preprocessed_spectrograms = []
         
-        if debug: print("segments: "+str(list(self.audio_segment_selector(audio_clip_length, spectrogram_length))))
+        self.print_debug("Segments: "+str(list(self.audio_segment_selector(audio_clip_length, spectrogram_length))), debug=debug)
         
         for i, segment_bounds in enumerate(self.audio_segment_selector(audio_clip_length, spectrogram_length)):
             
             if debug: 
-                print(segment_bounds)
+                self.print_debug("Preprocessing segment: "+str(segment_bounds), debug=debug)
 
             #if audio_clip is None, segment_start and segment_end will be None
             #if log_mel_spectrogram is None, spectrogram_start, spectrogram_end will be None
@@ -492,9 +513,10 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             #1) Of a fixed window size (self.spectrogram_window_size)
             #2) Fully contained in the audio clip (segments that go "out of bounds" wrt the audio clip are not considered)
             if debug: 
-                print("audio segment ("+str(segment_start)+", "+str(segment_end)+")")
+                if audio_clip is not None:
+                    self.print_debug("Audio segment: ("+str(segment_start)+", "+str(segment_end)+") of length ("+str(segment_end - segment_start)+")", debug=debug)
                 if log_mel_spectrogram is not None:
-                    print("spectrogram segment ("+str(spectrogram_start)+", "+str(spectrogram_end)+")")
+                    self.print_debug("Spectrogram segment: ("+str(spectrogram_start)+", "+str(spectrogram_end)+") of length ("+str(spectrogram_end - spectrogram_start)+")", debug=debug)
             
             if log_mel_spectrogram is not None:
                 log_mel_spectrogram_segment = log_mel_spectrogram[:,spectrogram_start:spectrogram_end]
@@ -508,14 +530,16 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 if self.silent_clip_cutoff_dB is not None:
                     #drop silent frames (taken from https://github.com/karolpiczak/paper-2015-esc-convnet/blob/master/Code/_Datasets/Setup.ipynb)
                     #ONLY if they aren't the only frame of the audio clip
-                    if debug: print("Mean dB value:" +str(np.mean(log_mel_spectrogram_segment)))
-                    if i>0 and np.mean(log_mel_spectrogram_segment) <= self.silent_clip_cutoff_dB:
-                        if debug: print("Silent segment dropped")
+                    mean_value = np.mean(log_mel_spectrogram_segment)
+                    self.print_debug("Mean dB value:" +str(mean_value), debug=debug)
+                    if mean_value <= self.silent_clip_cutoff_dB:
+                        self.print_debug("Silent segment dropped", debug=debug)
                         continue
                 
             if log_mel_spectrogram is not None:
                 preprocessed_log_mel_spectrogram_segment = log_mel_spectrogram_segment
             else:
+                self.print_debug("Generating mel spectrogram", debug=debug)
                 preprocessed_log_mel_spectrogram_segment = generate_mel_spectrogram_librosa(preprocessed_signal_segment, self.spectrogram_bands, debug_time_label=("preprocessed" if self.debug_preprocessing_time else ""), show=self.debug_spectrograms)
 
             original_spectrograms.append(log_mel_spectrogram_segment)
@@ -525,17 +549,19 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
             with code_timer("original spectrogram reshape", debug=self.debug_preprocessing_time):
             #Reshape the spectrograms from [N_AUDIO_SEGMENT, N_BANDS, N_FRAMES] to [N_AUDIO_SEGMENT, N_BANDS, N_FRAMES, 1]
                 original_spectrograms = np.asarray(original_spectrograms).reshape(len(original_spectrograms),self.spectrogram_bands,self.audio_segment_selector.spectrogram_window_size,1)
-        
+
         with code_timer("preprocessed spectrogram reshape", debug=self.debug_preprocessing_time):
             preprocessed_spectrograms = np.asarray(preprocessed_spectrograms).reshape(len(preprocessed_spectrograms),self.spectrogram_bands,self.audio_segment_selector.spectrogram_window_size,1)
 
         with code_timer("deltas", debug=self.debug_preprocessing_time):
             preprocessed_spectrograms_shape = np.shape(preprocessed_spectrograms)
             if self.compute_deltas:
+                self.print_debug("Computing spectrogram delta", debug=debug)
                 #Make space for the delta features
                 preprocessed_spectrograms = np.concatenate((preprocessed_spectrograms, np.zeros(preprocessed_spectrograms_shape)), axis = 3)            
 
                 if self.compute_delta_deltas:
+                    self.print_debug("Computing spectrogram delta-delta", debug=debug)
                     preprocessed_spectrograms = np.concatenate((preprocessed_spectrograms, np.zeros(preprocessed_spectrograms_shape)), axis = 3)
 
                 for i in range(len(preprocessed_spectrograms)):
@@ -554,21 +580,29 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                 for i in range(len(preprocessed_spectrograms)):
                     #Background noise transformations should not be applied to deltas
                     if self.image_background_noise_transformation is not None:
+                        self.print_debug("Applying background noise image augmentation to spectrogram", debug=debug)
                         preprocessed_spectrogram, noise_mask = self.image_background_noise_transformation(preprocessed_spectrograms[i, :, :, 0])
                         preprocessed_spectrograms[i, :, :, 0] = preprocessed_spectrogram
 
                     if self.image_shift_transformation is not None:
+                        self.print_debug("Applying right shift image augmentation to spectrogram", debug=debug)
                         shifted_spectrogram, shift_position = self.image_shift_transformation(preprocessed_spectrograms[i, :, :, 0])
                         preprocessed_spectrograms[i, :, :, 0] = shifted_spectrogram
 
                         #Spectrogram shift transformations can be applied to delta and delta-delta histograms as well
                         if self.compute_deltas:
+                            self.print_debug("Applying right shift image augmentation to spectrogram delta", debug=debug)
                             shifted_delta_spectrogram, _ = self.image_shift_transformation(preprocessed_spectrograms[i, :, :, 1], shift_position=shift_position)
                             preprocessed_spectrograms[i, :, :, 1] = shifted_delta_spectrogram
                             if self.compute_delta_deltas:
+                                self.print_debug("Applying right shift image augmentation to spectrogram delta-delta", debug=debug)
                                 shifted_delta_delta_spectrogram, _ = self.image_shift_transformation(preprocessed_spectrograms[i, :, :, 2], shift_position=shift_position)
                                 preprocessed_spectrograms[i, :, :, 2] = shifted_delta_delta_spectrogram
+
+        if log_mel_spectrogram is not None:
+            self.print_debug("Original spectrograms shape: "+str(original_spectrograms.shape), debug=debug)
         
+        self.print_debug("Preprocessed spectrograms shape: "+str(preprocessed_spectrograms.shape), debug=debug)
 
         return original_spectrograms, preprocessed_spectrograms
     
@@ -626,3 +660,13 @@ class SoundDatasetFold(torch.utils.data.IterableDataset):
                     audio_ids.append(index)
                     index += 1
         return audio_meta, audio_ids     
+
+    '''
+    Prints to stdout preserving the tqdm progress bar position
+    '''
+    def print_debug(self, string, debug, **kwargs):
+        if not debug: return
+        if self.progress_bar:
+            tqdm.write(str(string))
+        else:
+            print(string, **kwargs)

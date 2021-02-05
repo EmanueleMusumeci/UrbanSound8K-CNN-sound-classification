@@ -9,8 +9,8 @@ import soundfile as sf
 
 import numpy as np
 
-#from utils.audio_utils import play_sound, load_audio_file
-#from utils.timing import code_timer
+from utils.audio_utils import play_sound, load_audio_file
+from utils.timing import code_timer
 
 import muda
 
@@ -26,7 +26,7 @@ class PitchShift(object):
         assert isinstance(values, list) and len(values)>0, "Please provide a list of possible pitch shifting semitones values to choose from (randomly)"
         self.values = values
         self.debug_time = debug_time
-        self.name = "PitchShift"
+        self.name = name
 
         
     def __call__(self, clip, sr=22050, value = None):

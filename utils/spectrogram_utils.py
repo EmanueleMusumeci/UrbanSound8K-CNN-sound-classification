@@ -27,13 +27,16 @@ def compute_spectrogram_frames(clip_seconds, sample_rate, hop_length):
 '''
 Generates a (log) mel spectrogram using the librosa library
 '''
-def generate_mel_spectrogram_librosa(signal, spectrogram_bands, log_mel=True, debug_time_label="", show=False, flatten=False):
+def generate_mel_spectrogram_librosa(signal, 
+                                    spectrogram_bands=128, hop_length=512, 
+                                    sample_rate=22050, log_mel=True, debug_time_label="", 
+                                    show=False, flatten=False):
 
     debug_time = len(debug_time_label)>0
 
     #Generate log-mel spectrogram spectrogram of preprocessed signal segment
     with code_timer(debug_time_label+"librosa.feature.melspectrogram", debug = debug_time):
-        mel_spectrogram = librosa.feature.melspectrogram(signal, n_mels = spectrogram_bands)
+        mel_spectrogram = librosa.feature.melspectrogram(signal, n_mels = spectrogram_bands, hop_length=hop_length, sr=sample_rate)
 
     if log_mel:
         with code_timer(debug_time_label+"librosa.amplitude_to_db", debug = debug_time):

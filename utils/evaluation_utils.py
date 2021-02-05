@@ -54,9 +54,9 @@ def print_distribution(results):
         
     distribution = results["distribution"]
     
-    output = "\t(PREDICTED, GROUND-TRUTH)\n"
+    output = "Distributions\nCLASS NAME: (PREDICTED, GROUND-TRUTH)\n"
     for k in distribution.keys():
-        output+="\t# "+str(k)+": ("+str(distribution.get(k, 0)[0])+", "+str(distribution.get(k, 0)[1])+")\n"
+        output+=str(k)+": ("+str(distribution.get(k, 0)[0])+", "+str(distribution.get(k, 0)[1])+")\n"
     
     return output
 
