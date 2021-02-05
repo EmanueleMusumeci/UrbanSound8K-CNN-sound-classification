@@ -1,5 +1,6 @@
 data/*
 model/*
 test/*
-#PyTorchVisualizations/*
-#plots/*
+PyTorchVisualizations/*
+plots/*
+.vscode/*

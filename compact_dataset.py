@@ -3,11 +3,11 @@ import os
 import argparse
 import shutils
 
-from utils.timing import function_timer, code_timer
-from utils.dataset_utils import *
-from utils.spectrogram_utils import display_heatmap, generate_mel_spectrogram_librosa, compute_spectrogram_frames
-from utils.audio_utils import play_sound
-from data_augmentation.audio_transformations import *
+from core.utils.timing import function_timer, code_timer
+from core.utils.dataset_utils import *
+from core.utils.spectrogram_utils import display_heatmap, generate_mel_spectrogram_librosa, compute_spectrogram_frames
+from core.utils.audio_utils import play_sound
+from core.data_augmentation.audio_transformations import *
 
 parser = argparse.ArgumentParser(description=\
     'Compact and, if required, preprocess the dataset, saving the result in memory-mapped folds. All clips are \
@@ -81,8 +81,11 @@ if args.fold_percentage is not None:
 else:
     FOLD_PERCENTAGE = 1.0
 
+
+REGENERATE_FOLD = [False for fold in range(0,10)]
 if args.overwrite_existing_folds:
-    REGENERATE_FOLD = [True for fold in fold_list]
+    for fold in fold_list:
+        REGENERATE_FOLD[fold-1] = True
 
 if args.apply_all_preprocessing:
     audio_augmentations = [
@@ -155,8 +158,6 @@ else:
         with code_timer("load_compacted_dataset", debug=True):
             audio_meta, audio_raw, audio_spectrograms_raw = load_raw_compacted_dataset(DATASET_DIR, folds = fold_list)
 
-        with code_timer("load_compacted_preprocessed_dataset", debug=True):
-            audio_meta, audio_preprocessed, audio_spectrograms_preprocessed = load_preprocessed_compacted_dataset(DATASET_DIR, preprocessing_name=audio_augmentation.name, folds = fold_list)
 '''
 for i, clip_raw in enumerate(audio_raw):
     print("{}: {} ({})".format(i, clip_raw, len(audio_raw)))

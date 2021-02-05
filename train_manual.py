@@ -5,20 +5,20 @@ import math
 
 import torch
 
-from Dataset import SoundDatasetFold
-from DataLoader import DataLoader
-from nn.convolutional_model import CustomConvolutionalNetwork
-from nn.paper_convolutional_model import PaperConvolutionalNetwork
-from nn.feed_forward_model import FeedForwardNetwork
-from data_augmentation.image_transformations import *
-from data_augmentation.audio_transformations import *
-from Trainer import *
-from utils.dataset_utils import *
-from utils.audio_utils import *
+from core.Dataset import SoundDatasetFold
+from core.DataLoader import DataLoader
+from core.nn.convolutional_model import CustomConvolutionalNetwork
+from core.nn.paper_convolutional_model import PaperConvolutionalNetwork
+from core.nn.feed_forward_model import FeedForwardNetwork
+from core.data_augmentation.image_transformations import *
+from core.data_augmentation.audio_transformations import *
+from core.Trainer import *
+from core.utils.dataset_utils import *
+from core.utils.audio_utils import *
 
 """
 NOTICE: While train.py offers a command-line interface to control the training process,
-this file allows manually controlling training, by manually setting training parameters
+this file allows manually controlling training, by manually setting training parameters in the code
 """
 
 
@@ -40,6 +40,9 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 DATASET_DIR = os.path.join(BASE_DIR,"data")
 MODEL_DIR = os.path.join(BASE_DIR,"model")
+
+BATCH_SIZE = 128
+TRAINING_EPOCHS = 50
 
 #Preprocessing applied
 preprocessing_name = None
@@ -67,7 +70,6 @@ elif COMPUTE_DELTA_DELTAS:
 APPLY_IMAGE_SHIFT = True
 APPLY_IMAGE_NOISE = False
 
-BATCH_SIZE = 128
 
 #Spectrogram shape
 spectrogram_frames_per_segment = math.ceil(CLIP_SECONDS*SAMPLE_RATE / SPECTROGRAM_HOP_LENGTH)
@@ -196,7 +198,6 @@ train_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,
                             image_shift_transformation = shift_transformation, 
                             image_background_noise_transformation = background_noise_transformation, 
 
-                            spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
                             spectrogram_bands = spectrogram_bands, 
                             compute_deltas=COMPUTE_DELTAS, 
                             compute_delta_deltas=COMPUTE_DELTA_DELTAS, 
@@ -218,7 +219,6 @@ test_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,
                             audio_spectrograms = test_audio_spectrograms,
                             shuffle = False, 
                             use_spectrograms = True, 
-                            spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
                             spectrogram_bands = spectrogram_bands, 
                             compute_deltas=COMPUTE_DELTAS, 
                             compute_delta_deltas=COMPUTE_DELTA_DELTAS, 
@@ -278,8 +278,7 @@ trainer = Trainer(
                     cnn = True
                 )
 
-
 #Launch training
-trainer.train(50, save_test_scores_every=1, save_train_scores_every=1, save_model_every=1, compute_gradient_statistics=True)
+trainer.train(TRAINING_EPOCHS, save_test_scores_every=1, save_train_scores_every=1, save_model_every=1, compute_gradient_statistics=True)
 
 

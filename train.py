@@ -5,16 +5,16 @@ import math
 
 import torch
 
-from Dataset import SoundDatasetFold
-from DataLoader import DataLoader
-from nn.convolutional_model import CustomConvolutionalNetwork
-from nn.paper_convolutional_model import PaperConvolutionalNetwork
-from nn.feed_forward_model import FeedForwardNetwork
-from data_augmentation.image_transformations import *
-from data_augmentation.audio_transformations import *
-from Trainer import *
-from utils.dataset_utils import *
-from utils.audio_utils import *
+from core.Dataset import SoundDatasetFold
+from core.DataLoader import DataLoader
+from core.nn.convolutional_model import CustomConvolutionalNetwork
+from core.nn.paper_convolutional_model import PaperConvolutionalNetwork
+from core.nn.feed_forward_model import FeedForwardNetwork
+from core.data_augmentation.image_transformations import *
+from core.data_augmentation.audio_transformations import *
+from core.Trainer import *
+from core.utils.dataset_utils import *
+from core.utils.audio_utils import *
 
 
 parser = argparse.ArgumentParser(description='Trains a neural network for the environmental sound classification task on the \
@@ -45,6 +45,25 @@ parser.add_argument('--model_dir',
 parser.add_argument('--dataset_percentage', 
                     type=float, default = 1.0,
                     help='Percentage of the dataset to use for training (should be in range (0.0, 1.0] )')
+
+parser.add_argument('--epochs', 
+                    type=int, default = 50,
+                    help='Number of training epochs')
+                    
+parser.add_argument('--evaluate_on_test_every', 
+                    type=int, default = 1,
+                    help='Number of training epochs between two evaluations on the TEST set (default : 1) \
+                         (NOTICE: 0 disables evaluation completely)')
+                    
+parser.add_argument('--evaluate_on_train_every', 
+                    type=int, default = 1,
+                    help='Number of training epochs between two evaluations on the TRAINING set (default : 1) \
+                         (NOTICE: 0 disables evaluation completely)')
+                    
+parser.add_argument('--save_model_every', 
+                    type=int, default = 1,
+                    help='Number of training epochs between two model checkpoints (default : 1) \
+                         (NOTICE: 0 disables evaluation completely)')
 
 parser.add_argument('--disable_model_overwrite_protection', 
                     default=False, action='store_true',
@@ -226,6 +245,10 @@ DEBUG_TIMING = False
 selected_classes = [0,1,2,3,4,5,6,7,8,9]
 
 BATCH_SIZE = args.batch_size
+TRAINING_EPOCHS = args.epochs
+EVALUATE_ON_TRAIN_EVERY = args.evaluate_on_train_every
+EVALUATE_ON_TEST_EVERY = args.evaluate_on_test_every
+SAVE_MODEL_EVERY = args.save_model_every
 
 #Precompacted folds to be used for training
 if args.test_mode:
@@ -254,7 +277,7 @@ FFN_INPUT_SIZE = 154
 
 #Training instance name
 if args.name is None:
-    INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base")
+    INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base_IMAGE_SHIFT_NOISE")
 else:
     INSTANCE_NAME = args.name
 if not USE_PAPER_CNN:
@@ -462,8 +485,11 @@ trainer = Trainer(
                     cnn = True
                 )
 
+#trainer = Trainer.load(train_loader, test_loader, INSTANCE_NAME, MODEL_DIR, 26, device=DEVICE, batch_size = BATCH_SIZE, loss_function=loss_function, is_cnn = True)
 
 #Launch training
-trainer.train(50, save_test_scores_every=1, save_train_scores_every=1, save_model_every=1, compute_gradient_statistics=True)
-
-
+print("\n\nStarting training for {} epochs".format(TRAINING_EPOCHS))
+print("Evaluating on test set every {} epochs".format(EVALUATE_ON_TEST_EVERY))
+print("Evaluating on training set every {} epochs".format(EVALUATE_ON_TRAIN_EVERY))
+print("Saving model every {} epochs\n\n".format(SAVE_MODEL_EVERY))
+trainer.train(TRAINING_EPOCHS, save_test_scores_every=EVALUATE_ON_TEST_EVERY, save_train_scores_every=EVALUATE_ON_TRAIN_EVERY, save_model_every=SAVE_MODEL_EVERY, compute_gradient_statistics=True)

@@ -1,5 +1,5 @@
 '''
-Generates all plots and graphical renders needed for the presentation
+Generates all plots and graphical renders needed for the project presentation
 '''
 
 if __name__ == "__main__":
@@ -22,13 +22,12 @@ if __name__ == "__main__":
 
         from tqdm import tqdm
 
-        from utils.plot_utils import *
-        # TODO put it in plot_utils
-        #from class_confusion_matrix import *
-        from utils.dataset_utils import *
-        from utils.audio_utils import load_audio_file, play_sound, SingleWindowSelector
-        from data_augmentation.audio_transformations import *
-        from Trainer import *
+        from core.utils.plot_utils import *
+        from core.utils.dataset_utils import *
+        from core.utils.audio_utils import load_audio_file, play_sound, SingleWindowSelector
+        from core.data_augmentation.audio_transformations import *
+        from core.data_augmentation.image_transformations import *
+        from core.Trainer import *
 
         dataset_dir = "data"
         model_dir = "model"
@@ -36,19 +35,18 @@ if __name__ == "__main__":
 
         plot_color = "blue"
         
-        SINGLE_PLOTS = False
-        SINGLE_TRAIN_TEST_PLOTS = False
-        CONFUSION_MATRIX = False
-        COMPARATIVE_PLOTS = False
-        GRADIENT_FLOW = False
-        BEST_SCORES = False
-        PREPROCESSING_PERFORMANCE_DELTA_COMPARISONS = False
-        PLOT_TRAIN_TEST_ACCURACY_DELTAS = False
-        PLOT_CLASS_DISTRIBUTION = False
-        PLOT_PREPROCESSING_ACCURACY_RESULTS = False
+        SINGLE_PLOTS = True 
+        SINGLE_TRAIN_TEST_PLOTS = True
+        CONFUSION_MATRIX = True
+        COMPARATIVE_PLOTS = True
+        GRADIENT_FLOW = True
+        BEST_SCORES = True
+        PREPROCESSING_PERFORMANCE_DELTA_COMPARISONS = True
+        PLOT_TRAIN_TEST_ACCURACY_DELTAS = True
+        PLOT_CLASS_DISTRIBUTION = True
         COLLECT_AND_PREPROCESS_SAMPLES = True
         SHOW_PREPROCESSING = True
-        SALIENCY_MAPS = False
+        SALIENCY_MAPS = True
 
         ################
         # SINGLE PLOTS 
@@ -58,24 +56,309 @@ if __name__ == "__main__":
                 #Change the from/to_epoch and the epochs_skip to decide which score files are read
                 #Use the combine tasks flag to plot a comparative plot of the same metric for all tasks
                 
+                #TODO: All models
                 plot_scores("Base", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Base",
+                                title_prefix = "Paper model",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
-                plot_scores("PitchShift", model_dir,
+
+                plot_scores("Base_custom", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
-                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "PitchShift",
+                                title_prefix = "Custom model",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
+                
+                plot_scores("BackgroundNoise", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model - BN",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+
+                plot_scores("BackgroundNoise_custom", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Custom model - BN",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("DynamicRangeCompression", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model - DRC",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+
+                plot_scores("DynamicRangeCompression_custom", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Custom model - DRC",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("PitchShift_PS1", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model - PS1",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+
+                plot_scores("PitchShift_PS1_custom", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Custom model - PS1",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+
+                plot_scores("PitchShift_PS2", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model - PS2",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+
+                plot_scores("PitchShift_PS2_custom", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Custom model - PS2",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("TimeStretch", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model - TS",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+
+                plot_scores("TimeStretch_custom", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Custom model - TS",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("Base_delta", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model with delta features",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("BackgroundNoise_delta", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model with BG and delta features",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+
+                plot_scores("DynamicRangeCompression_delta", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model with DRC and delta features",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("PitchShift_PS1_delta", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model with PS1 and delta features",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("PitchShift_PS2_delta", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model with PS1 and delta features",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("TimeStretch_delta", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model with TS and delta features",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+
+                plot_scores("Base_delta_delta", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model with delta-delta features",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("BackgroundNoise_delta_delta", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model with BN and delta-delta features",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+
+                plot_scores("DynamicRangeCompression_delta_delta", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model with DRC and delta-delta features",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("PitchShift_PS1_delta_delta", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model with PS1 and delta-delta features",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("PitchShift_PS2_delta_delta", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model with PS1 and delta-delta features",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                            )
+                
+                plot_scores("TimeStretch_delta_delta", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model with TS and delta-delta features",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("Base_IMAGE_SHIFT_custom", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Custom model - Random spectrogram image right shift augmentation",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("Base_IMAGE_NOISE_custom", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Custom model - Random spectrogram image noise augmentation",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("Base_IMAGE_SHIFT_NOISE_custom", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Custom model - Random spectrogram image right shift and noise augmentation",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("Base_IMAGE_SHIFT", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = " Paper model - Random spectrogram image right shift augmentation",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("Base_IMAGE_NOISE", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model - Random spectrogram image noise augmentation",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("Base_IMAGE_SHIFT_NOISE", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Paper model - Image Random Noise and Shift Augmentation",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                            
+                
                 
 
         ###########################
@@ -97,30 +380,390 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Base",
+                                                title_prefix = "Paper model ",
                                                 colors = colors,
                                                 plot_dir = plot_dir
-                                                )
+                                              )
                 
-                plot_scores_from_multiple_dirs("PitchShift", model_dir, 
+                plot_scores_from_multiple_dirs("Base_custom", model_dir, 
                                                 scores_dirs, tasks={"audio_classification":"Audio classification"},
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "PitchShift",
+                                                title_prefix = "Custom model",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                              )
+                
+                plot_scores_from_multiple_dirs("BackgroundNoise", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model - Background Noise",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                              )
+                
+                plot_scores_from_multiple_dirs("BackgroundNoise_custom", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Custom model - BG",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                              )
+                
+                plot_scores_from_multiple_dirs("DynamicRangeCompression", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model - DRC",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
                 
+                plot_scores_from_multiple_dirs("DynamicRangeCompression_custom", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Custom model - Dynamic Range Compression",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("PitchShift_PS1", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model - Pitch Shift (shorter range)",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("PitchShift_PS1_custom", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Custom model - Pitch Shift (shorter range)",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("PitchShift_PS2", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model - Pitch Shift (wider range)",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("PitchShift_PS2_custom", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Custom model - Pitch Shift (wider range)",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("TimeStretch", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model - Time Stretch",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("TimeStretch_custom", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Custom model - Time Stretch",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("Base_delta", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model with delta features",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("BackgroundNoise_delta", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model with Background Noise and delta features",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("DynamicRangeCompression_delta", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model with Dynamic Range Compression and delta features",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("PitchShift_PS1_delta", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model with Pitch Shift (shorter range) and delta-delta features",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("PitchShift_PS2_delta", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model with Pitch Shift (longer range) and delta-delta features",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("TimeStretch_delta", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model with Time Stretch and delta-delta features",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("Base_delta_delta", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model with delta-delta features",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("BackgroundNoise_delta_delta", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model with Background Noise and delta-delta features",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("DynamicRangeCompression_delta_delta", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model with Dynamic Range Compression and delta-delta features",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("PitchShift_PS1_delta_delta", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model with Pitch Shift (shorter range) and delta-delta features",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("PitchShift_PS2_delta_delta", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model with Pitch Shift (wider range) and delta-delta features",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
+                plot_scores_from_multiple_dirs("TimeStretch_delta_delta", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model with Time Stretch and delta-delta features",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                                                
+                plot_scores_from_multiple_dirs("Base_IMAGE_SHIFT_custom", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Custom model - Random spectrogram image right shift augmentation",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
 
+                plot_scores_from_multiple_dirs("Base_IMAGE_NOISE_custom", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Custom model - Random spectrogram image noise augmentation",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                                                
+                plot_scores_from_multiple_dirs("Base_IMAGE_SHIFT_NOISE_custom", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Custom model - Random spectrogram image right shift and noise augmentation",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                                                         
+                plot_scores_from_multiple_dirs("Base_IMAGE_SHIFT", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model - Random spectrogram image right shift augmentation",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+
+                plot_scores_from_multiple_dirs("Base_IMAGE_NOISE", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model - Random spectrogram image noise augmentation",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                                                
+                plot_scores_from_multiple_dirs("Base_IMAGE_SHIFT_NOISE", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Paper model - Random spectrogram image right shift and noise augmentation",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                
         ####################
         # CONFUSION MATRIX #
         ####################
         if CONFUSION_MATRIX:
+                    
+                plot_confusion_matrix("Base", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                         
+                                        title_prefix = "Confusion Matrix Base",
+                                        scores_on_train=False,
+                                        plot_dir = plot_dir
+                                        )
+                
+                plot_confusion_matrix("Base_custom", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                         
+                                        title_prefix = "Confusion Matrix Base_custom",
+                                        scores_on_train=False,
+                                        plot_dir = plot_dir
+                                        )
+                                        
+                plot_confusion_matrix("Base_delta", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                         
+                                        title_prefix = "Confusion Matrix Base using Delta",
+                                        scores_on_train=False,
+                                        plot_dir = plot_dir
+                                        )
+
+                plot_confusion_matrix("Base_delta_delta", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                         
+                                        title_prefix = "Confusion Matrix Base using Delta Delta",
+                                        scores_on_train=False,
+                                        plot_dir = plot_dir
+                                        )
+                
                 plot_confusion_matrix("Base", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                          
                                         title_prefix = "Base",
+                                        scores_on_train=False,
+                                        plot_dir = plot_dir
+                                        )
+
+                plot_confusion_matrix("Base_IMAGE_NOISE", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                         
+                                        title_prefix = "Paper Model - Confusion Matrix Image Noise",
+                                        scores_on_train=False,
+                                        plot_dir = plot_dir
+                                        )
+                
+                plot_confusion_matrix("Base_IMAGE_NOISE_custom", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                         
+                                        title_prefix = "Custom Model - Confusion Matrix Image Noise",
+                                        scores_on_train=False,
+                                        plot_dir = plot_dir
+                                        )
+                
+                plot_confusion_matrix("Base_IMAGE_SHIFT", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                         
+                                        title_prefix = "Paper Model - Confusion Matrix Image Shift",
+                                        scores_on_train=False,
+                                        plot_dir = plot_dir
+                                        )
+                
+                plot_confusion_matrix("Base_IMAGE_SHIFT_custom", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                         
+                                        title_prefix = "Custom Model - Confusion Matrix Image Shift",
+                                        scores_on_train=False,
+                                        plot_dir = plot_dir
+                                        )
+                
+                plot_confusion_matrix("Base_IMAGE_SHIFT_NOISE", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                         
+                                        title_prefix = "Paper Model - Confusion Matrix Image Shift",
+                                        scores_on_train=False,
+                                        plot_dir = plot_dir
+                                        )
+                
+                plot_confusion_matrix("Base_IMAGE_SHIFT_NOISE_custom", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                         
+                                        title_prefix = "Custom Model - Confusion Matrix Image Shift",
                                         scores_on_train=False,
                                         plot_dir = plot_dir
                                         )
@@ -130,96 +773,508 @@ if __name__ == "__main__":
         # Comparative plots #
         #####################
         if COMPARATIVE_PLOTS:
+                
+                #Confronto tra tutte le audio augmentation sul modello paper
                 model_names = {
-                        "Base" : "Custom model - No augmentation", 
-                        "PitchShift" : "Custom model - PitchShift",
-                        }
+                                "Base" : "Paper model - No augmentation", 
+                                "PitchShift_PS1" : "Paper model - Pitch Shift (shorter range)",
+                                "PitchShift_PS2" : "Paper model - Pitch Shift (wider range)",
+                                "TimeStretch" : "Paper model - Time Stretch",
+                                "DynamicRangeCompression" : "Paper model - Dynamic Range Compression",
+                                "BackgroundNoise" : "Paper model - Background Noise"
+                              }
                 comparative_plots(model_names, model_dir,
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                 from_epoch=0, to_epoch=39, epochs_skip=0, 
                                 xticks_step=3, increase_epoch_labels_by_one=True,
-                                title_prefix = "Custom model",
+                                title_prefix = "Paper model audio augmentations",
                                 plot_dir = plot_dir
-                                )  
-        
+                                ) 
 
+                #Confronto tra tutte le audio augmentation sul modello custom
+                model_names = {
+                                "Base_custom" : "Custom model - No augmentation", 
+                                "PitchShift_PS1_custom" : "Custom model - Pitch Shift (shorter range)",
+                                "PitchShift_PS2_custom" : "Custom model - Pitch Shift (wider range)",
+                                "TimeStretch_custom" : "Custom model - Time Stretch",
+                                "DynamicRangeCompression_custom" : "Custom model - Dynamic Range Compression",
+                                "BackgroundNoise_custom" : "Custom model - Background Noise"
+                              }
+                comparative_plots(model_names, model_dir,
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=39, epochs_skip=0, 
+                                xticks_step=3, increase_epoch_labels_by_one=True,
+                                title_prefix = "Custom model audio augmentations",
+                                plot_dir = plot_dir
+                                ) 
+                
+                #Confronto tra Base, Base + Delta e Base + Delta Delta sul modello paper
+                model_names = {
+                                "Base" : "Base", 
+                                "Base_delta" : "Base + Spectrogram Delta",
+                                "Base_delta_delta" : "Base + Spectrogram Delta-Delta"
+                              }
+                comparative_plots(model_names, model_dir,
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=39, epochs_skip=0, 
+                                xticks_step=3, increase_epoch_labels_by_one=True,
+                                title_prefix = "Paper model with delta and delta-delta",
+                                plot_dir = plot_dir
+                                ) 
+
+                #Confronto tra tutte le audio augmentation DELTA sul modello paper
+                model_names = {
+                                "Base_delta" : "Paper model with delta - No augmentation", 
+                                "PitchShift_PS1_delta" : "Paper model with delta - Pitch Shift (shorter range)",
+                                "PitchShift_PS2_delta" : "Paper model with delta - Pitch Shift (wider range)",
+                                "TimeStretch_delta" : "Paper model with delta - Time Stretch",
+                                "DynamicRangeCompression_delta" : "Paper model with delta - Dynamic Range Compression",
+                                "BackgroundNoise_delta" : "Paper model with delta - Background Noise"
+                              }
+                comparative_plots(model_names, model_dir,
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=39, epochs_skip=0, 
+                                xticks_step=3, increase_epoch_labels_by_one=True,
+                                title_prefix = "Paper model audio augmentations with delta",
+                                plot_dir = plot_dir
+                                ) 
+                
+                #Confronto tra tutte le audio augmentation DELTA DELTA sul modello paper
+                model_names = {
+                                "Base_delta_delta" : "Paper model with delta-delta - No augmentation", 
+                                "PitchShift_PS1_delta_delta" : "Paper model with delta-delta - Pitch Shift (shorter range)",
+                                "PitchShift_PS2_delta_delta" : "Paper model with delta-delta - Pitch Shift (wider range)",
+                                "TimeStretch_delta_delta" : "Paper model with delta-delta - Time Stretch",
+                                "DynamicRangeCompression_delta_delta" : "Paper model with delta-delta - Dynamic Range Compression",
+                                "BackgroundNoise_delta_delta" : "Paper model with delta-delta - Background Noise"
+                              }
+                comparative_plots(model_names, model_dir,
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=39, epochs_skip=0, 
+                                xticks_step=3, increase_epoch_labels_by_one=True,
+                                title_prefix = "Paper model audio augmentations with delta-delta",
+                                plot_dir = plot_dir
+                                ) 
+
+                #Confronto tra Base, Random Image Shift, Random Image Noise, Random Image Shift + Random Image Noise sul modello custom
+                
+                model_names = {
+                                "Base" : "Paper model - No augmentation", 
+                                "Base_IMAGE_SHIFT" : "Paper model with spectrogram Image Shift",
+                                "Base_IMAGE_NOISE" : "Paper model with spectrogram Image Noise",
+                                "Base_IMAGE_SHIFT_NOISE" : "Paper model with spectrogram Image Shift and Noise",
+                              }
+                comparative_plots(model_names, model_dir,
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=39, epochs_skip=0, 
+                                xticks_step=3, increase_epoch_labels_by_one=True,
+                                title_prefix = "Paper model spectrogram image augmentations",
+                                plot_dir = plot_dir
+                                )
+                
+                #Confronto tra Base, Random Image Shift, Random Image Noise, Random Image Shift + Random Image Noise sul modello paper
+                model_names = {
+                                "Base_custom" : "Custom model - No augmentation", 
+                                "Base_IMAGE_SHIFT_custom" : "Custom model with spectrogram Image Shift",
+                                "Base_IMAGE_NOISE_custom" : "Custom model with spectrogram Image Noise",
+                                "Base_IMAGE_SHIFT_NOISE_custom" : "Custom model with spectrogram Image Shift and Noise",
+                              }
+                comparative_plots(model_names, model_dir,
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=39, epochs_skip=0, 
+                                xticks_step=3, increase_epoch_labels_by_one=True,
+                                title_prefix = "Custom model spectrogram image augmentations",
+                                plot_dir = plot_dir
+                                )
+                
+                #Confronto tra Base, Migliore tra i delta, Migliore tra le augmentation audio, Migliore tra le augmentation immagine
+                
+                model_names = {
+                                "Base" : "Paper model - No augmentation", 
+                                "DynamicRangeCompression" : "Best of the audio augmentations (Dynamic Range Compression)", 
+                                "Base_IMAGE_SHIFT_NOISE" : "Best of the image augmentations (SHIFT + NOISE)",
+                              }
+                comparative_plots(model_names, model_dir,
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=39, epochs_skip=0, 
+                                xticks_step=3, increase_epoch_labels_by_one=True,
+                                title_prefix = "Paper model comparison of the best augmentations",
+                                plot_dir = plot_dir
+                                )
+                
         #################
         # GRADIENT FLOW #
         #################
         if GRADIENT_FLOW:
                 #cropX = (0,250)
-                cropX = None
                 #cropY = (10,432)
+
+                cropX = None
                 cropY = None
+
                 create_gradient_flow_gif("Base", model_dir, plot_dir, cropX=cropX, cropY=cropY)
+
+                create_gradient_flow_gif("Base_IMAGE_SHIFT_NOISE", model_dir, plot_dir, cropX=cropX, cropY=cropY)
+                
+                create_gradient_flow_gif("Base_IMAGE_SHIFT_NOISE_custom", model_dir, plot_dir, cropX=cropX, cropY=cropY)
+
+                create_gradient_flow_gif("TimeStretch_custom", model_dir, plot_dir, cropX=cropX, cropY=cropY)
 
         ################
         # BEST  SCORES #
         ################
         if BEST_SCORES:
+                #TODO: Semplicemente aggiungere a questa lista tutti i modelli
                 model_names = {
                         "Base",
+                        "PitchShift_PS1",
+                        "PitchShift_PS2",
+                        "TimeStretch",
+                        "DynamicRangeCompression",
+                        "BackgroundNoise",
+                        
+                        "Base_custom",
+                        "PitchShift_PS1_custom",
+                        "PitchShift_PS2_custom",
+                        "TimeStretch_custom",
+                        "DynamicRangeCompression_custom",
+                        "BackgroundNoise_custom",
+
+                        "Base_IMAGE_SHIFT",
+                        "Base_IMAGE_NOISE",
+                        "Base_IMAGE_SHIFT_NOISE",
+                        
+                        "Base_IMAGE_SHIFT_custom",
+                        "Base_IMAGE_NOISE_custom",
+                        "Base_IMAGE_SHIFT_NOISE_custom",
+                        
+                        "Base_delta",
+                        "PitchShift_PS1_delta",
+                        "PitchShift_PS2_delta",
+                        "TimeStretch_delta",
+                        "DynamicRangeCompression_delta",
+                        "BackgroundNoise_delta",
+                        
+                        "Base_delta_delta", 
+                        "PitchShift_PS1_delta_delta",
+                        "PitchShift_PS2_delta_delta",
+                        "TimeStretch_delta_delta",
+                        "DynamicRangeCompression_delta_delta",
+                        "BackgroundNoise_delta_delta"
                         }
 
-                with open(os.path.join(model_dir,"best_scores.txt"), "w") as f:
+                with open(os.path.join(plot_dir,"best_scores.txt"), "w") as f:
                         for model_name in model_names:
                                 _, best_scores_str = get_best_epoch_scores(model_name, model_dir,
-                                        metrics = {"accuracy": "Accuracy",
-                                                "precision": "Precision",
-                                                "recall": "Recall",
-                                                "f1": "F1 Macro Avg.",
-                                                "distribution": "Distribution", 
-                                                "confusion matrix": "Confusion Matrix",
-                                                }
+                                        metrics = {
+                                                        "accuracy": "Accuracy",
+                                                        #"precision": "Precision",
+                                                        #"recall": "Recall",
+                                                        "f1": "F1 Macro Avg.",
+                                                        #"distribution": "Distribution", 
+                                                        #"confusion matrix": "Confusion Matrix"
+                                                  }
                                                 )
                                 f.write(best_scores_str)
         #################
         # DELTA  SCORES #
         #################
         if PREPROCESSING_PERFORMANCE_DELTA_COMPARISONS:
-                dict_augmentation_to_test = {
-                                            "Base_delta_delta":"Base",
-                                            "PitchShift_delta_delta":"PS1",
-                                            "BackgroundNoise_delta_delta":"BG",
-                                            "DynamicRangeCompression_delta_delta":"DRC",
-                                            "TimeStretch_delta_delta":"TS"
-                                        }
-            
-                #plot delta on total accuracy
-                plot_delta_on_metric(model_dir, "accuracy", dict_augmentation_to_test, 
-                                    "Base_delta_delta", ["Δ Classification Accuracy", "class"],
-                                    "value", "class", horizontal=False, plot_dir="plots")
 
-                #plot delta on total f1
-                plot_delta_on_metric(model_dir, "f1",dict_augmentation_to_test,
-                                    "Base_delta_delta", ["Δ f1-score", "augmentations"], 
-                                    "f1_score" , "augmentations",horizontal=False,plot_dir="plots")
-                
+                                
                 classes_names = ["air_conditioner","car_horn","children_playing","dog_bark","drilling","engine_idling","gun_shot","jackhammer","siren","street_music", "All classes"]
 
+                #TODO: Generare delta scores delle classi su i seguenti insiemi di modelli:
+                # 1) Base paper con tutte augmentation
+                dict_augmentation_to_test = {
+                                            "Base" : "Base",
+                                            "PitchShift_PS1" : "PS1",
+                                            "PitchShift_PS2" : "PS2",
+                                            "BackgroundNoise" : "BG",
+                                            "DynamicRangeCompression" : "DRC",
+                                            "TimeStretch" : "TS"
+                                            }
+                plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test,
+                                    "Base", ["Δ Classification Accuracies", "class"],
+                                    "value", "class", classes_names = classes_names, horizontal=True,title_prefix = "Custom model - Audio augmentation accuracy difference", plot_dir="plots")
+                # 2) Base custom con tutte augmentation
+                dict_augmentation_to_test = {
+                                            "Base_custom" : "Base",
+                                            "PitchShift_PS1_custom" : "PS1",
+                                            "PitchShift_PS2_custom" : "PS2",
+                                            "BackgroundNoise_custom" : "BG",
+                                            "DynamicRangeCompression_custom" : "DRC",
+                                            "TimeStretch_custom" : "TS"
+                                            }
+                plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test,
+                                    "Base_custom", ["Δ Classification Accuracies", "class"],
+                                    "value", "class", classes_names = classes_names, horizontal=True,title_prefix = "Custom model - Audio augmentation accuracy difference", plot_dir="plots") 
+                # 3) Base paper delta con tutte augmentation 
+                dict_augmentation_to_test = {
+                                            "Base_delta" : "Base",
+                                            "PitchShift_PS1_delta" : "PS1",
+                                            "PitchShift_PS2_delta" : "PS2",
+                                            "BackgroundNoise_delta" : "BG",
+                                            "DynamicRangeCompression_delta" : "DRC",
+                                            "TimeStretch_delta" : "TS"
+                                            }
+                plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test,
+                                    "Base_delta", ["Δ Classification Accuracies", "class"],
+                                    "value", "class", classes_names = classes_names, horizontal=True,title_prefix = "Paper model (Delta) - Audio augmentation accuracy difference", plot_dir="plots")
+                # 4) Base paper delta delta tutte augmentation
                 #plot delta on total accuracies
+                dict_augmentation_to_test = {
+                                            "Base_delta_delta" : "Base",
+                                            "PitchShift_PS1_delta_delta" : "PS1",
+                                            "PitchShift_PS2_delta_delta" : "PS2",
+                                            "BackgroundNoise_delta_delta" : "BG",
+                                            "DynamicRangeCompression_delta_delta" : "DRC",
+                                            "TimeStretch_delta_delta" : "TS"
+                                            }
                 plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test,
                                     "Base_delta_delta", ["Δ Classification Accuracies", "class"],
-                                    "value", "class", classes_names = classes_names, horizontal=True, plot_dir="plots")
+                                    "value", "class", classes_names = classes_names, horizontal=True,title_prefix = "Paper model (Delta-delta) - Audio augmentation accuracy difference", plot_dir="plots")
+                
+                # 5) Paper con tutte le image augmentation 
+                dict_augmentation_to_test = {
+                                            "Base" : "Base",
+                                            "Base_IMAGE_SHIFT" : "(Paper) Spectro. shift",
+                                            "Base_IMAGE_NOISE" : "(Paper) Spectro. noise",
+                                            "Base_IMAGE_SHIFT_NOISE" : "(Paper) Spectro. noise + shift"
+                                            }
+                plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test, 
+                                    "Base", ["Δ Classification Accuracy", "class"],
+                                    "value", "class", classes_names = classes_names, horizontal=False,title_prefix = "Paper model - Image augmentation accuracy difference", plot_dir="plots")
+                                    
+                # 5) Custom con tutte le image augmentation 
+                dict_augmentation_to_test = {
+                                            "Base_custom" : "(Custom) Base",
+                                            "Base_IMAGE_SHIFT_custom" : "(Custom) Spectro. shift",
+                                            "Base_IMAGE_NOISE_custom" : "(Custom) Spectro. noise",
+                                            "Base_IMAGE_SHIFT_NOISE_custom" : "(Custom) Spectro. noise + shift"
+                                            }
 
-        
+                plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test, 
+                                    "Base_custom", ["Δ Classification Accuracy", "class"],
+                                    "value", "class", classes_names = classes_names, horizontal=False,title_prefix = "Custom model - Image augmentation accuracy difference", plot_dir="plots")
+                                    
+                # 7) Paper con tutte le migliori 
+                dict_augmentation_to_test = {
+                                            "Base" : "(Paper) Base",
+                                            "Base_IMAGE_SHIFT_NOISE_custom" : "(Custom) Spectro. noise + shift",
+                                            "DynamicRangeCompression" : "(Paper) DRC",
+                                            }
+                plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test, 
+                                    "Base", ["Δ Classification Accuracy", "class"],
+                                    "value", "class", classes_names = classes_names, horizontal=False,title_prefix = "Best models - Accuracy difference", plot_dir="plots")
+                
+                
+                # 1) Base paper con tutte augmentation
+                dict_augmentation_to_test = {
+                                            "Base" : "Base",
+                                            "PitchShift_PS1" : "PS1",
+                                            "PitchShift_PS2" : "PS2",
+                                            "BackgroundNoise" : "BG",
+                                            "DynamicRangeCompression" : "DRC",
+                                            "TimeStretch" : "TS"
+                                            }
+                plot_delta_on_metric(model_dir, "accuracy", dict_augmentation_to_test, 
+                                    "Base", ["Δ Classification Accuracy", "class"],
+                                    "value", "class", horizontal=False,title_prefix = "Paper model - Audio augmentation accuracy difference", plot_dir="plots")
+
+                plot_delta_on_metric(model_dir, "f1",dict_augmentation_to_test,
+                                    "Base", ["Δ f1-score", "augmentations"], 
+                                    "f1_score" , "augmentations",title_prefix = "Paper model - Audio augmentation f1 difference",horizontal=False,plot_dir="plots")
+
+                # 2) Base custom con tutte augmentation
+                dict_augmentation_to_test = {
+                                            "Base_custom" : "Base",
+                                            "PitchShift_PS1_custom" : "PS1",
+                                            "PitchShift_PS2_custom" : "PS2",
+                                            "BackgroundNoise_custom" : "BG",
+                                            "DynamicRangeCompression_custom" : "DRC",
+                                            "TimeStretch_custom" : "TS"
+                                            }
+                plot_delta_on_metric(model_dir, "accuracy", dict_augmentation_to_test, 
+                                    "Base_custom", ["Δ Classification Accuracy", "class"],
+                                    "value", "class", horizontal=False,title_prefix = "Custom model - Audio augmentation accuracy difference", plot_dir="plots")
+                
+                plot_delta_on_metric(model_dir, "f1",dict_augmentation_to_test,
+                                    "Base_custom", ["Δ f1-score", "augmentations"], 
+                                    "f1_score" , "augmentations",horizontal=False,title_prefix = "Custom model - Audio augmentation f1 difference",plot_dir="plots")
+
+                # 3) Base paper con tutte augmentation + delta
+                dict_augmentation_to_test = {
+                                            "Base_delta" : "Base",
+                                            "PitchShift_PS1_delta" : "PS1",
+                                            "PitchShift_PS2_delta" : "PS2",
+                                            "BackgroundNoise_delta" : "BG",
+                                            "DynamicRangeCompression_delta" : "DRC",
+                                            "TimeStretch_delta" : "TS"
+                                            }
+                plot_delta_on_metric(model_dir, "accuracy", dict_augmentation_to_test, 
+                                    "Base_delta", ["Δ Classification Accuracy", "class"],
+                                    "value", "class", horizontal=False,title_prefix = "Paper model (delta) - Audio augmentation accuracy difference", plot_dir="plots")
+                                    
+                plot_delta_on_metric(model_dir, "f1",dict_augmentation_to_test,
+                                    "Base_delta", ["Δ f1-score", "augmentations"], 
+                                    "f1_score" , "augmentations",horizontal=False,title_prefix = "Paper model (delta) - Audio augmentation f1 difference",plot_dir="plots")
+                # 4) Base paper con tutte augmentation + delta-delta 
+                
+                #plot delta on total accuracy
+                dict_augmentation_to_test = {
+                                            "Base_delta_delta" : "Base",
+                                            "PitchShift_PS1_delta_delta" : "PS1",
+                                            "PitchShift_PS2_delta_delta" : "PS2",
+                                            "BackgroundNoise_delta_delta" : "BG",
+                                            "DynamicRangeCompression_delta_delta" : "DRC",
+                                            "TimeStretch_delta_delta" : "TS"
+                                            }
+                plot_delta_on_metric(model_dir, "accuracy", dict_augmentation_to_test, 
+                                    "Base_delta_delta", ["Δ Classification Accuracy", "class"],
+                                    "value", "class", horizontal=False,title_prefix = "Paper model (Delta-delta) - Audio augmentation accuracy difference", plot_dir="plots")
+                
+                plot_delta_on_metric(model_dir, "f1",dict_augmentation_to_test,
+                                    "Base_delta_delta", ["Δ f1-score", "augmentations"], 
+                                    "f1_score" , "augmentations",horizontal=False,title_prefix = "Base Delta Delta difference f1",plot_dir="plots")
+                # 5) Paper con tutte le image augmentation 
+                
+
         ###################################
         # PLOT TRAIN/TEST ACCURACY DELTAS #
         ###################################
-        if PLOT_TRAIN_TEST_DELTAS:
+        if PLOT_TRAIN_TEST_ACCURACY_DELTAS:
+                
+                # 1) Base paper con tutte augmentation
                 model_names = {
-                                "Base" : "No augmentations",
-                                "PitchShift" : "PS1",
+                                "Base" : "Base", 
+                                "PitchShift_PS1" : "PS1",
+                                "PitchShift_PS2" : "PS2",
+                                "TimeStretch" : "TS",
+                                "DynamicRangeCompression" : "DRC",
                                 "BackgroundNoise" : "BG"
-                             }
+                              }
                 plot_train_test_accuracy_delta(model_dir, model_names, 
                                                 metrics = {"accuracy" : "Accuracy"},
                                                 tasks = {"audio_classification" : "Audio classification"},
-                                                show = True
+                                                show = False,
+                                                plot_dir = plot_dir,
+                                                title_prefix = "Paper model - Train vs Test accuracy difference"
                                                 )
-
-#TODO : Integrare con Michele
+                # 2) Base custom con tutte augmentation
+                model_names = {
+                                "Base_custom" : "Base", 
+                                "PitchShift_PS1_custom" : "PS1",
+                                "PitchShift_PS2_custom" : "PS2",
+                                "TimeStretch_custom" : "TS",
+                                "DynamicRangeCompression_custom" : "DRC",
+                                "BackgroundNoise_custom" : "BG"
+                              }
+                plot_train_test_accuracy_delta(model_dir, model_names, 
+                                                metrics = {"accuracy" : "Accuracy"},
+                                                tasks = {"audio_classification" : "Audio classification"},
+                                                show = False,
+                                                plot_dir = plot_dir,
+                                                title_prefix = "Custom model - Train vs Test accuracy difference"
+                                                )
+                # 3) Base paper con tutte augmentation + delta
+                model_names = {
+                                "Base_delta" : "Base", 
+                                "PitchShift_PS1_delta" : "PS1",
+                                "PitchShift_PS2_delta" : "PS2",
+                                "TimeStretch_delta" : "TS",
+                                "DynamicRangeCompression_delta" : "DRC",
+                                "BackgroundNoise_delta" : "BG"
+                              }
+                plot_train_test_accuracy_delta(model_dir, model_names, 
+                                                metrics = {"accuracy" : "Accuracy"},
+                                                tasks = {"audio_classification" : "Audio classification"},
+                                                show = False,
+                                                plot_dir = plot_dir,
+                                                title_prefix = "Paper model (delta) - Train vs Test accuracy difference"
+                                                )
+                # 4) Base paper con tutte augmentation + delta-delta
+                model_names = {
+                                "Base_delta_delta" : "Base", 
+                                "PitchShift_PS1_delta_delta" : "PS1",
+                                "PitchShift_PS2_delta_delta" : "PS2",
+                                "TimeStretch_delta_delta" : "TS",
+                                "DynamicRangeCompression_delta_delta" : "DRC",
+                                "BackgroundNoise_delta_delta" : "BG"
+                              }
+                plot_train_test_accuracy_delta(model_dir, model_names, 
+                                                metrics = {"accuracy" : "Accuracy"},
+                                                tasks = {"audio_classification" : "Audio classification"},
+                                                show = False,
+                                                plot_dir = plot_dir,
+                                                title_prefix = "Paper model (delta-delta) - Train vs Test accuracy difference"
+                                                )
+                # 5) Paper con tutte le image augmentation
+                
+                model_names = {
+                                "Base" : "Base", 
+                                "Base_IMAGE_SHIFT" : "Right shift",
+                                "Base_IMAGE_NOISE" : "Random noise",
+                                "Base_IMAGE_SHIFT_NOISE" : "Shift and noise",
+                              }
+                plot_train_test_accuracy_delta(model_dir, model_names, 
+                                                metrics = {"accuracy" : "Accuracy"},
+                                                tasks = {"audio_classification" : "Audio classification"},
+                                                show = False,
+                                                plot_dir = plot_dir,
+                                                title_prefix = "Paper model (spectrogram image augmentation) - Train vs Test accuracy difference"
+                                                )
+                
+                # 6) Custom con tutte le image augmentation
+                model_names = {
+                                "Base_custom" : "Base", 
+                                "Base_IMAGE_SHIFT_custom" : "Right Shift",
+                                "Base_IMAGE_NOISE_custom" : "Random noise",
+                                "Base_IMAGE_SHIFT_NOISE_custom" : "Shift and noise",
+                              }
+                plot_train_test_accuracy_delta(model_dir, model_names, 
+                                                metrics = {"accuracy" : "Accuracy"},
+                                                tasks = {"audio_classification" : "Audio classification"},
+                                                show = False,
+                                                plot_dir = plot_dir,
+                                                title_prefix = "Custom model (spectrogram image augmentation) - Train vs Test accuracy difference"
+                                                )
+                # 7) Base paper + delta + delta-delta
+                model_names = {
+                                "Base" : "Base", 
+                                "Base_delta" : "Base + Δ",
+                                "Base_delta_delta" : "Base + ΔΔ"
+                              }
+                plot_train_test_accuracy_delta(model_dir, model_names, 
+                                                metrics = {"accuracy" : "Accuracy"},
+                                                tasks = {"audio_classification" : "Audio classification"},
+                                                show = False,
+                                                plot_dir = plot_dir,
+                                                title_prefix = "Paper model (delta vs delta-delta) - Train vs Test accuracy difference"
+                                                )
+                # 8) Delta modelli migliori
+                
+                model_names = {
+                                "Base" : "(Paper) Base", 
+                                "DynamicRangeCompression" : "(Paper) DRC", 
+                                "Base_IMAGE_SHIFT_NOISE_custom" : "(Custom) Image all",
+                              }
+                plot_train_test_accuracy_delta(model_dir, model_names, 
+                                                metrics = {"accuracy" : "Accuracy"},
+                                                tasks = {"audio_classification" : "Audio classification"},
+                                                show = False,
+                                                plot_dir = plot_dir,
+                                                title_prefix = "Best models - Train vs Test accuracy difference"
+                                                )
+                
 
         #############################
         #  PLOT CLASS DISTRIBUTION  #
@@ -233,14 +1288,6 @@ if __name__ == "__main__":
                         else:
                                 class_distribution[sample_meta["class_name"]] += 1
                 plot_class_distributions(class_distribution, plot_dir = plot_dir)
-
-        ###############################
-        #  PLOT RESULTS DISTRIBUTION  #
-        ###############################
-        if PLOT_PREPROCESSING_ACCURACY_RESULTS:
-                pass
-
-#TODO: Integrare lavoro Michele
 
         ####################################
         #  COLLECT AND PREPROCESS SAMPLES  #
@@ -279,7 +1326,7 @@ if __name__ == "__main__":
                                                                         }
                                         break
 
-                print(samples_one_for_each_class)
+                #print(samples_one_for_each_class)
                 
                 #Preprocess the collected samples
                 preprocessors = [
@@ -319,15 +1366,24 @@ if __name__ == "__main__":
         # SALIENCY MAPS #
         #################
         if SALIENCY_MAPS:
+                import torch
+
                 if os.path.exists(os.path.join(plot_dir, "saliency_maps")):
                         shutil.rmtree(os.path.join(plot_dir, "saliency_maps"))
                         os.makedirs(os.path.join(plot_dir, "saliency_maps"))
                 else:
                         os.makedirs(os.path.join(plot_dir, "saliency_maps"))
-
-                models = {
-                                "PROVA" : {"epoch" : 2, "preprocessor" : None, "deltas" : False, "delta_deltas" : False, "to_layer" : 3},
-                         }
+                
+                spectro_shift = SpectrogramShift(input_size=(128,130),width_shift_range=4,shift_prob=0.9)
+                spectro_noise = SpectrogramAddGaussNoise(input_size=(128,130),prob_to_have_noise=0.55)
+                
+                drc = MUDADynamicRangeCompression()
+                models = {}
+                models["DynamicRangeCompression_custom"] = {"epoch" : 14 , "preprocessor" : None, "deltas" : False, "delta_deltas" : False,  "to_layer" : 11, "spectro_shift" : None, "spectro_noise" : None}
+                models["Base"] = {"epoch" : 43, "preprocessor" : None, "deltas" : False, "delta_deltas" : False, "to_layer" : 3, "spectro_shift" : None, "spectro_noise" : None}
+                models["DynamicRangeCompression"] = {"epoch" : 47, "preprocessor" : drc, "deltas" : False, "delta_deltas" : False, "to_layer" : 3, "spectro_shift" : None, "spectro_noise" : None}
+                models["Base_IMAGE_NOISE"] = {"epoch" : 41, "preprocessor" : None, "deltas" : False, "delta_deltas" : False, "to_layer" : 3, "spectro_shift" : None, "spectro_noise" : spectro_noise}
+                models["Base_IMAGE_SHIFT_NOISE"] = {"epoch" : 43, "preprocessor" : None, "deltas" : False, "delta_deltas" : False, "to_layer" : 3, "spectro_shift" : spectro_shift, "spectro_noise" : spectro_noise}
 
                 CLIP_SECONDS = 3
                 SPECTROGRAM_HOP_LENGTH = 512
@@ -341,8 +1397,8 @@ if __name__ == "__main__":
                                         folds = [], 
                                         preprocessor = model_entry["preprocessor"],
                                         use_spectrograms = True, 
-                                        #image_shift_transformation = right_shift_transformation, 
-                                        #image_background_noise_transformation = background_noise_transformation, 
+                                        image_shift_transformation = spectro_shift, 
+                                        image_background_noise_transformation = spectro_noise, 
 
                                         spectrogram_frames_per_segment = spectrogram_frames_per_segment, 
                                         spectrogram_bands = 128, 
@@ -351,7 +1407,8 @@ if __name__ == "__main__":
                                         selected_classes=selected_classes,
                                         audio_segment_selector=SingleWindowSelector(CLIP_SECONDS, spectrogram_hop_length=SPECTROGRAM_HOP_LENGTH, random_location = False),
                                         debug_preprocessing=True
-                                ) 
+                                )
+                                
 
                                 data_loader = DataLoader(dataset)
                                 
@@ -366,8 +1423,29 @@ if __name__ == "__main__":
                                 if not os.path.exists(output_dir):
                                         os.makedirs(output_dir)
                                 
-                                if model_name.endswith("custom_model"):
-                                        pass
+                                if model_name.endswith("custom"):
+                                        model = custom_model_wrapper.model
+                                        convolutional_layers = nn.Sequential(
+                                                                                model.conv_layer_1,
+                                                                                model.conv_layer_2,
+                                                                                model.max_pool1,
+                                                                                
+                                                                                model.conv_layer_3,
+                                                                                model.conv_layer_4,
+                                                                                model.max_pool2,
+                                                                                
+                                                                                model.conv_layer_5,
+                                                                                model.conv_layer_6,
+                                                                                model.max_pool3,
+
+                                                                                model.conv_layer_7,
+                                                                                model.conv_layer_8,
+                                                                                model.max_pool4,
+                                                                            )
+                                        dense_layers = nn.Sequential(
+                                                                        model.dense_1,
+                                                                        model.dense_2
+                                                                    ) 
                                 else:
                                         convolutional_layers = custom_model_wrapper.model.convolutional_layers 
                                         dense_layers = custom_model_wrapper.model.dense_layers 
@@ -376,5 +1454,4 @@ if __name__ == "__main__":
                                                                 preprocessed_sample, sample["class_id"],
                                                                 save_to_dir=output_dir,
                                                                 from_layer = 0, to_layer=model_entry["to_layer"],
-                                                                filename_prefix=model_name+"_layer_")
-                
+                                                                filename_prefix=model_name+"_layer_")                                
