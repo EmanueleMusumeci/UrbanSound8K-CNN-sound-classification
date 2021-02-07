@@ -6,10 +6,12 @@ from torchsummary import summary
 CNN model used in the paper https://arxiv.org/pdf/1608.04363v2.pdf
 '''
 class PaperConvolutionalNetwork(nn.Module):
-    def __init__(self, input_size):
+    def __init__(self, input_size, dropout_p = 0.5):
         super(PaperConvolutionalNetwork, self).__init__()
         
         self.in_channels = input_size[-1]
+
+        self.dropout_p = dropout_p
 
         self.convolutional_layers = nn.Sequential(
             #Conv 1:
@@ -31,11 +33,11 @@ class PaperConvolutionalNetwork(nn.Module):
 
         self.dense_layers = nn.Sequential(
         
-            nn.Dropout(0.5),
+            nn.Dropout(p = self.dropout_p),
             nn.Linear(2400, 64),
             nn.ReLU(),
 
-            nn.Dropout(0.5),
+            nn.Dropout(p = self.dropout_p),
             nn.Linear(64, 10)
         )
 

@@ -160,6 +160,14 @@ parser.add_argument('--batch_size',
                     type=int, default = 128,
                     help='Training batch size')
 
+parser.add_argument('--dropout_probability', 
+                    type=float, default = 0.5,
+                    help='MODEL. Dropout probability used for regularization')
+
+parser.add_argument('--weight_decay', 
+                    type=float, default = 1e-3,
+                    help='MODEL. Weight decay coefficient used in L2 regularization')
+
 
 args = parser.parse_args()
 
@@ -271,6 +279,7 @@ else:
 
 #Model
 USE_PAPER_CNN = not args.custom_cnn
+DROPOUT_PROBABILIY = not args.dropout_probability
 CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment, in_channels)
 FFN_INPUT_SIZE = 154
 
@@ -454,9 +463,9 @@ test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
 #Model instances
 if USE_PAPER_CNN:
-    model = PaperConvolutionalNetwork(CNN_INPUT_SIZE)
+    model = PaperConvolutionalNetwork(CNN_INPUT_SIZE, dropout_p=DROPOUT_PROBABILIY)
 else:
-    model = CustomConvolutionalNetwork(CNN_INPUT_SIZE)
+    model = CustomConvolutionalNetwork(CNN_INPUT_SIZE, dropout_p=DROPOUT_PROBABILIY)
 
 #Loss function
 loss_function = torch.nn.CrossEntropyLoss()
@@ -465,7 +474,7 @@ loss_function = torch.nn.CrossEntropyLoss()
 if isinstance(model, PaperConvolutionalNetwork):
     optimizer = optim.SGD([
                 {'params': model.convolutional_layers.parameters()},
-                {'params': model.dense_layers.parameters(), 'weight_decay': 1e-3}
+                {'params': model.dense_layers.parameters(), 'weight_decay': args.weight_decay}
             ], lr=1e-2)
 else:
     optimizer = torch.optim.Adam(model.parameters())

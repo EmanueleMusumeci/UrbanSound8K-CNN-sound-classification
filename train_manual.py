@@ -67,7 +67,7 @@ elif COMPUTE_DELTA_DELTAS:
 
 
 #These parameters control whether we apply image augmentation techniques directly on the spectrograms 
-APPLY_IMAGE_SHIFT = True
+APPLY_IMAGE_SHIFT = False
 APPLY_IMAGE_NOISE = False
 
 
@@ -102,6 +102,10 @@ else:
 
 #Model
 USE_PAPER_CNN = False
+DROPOUT_PROBABILIY = 0.5
+#DROPOUT_PROBABILIY = 0
+#WEIGHT_DECAY = 1e-3
+WEIGHT_DECAY = 0
 CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment, in_channels)
 FFN_INPUT_SIZE = 154
 
@@ -232,6 +236,7 @@ test_dataset = SoundDatasetFold(DATASET_DIR, DATASET_NAME,
                             silent_clip_cutoff_dB = None
                             )
 
+
 #Dataset statistics
 num_classes = train_dataset.get_num_classes()
 print("Number of classes: ", train_dataset.get_num_classes())
@@ -245,9 +250,9 @@ test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
 #Model instances
 if USE_PAPER_CNN:
-    model = PaperConvolutionalNetwork(CNN_INPUT_SIZE)
+    model = PaperConvolutionalNetwork(CNN_INPUT_SIZE, dropout_p = DROPOUT_PROBABILIY)
 else:
-    model = CustomConvolutionalNetwork(CNN_INPUT_SIZE)
+    model = CustomConvolutionalNetwork(CNN_INPUT_SIZE, dropout_p = DROPOUT_PROBABILIY)
 
 
 #Loss function
@@ -258,7 +263,7 @@ loss_function = torch.nn.CrossEntropyLoss()
 if isinstance(model, PaperConvolutionalNetwork):
     optimizer = optim.SGD([
                 {'params': model.convolutional_layers.parameters()},
-                {'params': model.dense_layers.parameters(), 'weight_decay': 1e-3}
+                {'params': model.dense_layers.parameters(), 'weight_decay': WEIGHT_DECAY}
             ], lr=1e-2)
 else:
     optimizer = torch.optim.Adam(model.parameters())

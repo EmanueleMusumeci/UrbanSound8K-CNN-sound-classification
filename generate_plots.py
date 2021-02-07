@@ -1265,7 +1265,8 @@ if __name__ == "__main__":
                 model_names = {
                                 "Base" : "(Paper) Base", 
                                 "DynamicRangeCompression" : "(Paper) DRC", 
-                                "Base_IMAGE_SHIFT_NOISE_custom" : "(Custom) Image all",
+                                "Base_IMAGE_NOISE_custom" : "(Custom) Image noise",
+                                #"Base_IMAGE_NOISE_custom" : "(Custom) DRC + Image noise",
                               }
                 plot_train_test_accuracy_delta(model_dir, model_names, 
                                                 metrics = {"accuracy" : "Accuracy"},
