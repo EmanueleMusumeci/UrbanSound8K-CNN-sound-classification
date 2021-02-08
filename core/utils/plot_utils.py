@@ -840,7 +840,7 @@ def plot_sound_spectrogram(sound, compare_with_sound = None, preprocessing_name 
     subplot_title = "Preprocessed"
     plt.title(subplot_title)
     
-    librosa.display.specshow(sound, hop_length = hop_length, x_axis="time", y_axis=y_axis)
+    librosa.display.specshow(compare_with_sound, hop_length = hop_length, x_axis="time", y_axis=y_axis)
 
     plt.xlabel('Time [sec]', size = 12)
     plt.subplots_adjust(top = 0.82, hspace= 0.4)

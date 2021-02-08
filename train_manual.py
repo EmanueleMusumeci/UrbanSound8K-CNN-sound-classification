@@ -104,8 +104,8 @@ else:
 USE_PAPER_CNN = False
 DROPOUT_PROBABILIY = 0.5
 #DROPOUT_PROBABILIY = 0
-#WEIGHT_DECAY = 1e-3
-WEIGHT_DECAY = 0
+WEIGHT_DECAY = 1e-3
+#WEIGHT_DECAY = 0
 CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment, in_channels)
 FFN_INPUT_SIZE = 154
 
