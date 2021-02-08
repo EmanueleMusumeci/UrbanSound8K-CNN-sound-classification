@@ -35,18 +35,18 @@ if __name__ == "__main__":
 
         plot_color = "blue"
         
-        SINGLE_PLOTS = True 
-        SINGLE_TRAIN_TEST_PLOTS = True
-        CONFUSION_MATRIX = True
-        COMPARATIVE_PLOTS = True
-        GRADIENT_FLOW = True
-        BEST_SCORES = True
-        PREPROCESSING_PERFORMANCE_DELTA_COMPARISONS = True
-        PLOT_TRAIN_TEST_ACCURACY_DELTAS = True
-        PLOT_CLASS_DISTRIBUTION = True
+        SINGLE_PLOTS = False 
+        SINGLE_TRAIN_TEST_PLOTS = False
+        CONFUSION_MATRIX = False
+        COMPARATIVE_PLOTS = False
+        GRADIENT_FLOW = False
+        BEST_SCORES = False
+        PREPROCESSING_PERFORMANCE_DELTA_COMPARISONS = False
+        PLOT_TRAIN_TEST_ACCURACY_DELTAS = False
+        PLOT_CLASS_DISTRIBUTION = False
         COLLECT_AND_PREPROCESS_SAMPLES = True
         SHOW_PREPROCESSING = True
-        SALIENCY_MAPS = True
+        SALIENCY_MAPS = False
 
         ################
         # SINGLE PLOTS 
