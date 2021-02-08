@@ -207,7 +207,7 @@ def plot_scores(model_name, model_dir, tasks={"audio_classification" : "Audio cl
     if not os.path.exists(plot_dir):
       os.makedirs(plot_dir)
     for k,plot in plots.items():
-      path = os.path.join(plot_dir, model_name+" - "+k)+".png"
+      path = os.path.join(plot_dir, model_name.replace(" ","_")+"_"+k)+".png"
       plot.savefig(path)
   
   if plot_dir is None or show:
@@ -280,7 +280,7 @@ def plot_confusion_matrix(model_name, model_dir,
     if not os.path.exists(plot_dir):
       os.makedirs(plot_dir)
 
-    path = os.path.join(plot_dir, model_name+"_Confusion_matrix")+".png"
+    path = os.path.join(plot_dir, model_name.replace(" ","_")+"_Confusion_matrix")+".png"
     fig.savefig(path)
     
     if plot_dir is None or show:
@@ -394,7 +394,7 @@ def plot_scores_from_multiple_dirs(
     if not os.path.exists(plot_dir):
       os.makedirs(plot_dir)
     for k,plot in plots.items():
-      path = os.path.join(plot_dir, model_name+" - Train_Test comparison - "+k)+".png"
+      path = os.path.join(plot_dir, model_name.replace(" ","_")+"_Train_Test_comparison_"+k)+".png"
       plot.savefig(path)
 
   if plot_dir is None or show:
@@ -491,7 +491,7 @@ def comparative_plots(model_names, model_dir,
     if not os.path.exists(plot_dir):
       os.makedirs(plot_dir)
     for k,plot in plots.items():
-      path = os.path.join(plot_dir, title_prefix+" - "+k)+".png"
+      path = os.path.join(plot_dir, title_prefix.replace(" ","_")+"_"+k)+".png"
       plot.savefig(path)
   
   if plot_dir is None or show:
@@ -626,7 +626,7 @@ def show_image_preprocessing(transformations, image, title_prefix="", progressiv
             os.makedirs(save_to_dir)
     for transformation_name, image in images.items():
         print(transformation_name)
-        path = os.path.join(save_to_dir,title_prefix+" - Preprocessed image - "+transformation_name)+".png"
+        path = os.path.join(save_to_dir,title_prefix.replace(" ","_")+"_Preprocessed_image_"+transformation_name.replace(" ","_"))+".png"
         image.savefig(path)
 
 def plot_class_distributions(distributions, plot_dir=None):
@@ -772,7 +772,7 @@ def plot_sound_waves(sound, compare_with_sound = None, preprocessing_name = None
     plt.subplots_adjust(top = 0.82, hspace= 0.4)
   
   if save_to_dir is not None:
-    path = os.path.join(save_to_dir,plot_title.replace("\n", " ").replace(":"," ")+".png")
+    path = os.path.join(save_to_dir,plot_title.replace("\n", " ").replace(":"," ").replace(" ","_")+".png")
     fig.savefig(path)
     
   if show: 
@@ -848,7 +848,7 @@ def plot_sound_spectrogram(sound, compare_with_sound = None, preprocessing_name 
     plt.subplots_adjust(top = 0.82, hspace= 0.4)
   
   if save_to_dir is not None:
-    path = os.path.join(save_to_dir,plot_title.replace("\n", " ").replace(":"," ")+".png")
+    path = os.path.join(save_to_dir,plot_title.replace("\n", " ").replace(":"," ").replace(" ","_")+".png")
     fig.savefig(path)
     
   if show: 
@@ -913,7 +913,7 @@ def plot_periodogram(sound, compare_with_sound = None, preprocessing_name = None
     plt.subplots_adjust(top = 0.82, hspace= 0.4)
   
   if save_to_dir is not None:
-    path = os.path.join(save_to_dir,plot_title.replace("\n", " ").replace(":"," ")+".png")
+    path = os.path.join(save_to_dir,plot_title.replace("\n", " ").replace(":"," ").replace(" ","_")+".png")
     plt.savefig(path)
     
   if show: 
@@ -1138,7 +1138,7 @@ def delta_plot(data, axis_labels, x_label, y_label, horizontal=True, metric="acc
         if not os.path.exists(plot_dir):
             os.makedirs(plot_dir)
 
-        path = os.path.join(plot_dir,title_prefix+"_delta_plot")+".png"
+        path = os.path.join(plot_dir,title_prefix.replace(" ","_")+"_delta_plot")+".png"
         g.savefig(path)
         
     if show:
