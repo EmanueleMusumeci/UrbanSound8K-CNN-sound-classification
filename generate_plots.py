@@ -357,6 +357,15 @@ if __name__ == "__main__":
                                 plot_dir = plot_dir
                                 )
                 
+                plot_scores("DynamicRangeCompression_NOISE_custom", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Custom model - DRC + spectrogram gaussian noise augmentation",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
                             
                 
                 
@@ -674,7 +683,39 @@ if __name__ == "__main__":
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
+                                                
+                plot_scores_from_multiple_dirs("DynamicRangeCompression_NOISE_custom", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Custom model - DRC + spectrogram gaussian noise augmentation",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+
+                '''                                
+                plot_scores_from_multiple_dirs("Base_custom_no_regularization", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Custom model - No augmentation - No Dropout",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
                 
+                plot_scores_from_multiple_dirs("Base_custom_with_dropout_and_weight_decay_custom", model_dir, 
+                                                scores_dirs, tasks={"audio_classification":"Audio classification"},
+                                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                                from_epoch=0, to_epoch=49, epochs_skip=0, 
+                                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                                title_prefix = "Custom model - No augmentation - Dropout - Weight decay",
+                                                colors = colors,
+                                                plot_dir = plot_dir
+                                                )
+                '''
+
         ####################
         # CONFUSION MATRIX #
         ####################
@@ -768,6 +809,13 @@ if __name__ == "__main__":
                                         plot_dir = plot_dir
                                         )
                 
+                plot_confusion_matrix("DynamicRangeCompression_NOISE_custom", model_dir, 
+                                        tasks={"audio_classification":"Audio classification"},
+                                         
+                                        title_prefix = "Custom Model - Confusion Matrix DRC + Image Noise",
+                                        scores_on_train=False,
+                                        plot_dir = plot_dir
+                                        )
 
         #####################
         # Comparative plots #
@@ -900,6 +948,7 @@ if __name__ == "__main__":
                                 "Base" : "Paper model - No augmentation", 
                                 "DynamicRangeCompression" : "Best of the audio augmentations (Dynamic Range Compression)", 
                                 "Base_IMAGE_SHIFT_NOISE" : "Best of the image augmentations (SHIFT + NOISE)",
+                                "DynamicRangeCompression_NOISE_custom" : "Best augmentations together (Custom, DRC + GAUSSIAN NOISE)",
                               }
                 comparative_plots(model_names, model_dir,
                                 tasks={"audio_classification":"Audio classification"},
@@ -910,6 +959,24 @@ if __name__ == "__main__":
                                 plot_dir = plot_dir
                                 )
                 
+                #Confronto tra Base custom senza dropout ne weight decay, con dropout, con dropout e weight decay
+                
+                '''
+                model_names = {
+                                "Base_custom_no_regularization" : "Custom model - No dropout - No weight decay", 
+                                "Base_custom" : "Custom model - Dropout - No weight decay", 
+                                "Base_custom_with_dropout_and_weight_decay_custom" : "Custom model - Dropout - Weight decay",
+                              }
+                comparative_plots(model_names, model_dir,
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=39, epochs_skip=0, 
+                                xticks_step=3, increase_epoch_labels_by_one=True,
+                                title_prefix = "Paper model comparison of the best augmentations",
+                                plot_dir = plot_dir
+                                )
+                '''
+
         #################
         # GRADIENT FLOW #
         #################
@@ -969,6 +1036,10 @@ if __name__ == "__main__":
                         "TimeStretch_delta_delta",
                         "DynamicRangeCompression_delta_delta",
                         "BackgroundNoise_delta_delta"
+
+                        "DynamicRangeCompression_NOISE_custom",
+                        "Base_custom_no_regularization",
+                        "Base_custom_with_dropout_and_weight_decay_custom"
                         }
 
                 with open(os.path.join(plot_dir,"best_scores.txt"), "w") as f:
@@ -1275,7 +1346,22 @@ if __name__ == "__main__":
                                                 plot_dir = plot_dir,
                                                 title_prefix = "Best models - Train vs Test accuracy difference"
                                                 )
-                
+
+                # 8) Delta su regolarizzazione
+                '''
+                model_names = {
+                                "Base_custom_no_regularization" : "(Custom) Base (no regulariz.)", 
+                                "Base_custom" : "(Custom) Base - Dropout", 
+                                "Base_custom_with_dropout_and_weight_decay_custom" : "(Custom) Base - Dropout + Weight dec.",
+                              }
+                plot_train_test_accuracy_delta(model_dir, model_names, 
+                                                metrics = {"accuracy" : "Accuracy"},
+                                                tasks = {"audio_classification" : "Audio classification"},
+                                                show = False,
+                                                plot_dir = plot_dir,
+                                                title_prefix = "Base custom - Impact of regularization on overfitting"
+                                                )
+                '''
 
         #############################
         #  PLOT CLASS DISTRIBUTION  #

@@ -745,6 +745,7 @@ def plot_sound_waves(sound, compare_with_sound = None, preprocessing_name = None
       plt.subplot(2,1,1)
     plt.title("Original")
 
+  plt.ylim([-1,1])
   librosa.display.waveplot(np.array(sound),sr=sr, x_axis="time")
   
   plt.ylabel('Magnitude (norm)', size = 12)
@@ -764,6 +765,7 @@ def plot_sound_waves(sound, compare_with_sound = None, preprocessing_name = None
     subplot_title = "Preprocessed"
     plt.title(subplot_title)
     
+    plt.ylim([-1,1])
     librosa.display.waveplot(np.array(compare_with_sound),sr=sr, x_axis = "time")
 
     plt.xlabel('Time [sec]', size = 12)
