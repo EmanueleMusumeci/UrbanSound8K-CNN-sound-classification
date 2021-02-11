@@ -35,18 +35,20 @@ if __name__ == "__main__":
 
         plot_color = "blue"
         
-        SINGLE_PLOTS = False 
+        SINGLE_PLOTS = False
         SINGLE_TRAIN_TEST_PLOTS = False
         CONFUSION_MATRIX = False
         COMPARATIVE_PLOTS = False
         GRADIENT_FLOW = False
         BEST_SCORES = False
-        PREPROCESSING_PERFORMANCE_DELTA_COMPARISONS = False
+        PREPROCESSING_PERFORMANCE_DELTA_COMPARISONS = True
         PLOT_TRAIN_TEST_ACCURACY_DELTAS = False
         PLOT_CLASS_DISTRIBUTION = False
-        COLLECT_AND_PREPROCESS_SAMPLES = True
-        SHOW_PREPROCESSING = True
+        COLLECT_AND_PREPROCESS_SAMPLES = False
+        SHOW_PREPROCESSING = False
         SALIENCY_MAPS = False
+
+        
 
         ################
         # SINGLE PLOTS 
@@ -59,7 +61,8 @@ if __name__ == "__main__":
                 #TODO: All models
                 plot_scores("Base", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
+                               
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
                                 title_prefix = "Paper model",
@@ -69,7 +72,7 @@ if __name__ == "__main__":
 
                 plot_scores("Base_custom", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
                                 title_prefix = "Custom model",
@@ -77,6 +80,27 @@ if __name__ == "__main__":
                                 plot_dir = plot_dir
                                 )
                 
+                plot_scores("NO_REGULARIZATION", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Base - only drop-out 0.5",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                plot_scores("NO_REGULARIZATION_DROP_0", model_dir, 
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
+                                from_epoch=0, to_epoch=49, epochs_skip=0,
+                                xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
+                                title_prefix = "Base - no regularization",
+                                color = plot_color,
+                                plot_dir = plot_dir
+                                )
+                
+                """
                 plot_scores("BackgroundNoise", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
@@ -366,7 +390,7 @@ if __name__ == "__main__":
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
-                            
+                """
                 
                 
 
@@ -788,26 +812,27 @@ if __name__ == "__main__":
                 plot_confusion_matrix("Base_IMAGE_SHIFT_custom", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                          
-                                        title_prefix = "Custom Model - Confusion Matrix Image Shift",
+                                        title_prefix = "Base Model - Confusion Matrix Image Shift",
                                         scores_on_train=False,
                                         plot_dir = plot_dir
                                         )
-                
+
                 plot_confusion_matrix("Base_IMAGE_SHIFT_NOISE", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                          
-                                        title_prefix = "Paper Model - Confusion Matrix Image Shift",
+                                        title_prefix = "Base Model - Confusion Matrix Image Shift Noise",
                                         scores_on_train=False,
                                         plot_dir = plot_dir
                                         )
-                
+
                 plot_confusion_matrix("Base_IMAGE_SHIFT_NOISE_custom", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                          
-                                        title_prefix = "Custom Model - Confusion Matrix Image Shift",
+                                        title_prefix = "Custom Model - Confusion Matrix Image Shift Noise",
                                         scores_on_train=False,
                                         plot_dir = plot_dir
                                         )
+        
                 
                 plot_confusion_matrix("DynamicRangeCompression_NOISE_custom", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
@@ -821,6 +846,19 @@ if __name__ == "__main__":
         # Comparative plots #
         #####################
         if COMPARATIVE_PLOTS:
+                #Confronto tra i due modelli base
+                model_names = {
+                                "Base" : "Paper model - No augmentation", 
+                                "Base_custom" : "Custom model - No augmentation", 
+                              }
+                comparative_plots(model_names, model_dir,
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=39, epochs_skip=0, 
+                                xticks_step=3, increase_epoch_labels_by_one=True,
+                                title_prefix = "Comparison between SB-CNN and our custom model",
+                                plot_dir = plot_dir
+                                )
                 
                 #Confronto tra tutte le audio augmentation sul modello paper
                 model_names = {
@@ -1035,11 +1073,12 @@ if __name__ == "__main__":
                         "PitchShift_PS2_delta_delta",
                         "TimeStretch_delta_delta",
                         "DynamicRangeCompression_delta_delta",
-                        "BackgroundNoise_delta_delta"
+                        "BackgroundNoise_delta_delta",
 
                         "DynamicRangeCompression_NOISE_custom",
-                        "Base_custom_no_regularization",
-                        "Base_custom_with_dropout_and_weight_decay_custom"
+                        "NO_REGULARIZATION",
+                        "NO_REGULARIZATION_DROP_0"
+                        #"Base_custom_with_dropout_and_weight_decay_custom"
                         }
 
                 with open(os.path.join(plot_dir,"best_scores.txt"), "w") as f:
@@ -1158,7 +1197,7 @@ if __name__ == "__main__":
                                             "TimeStretch" : "TS"
                                             }
                 plot_delta_on_metric(model_dir, "accuracy", dict_augmentation_to_test, 
-                                    "Base", ["Δ Classification Accuracy", "class"],
+                                    "Base", ["Δ Classification Accuracy", "augmentations"],
                                     "value", "class", horizontal=False,title_prefix = "Paper model - Audio augmentation accuracy difference", plot_dir="plots")
 
                 plot_delta_on_metric(model_dir, "f1",dict_augmentation_to_test,
@@ -1175,7 +1214,7 @@ if __name__ == "__main__":
                                             "TimeStretch_custom" : "TS"
                                             }
                 plot_delta_on_metric(model_dir, "accuracy", dict_augmentation_to_test, 
-                                    "Base_custom", ["Δ Classification Accuracy", "class"],
+                                    "Base_custom", ["Δ Classification Accuracy", "augmentations"],
                                     "value", "class", horizontal=False,title_prefix = "Custom model - Audio augmentation accuracy difference", plot_dir="plots")
                 
                 plot_delta_on_metric(model_dir, "f1",dict_augmentation_to_test,
@@ -1192,7 +1231,7 @@ if __name__ == "__main__":
                                             "TimeStretch_delta" : "TS"
                                             }
                 plot_delta_on_metric(model_dir, "accuracy", dict_augmentation_to_test, 
-                                    "Base_delta", ["Δ Classification Accuracy", "class"],
+                                    "Base_delta", ["Δ Classification Accuracy", "augmentations"],
                                     "value", "class", horizontal=False,title_prefix = "Paper model (delta) - Audio augmentation accuracy difference", plot_dir="plots")
                                     
                 plot_delta_on_metric(model_dir, "f1",dict_augmentation_to_test,
@@ -1210,7 +1249,7 @@ if __name__ == "__main__":
                                             "TimeStretch_delta_delta" : "TS"
                                             }
                 plot_delta_on_metric(model_dir, "accuracy", dict_augmentation_to_test, 
-                                    "Base_delta_delta", ["Δ Classification Accuracy", "class"],
+                                    "Base_delta_delta", ["Δ Classification Accuracy", "augmentations"],
                                     "value", "class", horizontal=False,title_prefix = "Paper model (Delta-delta) - Audio augmentation accuracy difference", plot_dir="plots")
                 
                 plot_delta_on_metric(model_dir, "f1",dict_augmentation_to_test,
@@ -1223,7 +1262,7 @@ if __name__ == "__main__":
         # PLOT TRAIN/TEST ACCURACY DELTAS #
         ###################################
         if PLOT_TRAIN_TEST_ACCURACY_DELTAS:
-                
+                """
                 # 1) Base paper con tutte augmentation
                 model_names = {
                                 "Base" : "Base", 
@@ -1240,6 +1279,7 @@ if __name__ == "__main__":
                                                 plot_dir = plot_dir,
                                                 title_prefix = "Paper model - Train vs Test accuracy difference"
                                                 )
+                """
                 # 2) Base custom con tutte augmentation
                 model_names = {
                                 "Base_custom" : "Base", 
