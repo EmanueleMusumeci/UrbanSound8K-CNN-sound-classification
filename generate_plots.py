@@ -59,7 +59,7 @@ if __name__ == "__main__":
                 #TODO: All models
                 plot_scores("Base", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
                                 title_prefix = "Paper model",
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
                 plot_scores("Base_custom", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
                                 title_prefix = "Custom model",
@@ -694,27 +694,27 @@ if __name__ == "__main__":
                                                 plot_dir = plot_dir
                                                 )
 
-                '''                                
-                plot_scores_from_multiple_dirs("Base_custom_no_regularization", model_dir, 
+                                            
+                plot_scores_from_multiple_dirs("Base_only_dropout", model_dir, 
                                                 scores_dirs, tasks={"audio_classification":"Audio classification"},
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Custom model - No augmentation - No Dropout",
+                                                title_prefix = "Custom model - No augmentation - Only Dropout",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
                 
-                plot_scores_from_multiple_dirs("Base_custom_with_dropout_and_weight_decay_custom", model_dir, 
+                plot_scores_from_multiple_dirs("Base_no_regularization", model_dir, 
                                                 scores_dirs, tasks={"audio_classification":"Audio classification"},
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Custom model - No augmentation - Dropout - Weight decay",
+                                                title_prefix = "Custom model - No augmentation - No regularization",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
-                '''
+                
 
         ####################
         # CONFUSION MATRIX #
@@ -822,6 +822,20 @@ if __name__ == "__main__":
         #####################
         if COMPARATIVE_PLOTS:
                 
+                #Confronto tra i due modelli base
+                model_names = {
+                                "Base" : "Paper model - No augmentation", 
+                                "Base custom" : "Custom model - No augmentation", 
+                              }
+                comparative_plots(model_names, model_dir,
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=39, epochs_skip=0, 
+                                xticks_step=3, increase_epoch_labels_by_one=True,
+                                title_prefix = "Comparison between SB-CNN and our custom model",
+                                plot_dir = plot_dir
+                                ) 
+
                 #Confronto tra tutte le audio augmentation sul modello paper
                 model_names = {
                                 "Base" : "Paper model - No augmentation", 
@@ -961,11 +975,11 @@ if __name__ == "__main__":
                 
                 #Confronto tra Base custom senza dropout ne weight decay, con dropout, con dropout e weight decay
                 
-                '''
+        
                 model_names = {
-                                "Base_custom_no_regularization" : "Custom model - No dropout - No weight decay", 
-                                "Base_custom" : "Custom model - Dropout - No weight decay", 
-                                "Base_custom_with_dropout_and_weight_decay_custom" : "Custom model - Dropout - Weight decay",
+                                "Base_no_regularization" : "Custom model - No regularization", 
+                                "Base_only_dropout" : "Custom model - Only Dropout", 
+                                "Base" : "Custom model - With regularization",
                               }
                 comparative_plots(model_names, model_dir,
                                 tasks={"audio_classification":"Audio classification"},
@@ -975,7 +989,7 @@ if __name__ == "__main__":
                                 title_prefix = "Paper model comparison of the best augmentations",
                                 plot_dir = plot_dir
                                 )
-                '''
+                
 
         #################
         # GRADIENT FLOW #
@@ -1035,11 +1049,11 @@ if __name__ == "__main__":
                         "PitchShift_PS2_delta_delta",
                         "TimeStretch_delta_delta",
                         "DynamicRangeCompression_delta_delta",
-                        "BackgroundNoise_delta_delta"
+                        "BackgroundNoise_delta_delta",
 
                         "DynamicRangeCompression_NOISE_custom",
-                        "Base_custom_no_regularization",
-                        "Base_custom_with_dropout_and_weight_decay_custom"
+                        "Base_no_regularization",
+                        "Base_only_dropout"
                         }
 
                 with open(os.path.join(plot_dir,"best_scores.txt"), "w") as f:
@@ -1348,11 +1362,11 @@ if __name__ == "__main__":
                                                 )
 
                 # 8) Delta su regolarizzazione
-                '''
+                
                 model_names = {
-                                "Base_custom_no_regularization" : "(Custom) Base (no regulariz.)", 
-                                "Base_custom" : "(Custom) Base - Dropout", 
-                                "Base_custom_with_dropout_and_weight_decay_custom" : "(Custom) Base - Dropout + Weight dec.",
+                                "Base_no_regularization" : "(Custom) Base (no regulariz.)", 
+                                "Base_only_dropout" : "(Custom) Base - Dropout", 
+                                "Base" : "(Custom) Base - Dropout + Weight dec.",
                               }
                 plot_train_test_accuracy_delta(model_dir, model_names, 
                                                 metrics = {"accuracy" : "Accuracy"},
@@ -1361,7 +1375,7 @@ if __name__ == "__main__":
                                                 plot_dir = plot_dir,
                                                 title_prefix = "Base custom - Impact of regularization on overfitting"
                                                 )
-                '''
+                
 
         #############################
         #  PLOT CLASS DISTRIBUTION  #
