@@ -35,18 +35,18 @@ if __name__ == "__main__":
 
         plot_color = "blue"
         
-        SINGLE_PLOTS = True 
-        SINGLE_TRAIN_TEST_PLOTS = True
-        CONFUSION_MATRIX = True
-        COMPARATIVE_PLOTS = True
-        GRADIENT_FLOW = True
-        BEST_SCORES = True
+        SINGLE_PLOTS = False
+        SINGLE_TRAIN_TEST_PLOTS = False
+        CONFUSION_MATRIX = False
+        COMPARATIVE_PLOTS = False
+        GRADIENT_FLOW = False
+        BEST_SCORES = False
         PREPROCESSING_PERFORMANCE_DELTA_COMPARISONS = True
-        PLOT_TRAIN_TEST_ACCURACY_DELTAS = True
-        PLOT_CLASS_DISTRIBUTION = True
-        COLLECT_AND_PREPROCESS_SAMPLES = True
-        SHOW_PREPROCESSING = True
-        SALIENCY_MAPS = True
+        PLOT_TRAIN_TEST_ACCURACY_DELTAS = False
+        PLOT_CLASS_DISTRIBUTION = False
+        COLLECT_AND_PREPROCESS_SAMPLES = False
+        SHOW_PREPROCESSING = False
+        SALIENCY_MAPS = False
 
         ################
         # SINGLE PLOTS 
@@ -62,7 +62,7 @@ if __name__ == "__main__":
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model",
+                                title_prefix = "SB-CNN",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
@@ -72,301 +72,301 @@ if __name__ == "__main__":
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Custom model",
+                                title_prefix = "Custom CNN",
                                 color = plot_color,
                                 plot_dir = plot_dir
-                                )
+                                )                
                 
                 plot_scores("BackgroundNoise", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model - BN",
+                                title_prefix = "SB-CNN - Background Noise",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
 
                 plot_scores("BackgroundNoise_custom", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Custom model - BN",
+                                title_prefix = "Custom CNN - Background Noise",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("DynamicRangeCompression", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model - DRC",
+                                title_prefix = "SB-CNN - DRC",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
 
                 plot_scores("DynamicRangeCompression_custom", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Custom model - DRC",
+                                title_prefix = "Custom CNN - DRC",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("PitchShift_PS1", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model - PS1",
+                                title_prefix = "SB-CNN - PS1",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
 
                 plot_scores("PitchShift_PS1_custom", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Custom model - PS1",
+                                title_prefix = "Custom CNN - PS1",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
 
                 plot_scores("PitchShift_PS2", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model - PS2",
+                                title_prefix = "SB-CNN - PS2",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
 
                 plot_scores("PitchShift_PS2_custom", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Custom model - PS2",
+                                title_prefix = "Custom CNN - PS2",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("TimeStretch", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model - TS",
+                                title_prefix = "SB-CNN - TS",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
 
                 plot_scores("TimeStretch_custom", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Custom model - TS",
+                                title_prefix = "Custom CNN - TS",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("Base_delta", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model with delta features",
+                                title_prefix = "SB-CNN with delta features",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("BackgroundNoise_delta", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model with BG and delta features",
+                                title_prefix = "SB-CNN with BG and delta features",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
 
                 plot_scores("DynamicRangeCompression_delta", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model with DRC and delta features",
+                                title_prefix = "SB-CNN with DRC and delta features",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("PitchShift_PS1_delta", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model with PS1 and delta features",
+                                title_prefix = "SB-CNN with PS1 and delta features",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("PitchShift_PS2_delta", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model with PS1 and delta features",
+                                title_prefix = "SB-CNN with PS1 and delta features",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("TimeStretch_delta", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model with TS and delta features",
+                                title_prefix = "SB-CNN with TS and delta features",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
 
                 plot_scores("Base_delta_delta", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model with delta-delta features",
+                                title_prefix = "SB-CNN with delta-delta features",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("BackgroundNoise_delta_delta", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model with BN and delta-delta features",
+                                title_prefix = "SB-CNN with Background Noise and delta-delta features",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
 
                 plot_scores("DynamicRangeCompression_delta_delta", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model with DRC and delta-delta features",
+                                title_prefix = "SB-CNN with DRC and delta-delta features",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("PitchShift_PS1_delta_delta", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model with PS1 and delta-delta features",
+                                title_prefix = "SB-CNN with PS1 and delta-delta features",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("PitchShift_PS2_delta_delta", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model with PS1 and delta-delta features",
+                                title_prefix = "SB-CNN with PS1 and delta-delta features",
                                 color = plot_color,
                                 plot_dir = plot_dir
                             )
                 
                 plot_scores("TimeStretch_delta_delta", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model with TS and delta-delta features",
+                                title_prefix = "SB-CNN with TS and delta-delta features",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("Base_IMAGE_SHIFT_custom", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Custom model - Random spectrogram image right shift augmentation",
+                                title_prefix = "Custom CNN with spectrogram right shift",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("Base_IMAGE_NOISE_custom", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Custom model - Random spectrogram image noise augmentation",
+                                title_prefix = "Custom CNN with spectrogram gaussian noise",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("Base_IMAGE_SHIFT_NOISE_custom", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Custom model - Random spectrogram image right shift and noise augmentation",
+                                title_prefix = "Custom CNN with spectrogram right shift and gaussian noise",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("Base_IMAGE_SHIFT", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = " Paper model - Random spectrogram image right shift augmentation",
+                                title_prefix = " SB-CNN with spectrogram right shift",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("Base_IMAGE_NOISE", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model - Random spectrogram image noise augmentation",
+                                title_prefix = "SB-CNN with spectrogram gaussian noise",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("Base_IMAGE_SHIFT_NOISE", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Paper model - Image Random Noise and Shift Augmentation",
+                                title_prefix = "SB-CNN - Image Random Noise and Shift Augmentation",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
                 
                 plot_scores("DynamicRangeCompression_NOISE_custom", model_dir, 
                                 tasks={"audio_classification":"Audio classification"},
-                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"], "Loss":["loss"]},
                                 from_epoch=0, to_epoch=49, epochs_skip=0,
                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                title_prefix = "Custom model - DRC + spectrogram gaussian noise augmentation",
+                                title_prefix = "Custom CNN - DRC + spectrogram gaussian noise augmentation",
                                 color = plot_color,
                                 plot_dir = plot_dir
                                 )
-                            
+                
                 
                 
 
@@ -389,7 +389,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model ",
+                                                title_prefix = "SB-CNN ",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                               )
@@ -399,7 +399,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Custom model",
+                                                title_prefix = "Custom CNN",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                               )
@@ -409,7 +409,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model - Background Noise",
+                                                title_prefix = "SB-CNN - Background Noise",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                               )
@@ -419,7 +419,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Custom model - BG",
+                                                title_prefix = "Custom CNN - BG",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                               )
@@ -429,7 +429,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model - DRC",
+                                                title_prefix = "SB-CNN - DRC",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -439,7 +439,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Custom model - Dynamic Range Compression",
+                                                title_prefix = "Custom CNN - Dynamic Range Compression",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -449,7 +449,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model - Pitch Shift (shorter range)",
+                                                title_prefix = "SB-CNN - Pitch Shift (shorter range)",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -459,7 +459,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Custom model - Pitch Shift (shorter range)",
+                                                title_prefix = "Custom CNN - Pitch Shift (shorter range)",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -469,7 +469,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model - Pitch Shift (wider range)",
+                                                title_prefix = "SB-CNN - Pitch Shift (wider range)",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -479,7 +479,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Custom model - Pitch Shift (wider range)",
+                                                title_prefix = "Custom CNN - Pitch Shift (wider range)",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -489,7 +489,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model - Time Stretch",
+                                                title_prefix = "SB-CNN - Time Stretch",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -499,7 +499,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Custom model - Time Stretch",
+                                                title_prefix = "Custom CNN - Time Stretch",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -509,7 +509,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model with delta features",
+                                                title_prefix = "SB-CNN with delta features",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -519,7 +519,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model with Background Noise and delta features",
+                                                title_prefix = "SB-CNN with Background Noise and delta features",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -529,7 +529,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model with Dynamic Range Compression and delta features",
+                                                title_prefix = "SB-CNN with Dynamic Range Compression and delta features",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -539,7 +539,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model with Pitch Shift (shorter range) and delta-delta features",
+                                                title_prefix = "SB-CNN with Pitch Shift (shorter range) and delta-delta features",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -549,7 +549,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model with Pitch Shift (longer range) and delta-delta features",
+                                                title_prefix = "SB-CNN with Pitch Shift (longer range) and delta-delta features",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -559,7 +559,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model with Time Stretch and delta-delta features",
+                                                title_prefix = "SB-CNN with Time Stretch and delta-delta features",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -569,7 +569,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model with delta-delta features",
+                                                title_prefix = "SB-CNN with delta-delta features",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -579,7 +579,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model with Background Noise and delta-delta features",
+                                                title_prefix = "SB-CNN with Background Noise and delta-delta features",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -589,7 +589,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model with Dynamic Range Compression and delta-delta features",
+                                                title_prefix = "SB-CNN with Dynamic Range Compression and delta-delta features",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -599,7 +599,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model with Pitch Shift (shorter range) and delta-delta features",
+                                                title_prefix = "SB-CNN with Pitch Shift (shorter range) and delta-delta features",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -609,7 +609,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model with Pitch Shift (wider range) and delta-delta features",
+                                                title_prefix = "SB-CNN with Pitch Shift (wider range) and delta-delta features",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -619,7 +619,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model with Time Stretch and delta-delta features",
+                                                title_prefix = "SB-CNN with Time Stretch and delta-delta features",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -629,7 +629,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Custom model - Random spectrogram image right shift augmentation",
+                                                title_prefix = "Custom CNN with spectrogram right shift",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -639,7 +639,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Custom model - Random spectrogram image noise augmentation",
+                                                title_prefix = "Custom CNN with spectrogram gaussian noise",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -649,7 +649,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Custom model - Random spectrogram image right shift and noise augmentation",
+                                                title_prefix = "Custom CNN with spectrogram right shift and gaussian noise",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -659,7 +659,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model - Random spectrogram image right shift augmentation",
+                                                title_prefix = "SB-CNN with spectrogram right shift",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -669,7 +669,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model - Random spectrogram image noise augmentation",
+                                                title_prefix = "SB-CNN with spectrogram gaussian noise",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -679,7 +679,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Paper model - Random spectrogram image right shift and noise augmentation",
+                                                title_prefix = "SB-CNN with spectrogram right shift and gaussian noise",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -689,7 +689,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Custom model - DRC + spectrogram gaussian noise augmentation",
+                                                title_prefix = "Custom CNN - DRC + spectrogram gaussian noise augmentation",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -700,7 +700,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Custom model - No augmentation - Only Dropout",
+                                                title_prefix = "Custom CNN - No augmentation - Only Dropout",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -710,7 +710,7 @@ if __name__ == "__main__":
                                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                                 from_epoch=0, to_epoch=49, epochs_skip=0, 
                                                 xticks_step=3, combine_tasks=False, increase_epoch_labels_by_one=True, 
-                                                title_prefix = "Custom model - No augmentation - No regularization",
+                                                title_prefix = "Custom CNN - No augmentation - No regularization",
                                                 colors = colors,
                                                 plot_dir = plot_dir
                                                 )
@@ -724,7 +724,7 @@ if __name__ == "__main__":
                 plot_confusion_matrix("Base", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                          
-                                        title_prefix = "Confusion Matrix Base",
+                                        title_prefix = "SB-CNN",
                                         scores_on_train=False,
                                         plot_dir = plot_dir
                                         )
@@ -732,7 +732,7 @@ if __name__ == "__main__":
                 plot_confusion_matrix("Base_custom", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                          
-                                        title_prefix = "Confusion Matrix Base_custom",
+                                        title_prefix = "Custom CNN",
                                         scores_on_train=False,
                                         plot_dir = plot_dir
                                         )
@@ -740,7 +740,7 @@ if __name__ == "__main__":
                 plot_confusion_matrix("Base_delta", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                          
-                                        title_prefix = "Confusion Matrix Base using Delta",
+                                        title_prefix = "SB-CNN using spectrogram delta",
                                         scores_on_train=False,
                                         plot_dir = plot_dir
                                         )
@@ -748,15 +748,7 @@ if __name__ == "__main__":
                 plot_confusion_matrix("Base_delta_delta", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                          
-                                        title_prefix = "Confusion Matrix Base using Delta Delta",
-                                        scores_on_train=False,
-                                        plot_dir = plot_dir
-                                        )
-                
-                plot_confusion_matrix("Base", model_dir, 
-                                        tasks={"audio_classification":"Audio classification"},
-                                         
-                                        title_prefix = "Base",
+                                        title_prefix = "SB-CNN using spectrogram delta-delta",
                                         scores_on_train=False,
                                         plot_dir = plot_dir
                                         )
@@ -764,7 +756,7 @@ if __name__ == "__main__":
                 plot_confusion_matrix("Base_IMAGE_NOISE", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                          
-                                        title_prefix = "Paper Model - Confusion Matrix Image Noise",
+                                        title_prefix = "SB-CNN with spectrogram gaussian noise",
                                         scores_on_train=False,
                                         plot_dir = plot_dir
                                         )
@@ -772,7 +764,7 @@ if __name__ == "__main__":
                 plot_confusion_matrix("Base_IMAGE_NOISE_custom", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                          
-                                        title_prefix = "Custom Model - Confusion Matrix Image Noise",
+                                        title_prefix = "Custom CNN with spectrogram gaussian noise",
                                         scores_on_train=False,
                                         plot_dir = plot_dir
                                         )
@@ -780,7 +772,7 @@ if __name__ == "__main__":
                 plot_confusion_matrix("Base_IMAGE_SHIFT", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                          
-                                        title_prefix = "Paper Model - Confusion Matrix Image Shift",
+                                        title_prefix = "SB-CNN with spectrogram right shift",
                                         scores_on_train=False,
                                         plot_dir = plot_dir
                                         )
@@ -788,31 +780,32 @@ if __name__ == "__main__":
                 plot_confusion_matrix("Base_IMAGE_SHIFT_custom", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                          
-                                        title_prefix = "Custom Model - Confusion Matrix Image Shift",
+                                        title_prefix = "Custom CNN with spectrogram right shift",
                                         scores_on_train=False,
                                         plot_dir = plot_dir
                                         )
-                
+
                 plot_confusion_matrix("Base_IMAGE_SHIFT_NOISE", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                          
-                                        title_prefix = "Paper Model - Confusion Matrix Image Shift",
+                                        title_prefix = "SB-CNN with spectrogram right shift and gaussian noise",
                                         scores_on_train=False,
                                         plot_dir = plot_dir
                                         )
-                
+
                 plot_confusion_matrix("Base_IMAGE_SHIFT_NOISE_custom", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                          
-                                        title_prefix = "Custom Model - Confusion Matrix Image Shift",
+                                        title_prefix = "Custom CNN with spectrogram right shift and gaussian noise",
                                         scores_on_train=False,
                                         plot_dir = plot_dir
                                         )
+        
                 
                 plot_confusion_matrix("DynamicRangeCompression_NOISE_custom", model_dir, 
                                         tasks={"audio_classification":"Audio classification"},
                                          
-                                        title_prefix = "Custom Model - Confusion Matrix DRC + Image Noise",
+                                        title_prefix = "SB-CNN with DRC and spectrogram gaussian noise",
                                         scores_on_train=False,
                                         plot_dir = plot_dir
                                         )
@@ -821,147 +814,160 @@ if __name__ == "__main__":
         # Comparative plots #
         #####################
         if COMPARATIVE_PLOTS:
-                
                 #Confronto tra i due modelli base
                 model_names = {
-                                "Base" : "Paper model - No augmentation", 
-                                "Base custom" : "Custom model - No augmentation", 
+                                "Base" : "SB-CNN - No augmentation", 
+                                "Base_custom" : "Custom CNN - No augmentation", 
                               }
                 comparative_plots(model_names, model_dir,
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                 from_epoch=0, to_epoch=39, epochs_skip=0, 
                                 xticks_step=3, increase_epoch_labels_by_one=True,
-                                title_prefix = "Comparison between SB-CNN and our custom model",
+                                title_prefix = "Comparison between SB-CNN and our Custom CNN",
+                                plot_dir = plot_dir
+                                )
+                
+                #Confronto tra i due modelli base
+                model_names = {
+                                "Base" : "SB-CNN - No augmentation", 
+                                "Base_custom" : "Custom CNN - No augmentation", 
+                              }
+                comparative_plots(model_names, model_dir,
+                                tasks={"audio_classification":"Audio classification"},
+                                metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
+                                from_epoch=0, to_epoch=39, epochs_skip=0, 
+                                xticks_step=3, increase_epoch_labels_by_one=True,
+                                title_prefix = "Comparison between SB-CNN and our Custom CNN",
                                 plot_dir = plot_dir
                                 ) 
 
                 #Confronto tra tutte le audio augmentation sul modello paper
                 model_names = {
-                                "Base" : "Paper model - No augmentation", 
-                                "PitchShift_PS1" : "Paper model - Pitch Shift (shorter range)",
-                                "PitchShift_PS2" : "Paper model - Pitch Shift (wider range)",
-                                "TimeStretch" : "Paper model - Time Stretch",
-                                "DynamicRangeCompression" : "Paper model - Dynamic Range Compression",
-                                "BackgroundNoise" : "Paper model - Background Noise"
+                                "Base" : "SB-CNN - No augmentation", 
+                                "PitchShift_PS1" : "SB-CNN - Pitch Shift (shorter range)",
+                                "PitchShift_PS2" : "SB-CNN - Pitch Shift (wider range)",
+                                "TimeStretch" : "SB-CNN - Time Stretch",
+                                "DynamicRangeCompression" : "SB-CNN - Dynamic Range Compression",
+                                "BackgroundNoise" : "SB-CNN - Background Noise"
                               }
                 comparative_plots(model_names, model_dir,
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                 from_epoch=0, to_epoch=39, epochs_skip=0, 
                                 xticks_step=3, increase_epoch_labels_by_one=True,
-                                title_prefix = "Paper model audio augmentations",
+                                title_prefix = "SB-CNN audio augmentations",
                                 plot_dir = plot_dir
                                 ) 
 
                 #Confronto tra tutte le audio augmentation sul modello custom
                 model_names = {
-                                "Base_custom" : "Custom model - No augmentation", 
-                                "PitchShift_PS1_custom" : "Custom model - Pitch Shift (shorter range)",
-                                "PitchShift_PS2_custom" : "Custom model - Pitch Shift (wider range)",
-                                "TimeStretch_custom" : "Custom model - Time Stretch",
-                                "DynamicRangeCompression_custom" : "Custom model - Dynamic Range Compression",
-                                "BackgroundNoise_custom" : "Custom model - Background Noise"
+                                "Base_custom" : "Custom CNN - No augmentation", 
+                                "PitchShift_PS1_custom" : "Custom CNN - Pitch Shift (shorter range)",
+                                "PitchShift_PS2_custom" : "Custom CNN - Pitch Shift (wider range)",
+                                "TimeStretch_custom" : "Custom CNN - Time Stretch",
+                                "DynamicRangeCompression_custom" : "Custom CNN - Dynamic Range Compression",
+                                "BackgroundNoise_custom" : "Custom CNN - Background Noise"
                               }
                 comparative_plots(model_names, model_dir,
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                 from_epoch=0, to_epoch=39, epochs_skip=0, 
                                 xticks_step=3, increase_epoch_labels_by_one=True,
-                                title_prefix = "Custom model audio augmentations",
+                                title_prefix = "Custom CNN audio augmentations",
                                 plot_dir = plot_dir
                                 ) 
                 
                 #Confronto tra Base, Base + Delta e Base + Delta Delta sul modello paper
                 model_names = {
-                                "Base" : "Base", 
-                                "Base_delta" : "Base + Spectrogram Delta",
-                                "Base_delta_delta" : "Base + Spectrogram Delta-Delta"
+                                "Base" : "SB-CNN", 
+                                "Base_delta" : "SB-CNN with spectrogram delta",
+                                "Base_delta_delta" : "SB-CNN with spectrogram delta-delta"
                               }
                 comparative_plots(model_names, model_dir,
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                 from_epoch=0, to_epoch=39, epochs_skip=0, 
                                 xticks_step=3, increase_epoch_labels_by_one=True,
-                                title_prefix = "Paper model with delta and delta-delta",
+                                title_prefix = "SB-CNN with delta and delta-delta",
                                 plot_dir = plot_dir
                                 ) 
 
                 #Confronto tra tutte le audio augmentation DELTA sul modello paper
                 model_names = {
-                                "Base_delta" : "Paper model with delta - No augmentation", 
-                                "PitchShift_PS1_delta" : "Paper model with delta - Pitch Shift (shorter range)",
-                                "PitchShift_PS2_delta" : "Paper model with delta - Pitch Shift (wider range)",
-                                "TimeStretch_delta" : "Paper model with delta - Time Stretch",
-                                "DynamicRangeCompression_delta" : "Paper model with delta - Dynamic Range Compression",
-                                "BackgroundNoise_delta" : "Paper model with delta - Background Noise"
+                                "Base_delta" : "SB-CNN with delta - No augmentation", 
+                                "PitchShift_PS1_delta" : "SB-CNN with delta - Pitch Shift (shorter range)",
+                                "PitchShift_PS2_delta" : "SB-CNN with delta - Pitch Shift (wider range)",
+                                "TimeStretch_delta" : "SB-CNN with delta - Time Stretch",
+                                "DynamicRangeCompression_delta" : "SB-CNN with delta - Dynamic Range Compression",
+                                "BackgroundNoise_delta" : "SB-CNN with delta - Background Noise"
                               }
                 comparative_plots(model_names, model_dir,
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                 from_epoch=0, to_epoch=39, epochs_skip=0, 
                                 xticks_step=3, increase_epoch_labels_by_one=True,
-                                title_prefix = "Paper model audio augmentations with delta",
+                                title_prefix = "SB-CNN audio augmentations with delta",
                                 plot_dir = plot_dir
                                 ) 
                 
                 #Confronto tra tutte le audio augmentation DELTA DELTA sul modello paper
                 model_names = {
-                                "Base_delta_delta" : "Paper model with delta-delta - No augmentation", 
-                                "PitchShift_PS1_delta_delta" : "Paper model with delta-delta - Pitch Shift (shorter range)",
-                                "PitchShift_PS2_delta_delta" : "Paper model with delta-delta - Pitch Shift (wider range)",
-                                "TimeStretch_delta_delta" : "Paper model with delta-delta - Time Stretch",
-                                "DynamicRangeCompression_delta_delta" : "Paper model with delta-delta - Dynamic Range Compression",
-                                "BackgroundNoise_delta_delta" : "Paper model with delta-delta - Background Noise"
+                                "Base_delta_delta" : "SB-CNN with delta-delta - No augmentation", 
+                                "PitchShift_PS1_delta_delta" : "SB-CNN with delta-delta - Pitch Shift (shorter range)",
+                                "PitchShift_PS2_delta_delta" : "SB-CNN with delta-delta - Pitch Shift (wider range)",
+                                "TimeStretch_delta_delta" : "SB-CNN with delta-delta - Time Stretch",
+                                "DynamicRangeCompression_delta_delta" : "SB-CNN with delta-delta - Dynamic Range Compression",
+                                "BackgroundNoise_delta_delta" : "SB-CNN with delta-delta - Background Noise"
                               }
                 comparative_plots(model_names, model_dir,
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                 from_epoch=0, to_epoch=39, epochs_skip=0, 
                                 xticks_step=3, increase_epoch_labels_by_one=True,
-                                title_prefix = "Paper model audio augmentations with delta-delta",
+                                title_prefix = "SB-CNN audio augmentations with delta-delta",
                                 plot_dir = plot_dir
                                 ) 
 
                 #Confronto tra Base, Random Image Shift, Random Image Noise, Random Image Shift + Random Image Noise sul modello custom
                 
                 model_names = {
-                                "Base" : "Paper model - No augmentation", 
-                                "Base_IMAGE_SHIFT" : "Paper model with spectrogram Image Shift",
-                                "Base_IMAGE_NOISE" : "Paper model with spectrogram Image Noise",
-                                "Base_IMAGE_SHIFT_NOISE" : "Paper model with spectrogram Image Shift and Noise",
+                                "Base" : "SB-CNN - No augmentation", 
+                                "Base_IMAGE_SHIFT" : "SB-CNN with spectrogram Image Shift",
+                                "Base_IMAGE_NOISE" : "SB-CNN with spectrogram Image Noise",
+                                "Base_IMAGE_SHIFT_NOISE" : "SB-CNN with spectrogram Image Shift and Noise",
                               }
                 comparative_plots(model_names, model_dir,
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                 from_epoch=0, to_epoch=39, epochs_skip=0, 
                                 xticks_step=3, increase_epoch_labels_by_one=True,
-                                title_prefix = "Paper model spectrogram image augmentations",
+                                title_prefix = "SB-CNN spectrogram image augmentations",
                                 plot_dir = plot_dir
                                 )
                 
                 #Confronto tra Base, Random Image Shift, Random Image Noise, Random Image Shift + Random Image Noise sul modello paper
                 model_names = {
-                                "Base_custom" : "Custom model - No augmentation", 
-                                "Base_IMAGE_SHIFT_custom" : "Custom model with spectrogram Image Shift",
-                                "Base_IMAGE_NOISE_custom" : "Custom model with spectrogram Image Noise",
-                                "Base_IMAGE_SHIFT_NOISE_custom" : "Custom model with spectrogram Image Shift and Noise",
+                                "Base_custom" : "Custom CNN - No augmentation", 
+                                "Base_IMAGE_SHIFT_custom" : "Custom CNN with spectrogram Image Shift",
+                                "Base_IMAGE_NOISE_custom" : "Custom CNN with spectrogram Image Noise",
+                                "Base_IMAGE_SHIFT_NOISE_custom" : "Custom CNN with spectrogram Image Shift and Noise",
                               }
                 comparative_plots(model_names, model_dir,
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                 from_epoch=0, to_epoch=39, epochs_skip=0, 
                                 xticks_step=3, increase_epoch_labels_by_one=True,
-                                title_prefix = "Custom model spectrogram image augmentations",
+                                title_prefix = "Custom CNN spectrogram image augmentations",
                                 plot_dir = plot_dir
                                 )
                 
                 #Confronto tra Base, Migliore tra i delta, Migliore tra le augmentation audio, Migliore tra le augmentation immagine
                 
                 model_names = {
-                                "Base" : "Paper model - No augmentation", 
+                                "Base" : "SB-CNN - No augmentation", 
                                 "DynamicRangeCompression" : "Best of the audio augmentations (Dynamic Range Compression)", 
-                                "Base_IMAGE_SHIFT_NOISE" : "Best of the image augmentations (SHIFT + NOISE)",
+                                "Base_IMAGE_NOISE" : "Best of the image augmentations (GAUSSIAN NOISE)",
                                 "DynamicRangeCompression_NOISE_custom" : "Best augmentations together (Custom, DRC + GAUSSIAN NOISE)",
                               }
                 comparative_plots(model_names, model_dir,
@@ -969,7 +975,7 @@ if __name__ == "__main__":
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                 from_epoch=0, to_epoch=39, epochs_skip=0, 
                                 xticks_step=3, increase_epoch_labels_by_one=True,
-                                title_prefix = "Paper model comparison of the best augmentations",
+                                title_prefix = "SB-CNN comparison of the best augmentations",
                                 plot_dir = plot_dir
                                 )
                 
@@ -977,16 +983,16 @@ if __name__ == "__main__":
                 
         
                 model_names = {
-                                "Base_no_regularization" : "Custom model - No regularization", 
-                                "Base_only_dropout" : "Custom model - Only Dropout", 
-                                "Base" : "Custom model - With regularization",
+                                "Base_no_regularization" : "SB-CNN - No regularization", 
+                                "Base_only_dropout" : "SB-CNN - Only Dropout", 
+                                "Base" : "SB-CNN - With regularization",
                               }
                 comparative_plots(model_names, model_dir,
                                 tasks={"audio_classification":"Audio classification"},
                                 metrics={"F1-macro":["f1"], "Accuracy":["accuracy"]},
                                 from_epoch=0, to_epoch=39, epochs_skip=0, 
                                 xticks_step=3, increase_epoch_labels_by_one=True,
-                                title_prefix = "Paper model comparison of the best augmentations",
+                                title_prefix = "SB-CNN comparison of the regularization methods",
                                 plot_dir = plot_dir
                                 )
                 
@@ -1088,8 +1094,8 @@ if __name__ == "__main__":
                                             "TimeStretch" : "TS"
                                             }
                 plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test,
-                                    "Base", ["Δ Classification Accuracies", "class"],
-                                    "value", "class", classes_names = classes_names, horizontal=True,title_prefix = "Custom model - Audio augmentation accuracy difference", plot_dir="plots")
+                                    "Base", ["Δ Classification Accuracies", "Classes"],
+                                    "value", "class", classes_names = classes_names, horizontal=True,title_prefix = "SB-CNN\nAudio augmentations accuracy difference", plot_dir="plots")
                 # 2) Base custom con tutte augmentation
                 dict_augmentation_to_test = {
                                             "Base_custom" : "Base",
@@ -1100,8 +1106,8 @@ if __name__ == "__main__":
                                             "TimeStretch_custom" : "TS"
                                             }
                 plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test,
-                                    "Base_custom", ["Δ Classification Accuracies", "class"],
-                                    "value", "class", classes_names = classes_names, horizontal=True,title_prefix = "Custom model - Audio augmentation accuracy difference", plot_dir="plots") 
+                                    "Base_custom", ["Δ Classification Accuracies", "Classes"],
+                                    "value", "class", classes_names = classes_names, horizontal=True,title_prefix = "Custom CNN\nAudio augmentations accuracy difference", plot_dir="plots") 
                 # 3) Base paper delta con tutte augmentation 
                 dict_augmentation_to_test = {
                                             "Base_delta" : "Base",
@@ -1112,8 +1118,8 @@ if __name__ == "__main__":
                                             "TimeStretch_delta" : "TS"
                                             }
                 plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test,
-                                    "Base_delta", ["Δ Classification Accuracies", "class"],
-                                    "value", "class", classes_names = classes_names, horizontal=True,title_prefix = "Paper model (Delta) - Audio augmentation accuracy difference", plot_dir="plots")
+                                    "Base_delta", ["Δ Classification Accuracies", "Classes"],
+                                    "value", "class", classes_names = classes_names, horizontal=True,title_prefix = "SB-CNN with spectrograms delta\nAudio augmentations accuracy difference", plot_dir="plots")
                 # 4) Base paper delta delta tutte augmentation
                 #plot delta on total accuracies
                 dict_augmentation_to_test = {
@@ -1125,41 +1131,41 @@ if __name__ == "__main__":
                                             "TimeStretch_delta_delta" : "TS"
                                             }
                 plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test,
-                                    "Base_delta_delta", ["Δ Classification Accuracies", "class"],
-                                    "value", "class", classes_names = classes_names, horizontal=True,title_prefix = "Paper model (Delta-delta) - Audio augmentation accuracy difference", plot_dir="plots")
+                                    "Base_delta_delta", ["Δ Classification Accuracies", "Classes"],
+                                    "value", "class", classes_names = classes_names, horizontal=True,title_prefix = "SB-CNN with spectrograms delta-delta\nAudio augmentations accuracy difference", plot_dir="plots")
                 
                 # 5) Paper con tutte le image augmentation 
                 dict_augmentation_to_test = {
                                             "Base" : "Base",
-                                            "Base_IMAGE_SHIFT" : "(Paper) Spectro. shift",
-                                            "Base_IMAGE_NOISE" : "(Paper) Spectro. noise",
-                                            "Base_IMAGE_SHIFT_NOISE" : "(Paper) Spectro. noise + shift"
+                                            "Base_IMAGE_SHIFT" : "SB-CNN Spectro. shift",
+                                            "Base_IMAGE_NOISE" : "SB-CNN Spectro. noise",
+                                            "Base_IMAGE_SHIFT_NOISE" : "SB-CNN Spectro. noise + shift"
                                             }
                 plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test, 
-                                    "Base", ["Δ Classification Accuracy", "class"],
-                                    "value", "class", classes_names = classes_names, horizontal=False,title_prefix = "Paper model - Image augmentation accuracy difference", plot_dir="plots")
+                                    "Base", ["Δ Accuracy", "Classes"],
+                                    "value", "class", classes_names = classes_names, horizontal=False,title_prefix = "SB-CNN\nImage augmentations accuracy difference", plot_dir="plots")
                                     
                 # 5) Custom con tutte le image augmentation 
                 dict_augmentation_to_test = {
-                                            "Base_custom" : "(Custom) Base",
-                                            "Base_IMAGE_SHIFT_custom" : "(Custom) Spectro. shift",
-                                            "Base_IMAGE_NOISE_custom" : "(Custom) Spectro. noise",
-                                            "Base_IMAGE_SHIFT_NOISE_custom" : "(Custom) Spectro. noise + shift"
+                                            "Base_custom" : "Custom Base",
+                                            "Base_IMAGE_SHIFT_custom" : "Custom Spectro. shift",
+                                            "Base_IMAGE_NOISE_custom" : "Custom Spectro. noise",
+                                            "Base_IMAGE_SHIFT_NOISE_custom" : "Custom Spectro. noise + shift"
                                             }
 
                 plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test, 
-                                    "Base_custom", ["Δ Classification Accuracy", "class"],
-                                    "value", "class", classes_names = classes_names, horizontal=False,title_prefix = "Custom model - Image augmentation accuracy difference", plot_dir="plots")
+                                    "Base_custom", ["Δ Accuracy", "Classes"],
+                                    "value", "class", classes_names = classes_names, horizontal=False,title_prefix = "Custom CNN\nImage augmentations accuracy difference", plot_dir="plots")
                                     
                 # 7) Paper con tutte le migliori 
                 dict_augmentation_to_test = {
-                                            "Base" : "(Paper) Base",
-                                            "Base_IMAGE_SHIFT_NOISE_custom" : "(Custom) Spectro. noise + shift",
-                                            "DynamicRangeCompression" : "(Paper) DRC",
+                                            "Base" : "SB-CNN Base",
+                                            "Base_IMAGE_SHIFT_NOISE_custom" : "Custom Spectro. noise + shift",
+                                            "DynamicRangeCompression" : "SB-CNN DRC",
                                             }
                 plot_delta_on_metric(model_dir, "all", dict_augmentation_to_test, 
-                                    "Base", ["Δ Classification Accuracy", "class"],
-                                    "value", "class", classes_names = classes_names, horizontal=False,title_prefix = "Best models - Accuracy difference", plot_dir="plots")
+                                    "Base", ["Δ Accuracy", "Classes"],
+                                    "value", "class", classes_names = classes_names, horizontal=False,title_prefix = "Best models\nAccuracy difference", plot_dir="plots")
                 
                 
                 # 1) Base paper con tutte augmentation
@@ -1172,12 +1178,12 @@ if __name__ == "__main__":
                                             "TimeStretch" : "TS"
                                             }
                 plot_delta_on_metric(model_dir, "accuracy", dict_augmentation_to_test, 
-                                    "Base", ["Δ Classification Accuracy", "class"],
-                                    "value", "class", horizontal=False,title_prefix = "Paper model - Audio augmentation accuracy difference", plot_dir="plots")
+                                    "Base", ["Δ Accuracy", "Augmentations"],
+                                    "value", "class", horizontal=False,title_prefix = "SB-CNN\nAudio augmentations accuracy difference", plot_dir="plots")
 
                 plot_delta_on_metric(model_dir, "f1",dict_augmentation_to_test,
-                                    "Base", ["Δ f1-score", "augmentations"], 
-                                    "f1_score" , "augmentations",title_prefix = "Paper model - Audio augmentation f1 difference",horizontal=False,plot_dir="plots")
+                                    "Base", ["Δ F1-macro", "Augmentations"], 
+                                    "f1_score" , "augmentations",title_prefix = "SB-CNN\nAudio augmentations F1-macro difference",horizontal=False,plot_dir="plots")
 
                 # 2) Base custom con tutte augmentation
                 dict_augmentation_to_test = {
@@ -1189,12 +1195,12 @@ if __name__ == "__main__":
                                             "TimeStretch_custom" : "TS"
                                             }
                 plot_delta_on_metric(model_dir, "accuracy", dict_augmentation_to_test, 
-                                    "Base_custom", ["Δ Classification Accuracy", "class"],
-                                    "value", "class", horizontal=False,title_prefix = "Custom model - Audio augmentation accuracy difference", plot_dir="plots")
+                                    "Base_custom", ["Δ Accuracy", "Augmentations"],
+                                    "value", "class", horizontal=False,title_prefix = "Custom CNN\nAudio augmentations accuracy difference", plot_dir="plots")
                 
                 plot_delta_on_metric(model_dir, "f1",dict_augmentation_to_test,
-                                    "Base_custom", ["Δ f1-score", "augmentations"], 
-                                    "f1_score" , "augmentations",horizontal=False,title_prefix = "Custom model - Audio augmentation f1 difference",plot_dir="plots")
+                                    "Base_custom", ["Δ F1-macro", "Augmentations"], 
+                                    "f1_score" , "augmentations",horizontal=False,title_prefix = "Custom CNN\nAudio augmentations F1-macro difference",plot_dir="plots")
 
                 # 3) Base paper con tutte augmentation + delta
                 dict_augmentation_to_test = {
@@ -1206,12 +1212,12 @@ if __name__ == "__main__":
                                             "TimeStretch_delta" : "TS"
                                             }
                 plot_delta_on_metric(model_dir, "accuracy", dict_augmentation_to_test, 
-                                    "Base_delta", ["Δ Classification Accuracy", "class"],
-                                    "value", "class", horizontal=False,title_prefix = "Paper model (delta) - Audio augmentation accuracy difference", plot_dir="plots")
+                                    "Base_delta", ["Δ Accuracy", "Augmentations"],
+                                    "value", "class", horizontal=False,title_prefix = "SB-CNN with spectrogram delta\nAudio augmentations accuracy difference", plot_dir="plots")
                                     
                 plot_delta_on_metric(model_dir, "f1",dict_augmentation_to_test,
-                                    "Base_delta", ["Δ f1-score", "augmentations"], 
-                                    "f1_score" , "augmentations",horizontal=False,title_prefix = "Paper model (delta) - Audio augmentation f1 difference",plot_dir="plots")
+                                    "Base_delta", ["Δ F1-macro", "Augmentations"], 
+                                    "f1_score" , "augmentations",horizontal=False,title_prefix = "SB-CNN wih spectrogram delta\nAudio augmentations F1-macro difference",plot_dir="plots")
                 # 4) Base paper con tutte augmentation + delta-delta 
                 
                 #plot delta on total accuracy
@@ -1224,12 +1230,12 @@ if __name__ == "__main__":
                                             "TimeStretch_delta_delta" : "TS"
                                             }
                 plot_delta_on_metric(model_dir, "accuracy", dict_augmentation_to_test, 
-                                    "Base_delta_delta", ["Δ Classification Accuracy", "class"],
-                                    "value", "class", horizontal=False,title_prefix = "Paper model (Delta-delta) - Audio augmentation accuracy difference", plot_dir="plots")
+                                    "Base_delta_delta", ["Δ Accuracy", "Augmentations"],
+                                    "value", "class", horizontal=False,title_prefix = "SB-CNN with spectrogram delta-delta\nAudio augmentations accuracy difference", plot_dir="plots")
                 
                 plot_delta_on_metric(model_dir, "f1",dict_augmentation_to_test,
-                                    "Base_delta_delta", ["Δ f1-score", "augmentations"], 
-                                    "f1_score" , "augmentations",horizontal=False,title_prefix = "Base Delta Delta difference f1",plot_dir="plots")
+                                    "Base_delta_delta", ["Δ F1-macro", "Augmentations"], 
+                                    "f1_score" , "augmentations",horizontal=False,title_prefix = "SB-CNN with spectrogram delta-delta\nAudio augmentations F1-macro difference",plot_dir="plots")
                 # 5) Paper con tutte le image augmentation 
                 
 
@@ -1238,6 +1244,9 @@ if __name__ == "__main__":
         ###################################
         if PLOT_TRAIN_TEST_ACCURACY_DELTAS:
                 
+                if not os.path.exists(os.path.join(plot_dir, "train_test_deltas")):
+                        os.makedirs(os.path.join(plot_dir, "train_test_deltas"))
+
                 # 1) Base paper con tutte augmentation
                 model_names = {
                                 "Base" : "Base", 
@@ -1247,13 +1256,15 @@ if __name__ == "__main__":
                                 "DynamicRangeCompression" : "DRC",
                                 "BackgroundNoise" : "BG"
                               }
+                              
                 plot_train_test_accuracy_delta(model_dir, model_names, 
                                                 metrics = {"accuracy" : "Accuracy"},
                                                 tasks = {"audio_classification" : "Audio classification"},
                                                 show = False,
-                                                plot_dir = plot_dir,
-                                                title_prefix = "Paper model - Train vs Test accuracy difference"
+                                                plot_dir = os.path.join(plot_dir, "train_test_deltas"),
+                                                title_prefix = "SB-CNN\nTrain vs Test accuracy difference"
                                                 )
+                
                 # 2) Base custom con tutte augmentation
                 model_names = {
                                 "Base_custom" : "Base", 
@@ -1267,8 +1278,8 @@ if __name__ == "__main__":
                                                 metrics = {"accuracy" : "Accuracy"},
                                                 tasks = {"audio_classification" : "Audio classification"},
                                                 show = False,
-                                                plot_dir = plot_dir,
-                                                title_prefix = "Custom model - Train vs Test accuracy difference"
+                                                plot_dir = os.path.join(plot_dir, "train_test_deltas"),
+                                                title_prefix = "Custom CNN\nTrain vs Test accuracy difference"
                                                 )
                 # 3) Base paper con tutte augmentation + delta
                 model_names = {
@@ -1283,8 +1294,8 @@ if __name__ == "__main__":
                                                 metrics = {"accuracy" : "Accuracy"},
                                                 tasks = {"audio_classification" : "Audio classification"},
                                                 show = False,
-                                                plot_dir = plot_dir,
-                                                title_prefix = "Paper model (delta) - Train vs Test accuracy difference"
+                                                plot_dir = os.path.join(plot_dir, "train_test_deltas"),
+                                                title_prefix = "SB-CNN with spectrogram delta\nTrain vs Test accuracy difference"
                                                 )
                 # 4) Base paper con tutte augmentation + delta-delta
                 model_names = {
@@ -1299,8 +1310,8 @@ if __name__ == "__main__":
                                                 metrics = {"accuracy" : "Accuracy"},
                                                 tasks = {"audio_classification" : "Audio classification"},
                                                 show = False,
-                                                plot_dir = plot_dir,
-                                                title_prefix = "Paper model (delta-delta) - Train vs Test accuracy difference"
+                                                plot_dir = os.path.join(plot_dir, "train_test_deltas"),
+                                                title_prefix = "SB-CNN with spectrogram delta-delta\nTrain vs Test accuracy difference"
                                                 )
                 # 5) Paper con tutte le image augmentation
                 
@@ -1314,8 +1325,8 @@ if __name__ == "__main__":
                                                 metrics = {"accuracy" : "Accuracy"},
                                                 tasks = {"audio_classification" : "Audio classification"},
                                                 show = False,
-                                                plot_dir = plot_dir,
-                                                title_prefix = "Paper model (spectrogram image augmentation) - Train vs Test accuracy difference"
+                                                plot_dir = os.path.join(plot_dir, "train_test_deltas"),
+                                                title_prefix = "SB-CNN with spectrogram augmentation\nTrain vs Test accuracy difference"
                                                 )
                 
                 # 6) Custom con tutte le image augmentation
@@ -1329,8 +1340,8 @@ if __name__ == "__main__":
                                                 metrics = {"accuracy" : "Accuracy"},
                                                 tasks = {"audio_classification" : "Audio classification"},
                                                 show = False,
-                                                plot_dir = plot_dir,
-                                                title_prefix = "Custom model (spectrogram image augmentation) - Train vs Test accuracy difference"
+                                                plot_dir = os.path.join(plot_dir, "train_test_deltas"),
+                                                title_prefix = "Custom CNN with spectrogram augmentation)\nTrain vs Test accuracy difference"
                                                 )
                 # 7) Base paper + delta + delta-delta
                 model_names = {
@@ -1342,38 +1353,39 @@ if __name__ == "__main__":
                                                 metrics = {"accuracy" : "Accuracy"},
                                                 tasks = {"audio_classification" : "Audio classification"},
                                                 show = False,
-                                                plot_dir = plot_dir,
-                                                title_prefix = "Paper model (delta vs delta-delta) - Train vs Test accuracy difference"
+                                                plot_dir = os.path.join(plot_dir, "train_test_deltas"),
+                                                title_prefix = "SB-CNN with spectrogram augmentation\nTrain vs Test accuracy difference"
                                                 )
                 # 8) Delta modelli migliori
                 
                 model_names = {
-                                "Base" : "(Paper) Base", 
-                                "DynamicRangeCompression" : "(Paper) DRC", 
-                                "Base_IMAGE_NOISE_custom" : "(Custom) Image noise",
-                                #"Base_IMAGE_NOISE_custom" : "(Custom) DRC + Image noise",
+                                "Base" : "SB-CNN Base", 
+                                "DynamicRangeCompression" : "SB-CNN DRC", 
+                                "Base_IMAGE_NOISE_custom" : "Custom Image noise",
+                                #"Base_IMAGE_NOISE_custom" : "Custom DRC + Image noise",
                               }
                 plot_train_test_accuracy_delta(model_dir, model_names, 
                                                 metrics = {"accuracy" : "Accuracy"},
                                                 tasks = {"audio_classification" : "Audio classification"},
                                                 show = False,
-                                                plot_dir = plot_dir,
-                                                title_prefix = "Best models - Train vs Test accuracy difference"
+                                                plot_dir = os.path.join(plot_dir, "train_test_deltas"),
+                                                title_prefix = "Best models\nTrain vs Test accuracy difference"
                                                 )
 
                 # 8) Delta su regolarizzazione
                 
                 model_names = {
-                                "Base_no_regularization" : "(Custom) Base (no regulariz.)", 
-                                "Base_only_dropout" : "(Custom) Base - Dropout", 
-                                "Base" : "(Custom) Base - Dropout + Weight dec.",
+                                "Base_no_regularization" : "No reg.", 
+                                "Base_only_dropout" : "Only Dropout", 
+                                "Base" : "Dropout + Weight dec.",
                               }
                 plot_train_test_accuracy_delta(model_dir, model_names, 
                                                 metrics = {"accuracy" : "Accuracy"},
                                                 tasks = {"audio_classification" : "Audio classification"},
                                                 show = False,
-                                                plot_dir = plot_dir,
-                                                title_prefix = "Base custom - Impact of regularization on overfitting"
+                                                plot_dir = os.path.join(plot_dir, "train_test_deltas"),
+                                                title_prefix = "SB-CNN\nImpact of regularization on overfitting",
+                                                x_label = "Regularization"
                                                 )
                 
 
@@ -1389,7 +1401,7 @@ if __name__ == "__main__":
                         else:
                                 class_distribution[sample_meta["class_name"]] += 1
                 plot_class_distributions(class_distribution, plot_dir = plot_dir)
-
+                plot_class_distributions(class_distribution, plot_dir = plot_dir, no_labels = True)
         ####################################
         #  COLLECT AND PREPROCESS SAMPLES  #
         ####################################

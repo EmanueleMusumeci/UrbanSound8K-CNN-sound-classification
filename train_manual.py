@@ -101,18 +101,18 @@ else:
 
 
 #Model
-USE_PAPER_CNN = False
-DROPOUT_PROBABILIY = 0.5
-#DROPOUT_PROBABILIY = 0
-WEIGHT_DECAY = 1e-3
-#WEIGHT_DECAY = 0
+USE_PAPER_CNN = True
+#DROPOUT_PROBABILIY = 0.5
+DROPOUT_PROBABILIY = 0
+#WEIGHT_DECAY = 1e-3
+WEIGHT_DECAY = 0
 CNN_INPUT_SIZE = (spectrogram_bands, spectrogram_frames_per_segment, in_channels)
 FFN_INPUT_SIZE = 154
 
 
 #Training instance name
 if args.name is None:
-    INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "Base")
+    INSTANCE_NAME = (preprocessing_name if preprocessing_name is not None else "NO_REGULARIZATION_DROP_0")
 else:
     INSTANCE_NAME = args.name
 if not USE_PAPER_CNN:

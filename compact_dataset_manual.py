@@ -6,6 +6,7 @@ from core.utils.spectrogram_utils import display_heatmap, generate_mel_spectrogr
 from core.utils.audio_utils import play_sound
 from core.data_augmentation.audio_transformations import *
 
+OVERWRITE_EXISTING_FOLDS = False
 
 """
 NOTICE: While compact_dataset.py offers a command-line interface to control the dataset compacting process,
@@ -22,23 +23,22 @@ fold_list = [1,2,3,4,5,6,7,8,9,10]
 FOLD_PERCENTAGE = 1.0
 
 
-OVERWRITE_EXISTING_FOLDS = True
 REGENERATE_FOLD = [False for fold in range(0,10)]
 if OVERWRITE_EXISTING_FOLDS:
     for fold in fold_list:
         REGENERATE_FOLD[fold-1] = True
 
 audio_augmentations = [
-                        #PitchShift(values = [-2, -1, 1, 2]),
-                        #PitchShift(values = [-3.5, -2.5, 2.5, 3.5]),
-                        #MUDADynamicRangeCompression(),
-                        #BackgroundNoise({
-                        #    "street_scene_1" : "150993__saphe__street-scene-1.wav",
-                        #    "street_scene_3" : "173955__saphe__street-scene-3.wav",
-                        #    "street_valencia" : "207208__jormarp__high-street-of-gandia-valencia-spain.wav",
-                        #    "city_park_tel_aviv" : "268903__yonts__city-park-tel-aviv-israel.wav",
-                        #}, files_dir = os.path.join(DATASET_DIR, "UrbanSound8K-JAMS", "background_noise")),
-                        #TimeStretch(values = [0.81, 0.93, 1.07, 1.23])
+                        PitchShift(values = [-2, -1, 1, 2]),
+                        PitchShift(values = [-3.5, -2.5, 2.5, 3.5]),
+                        MUDADynamicRangeCompression(),
+                        BackgroundNoise({
+                            "street_scene_1" : "150993__saphe__street-scene-1.wav",
+                            "street_scene_3" : "173955__saphe__street-scene-3.wav",
+                            "street_valencia" : "207208__jormarp__high-street-of-gandia-valencia-spain.wav",
+                            "city_park_tel_aviv" : "268903__yonts__city-park-tel-aviv-israel.wav",
+                        }, files_dir = os.path.join(DATASET_DIR, "UrbanSound8K-JAMS", "background_noise")),
+                        TimeStretch(values = [0.81, 0.93, 1.07, 1.23])
                         
                         ]
 
@@ -47,7 +47,7 @@ if len(audio_augmentations)>0:
         print("PREPROCESSING NAME: {}".format(audio_augmentation.name))
         for fold in fold_list:
             if not REGENERATE_FOLD[fold-1] and not check_audio_length(fold, DATASET_DIR, sampling_rate=22050):
-                print("The compacted raw fold has a different audio length (which might be due to a different sample rate). Restart the compacting with the --overwrite_existing_folds command-line argument to correctly re-generate the raw fold.")
+                print("The compacted raw fold has a different audio length (which might be due to a different sample rate). Restart the compacting with OVERWRITE_EXISTING_FOLDS = True to correctly re-generate the raw fold.")
                 exit()
             if not os.path.exists(os.path.join(DATASET_DIR, "raw", "urban_audio_fold_"+str(fold)+".dat")) or REGENERATE_FOLD[fold-1]:
                 compact_raw_fold(DATASET_DIR, fold, normalize_audio=False, fold_percentage=FOLD_PERCENTAGE, resample_to=22050)
@@ -69,7 +69,7 @@ if len(audio_augmentations)>0:
 else:
     for fold in fold_list:
         if not REGENERATE_FOLD[fold-1] and not check_audio_length(fold, DATASET_DIR, sampling_rate=args.resample_to):
-            print("The compacted raw fold has a different audio length (which might be due to a different sample rate). Restart the compacting with the --overwrite_existing_folds command-line argument to correctly re-generate the raw fold.")
+            print("The compacted raw fold has a different audio length (which might be due to a different sample rate). Restart the compacting with with OVERWRITE_EXISTING_FOLDS = True to correctly re-generate the raw fold.")
             exit()
         if not os.path.exists(os.path.join(DATASET_DIR, "raw", "urban_audio_fold_"+str(fold)+".dat")) or REGENERATE_FOLD[fold-1]:
             compact_raw_fold(DATASET_DIR, fold, normalize_audio=False, fold_percentage=FOLD_PERCENTAGE, resample_to=22050)

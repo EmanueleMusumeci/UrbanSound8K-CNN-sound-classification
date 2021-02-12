@@ -629,29 +629,40 @@ def show_image_preprocessing(transformations, image, title_prefix="", progressiv
         path = os.path.join(save_to_dir,title_prefix.replace(" ","_")+"_Preprocessed_image_"+transformation_name.replace(" ","_"))+".png"
         image.savefig(path)
 
-def plot_class_distributions(distributions, plot_dir=None):
-    plt.rc('xtick',labelsize=15)
-    plt.rc('ytick',labelsize=15)
+def plot_class_distributions(distributions, plot_dir=None, no_labels = False):
+    if not no_labels:
+      plt.rc('xtick',labelsize=15)
+      plt.rc('ytick',labelsize=15)
 
     fig, ax = plt.subplots(figsize=(18,7))
-    seaborn.barplot(data = pd.DataFrame(distributions, index=[0]).melt(), 
-                    x = "variable", y="value", hue="variable", dodge = False).legend_.remove()
+    plot = seaborn.barplot(data = pd.DataFrame(distributions, index=[0]).melt(), 
+                    x = "variable", y="value", hue="variable", dodge = False)
+    plot.legend_.remove()
     
-    plt.xticks(range(0,len(distributions), 1), distributions.keys(), rotation=45, ha="right")
     
-    plt.xlabel("Class name", size = 15)
-    plt.ylabel("Instance count", size = 17)
+    title = "Class distribution"
+
+    if no_labels:
+      plot.set(xticklabels=[])
+      plot.set(yticklabels=[])
+      plot.tick_params(bottom=False)
+      plot.tick_params(left=False)
+      plt.ylabel("Instance count", size = 20)
+      plt.xlabel("Classes", size = 20)
+    else:
+      plt.xticks(range(0,len(distributions), 1), distributions.keys(), rotation=45, ha="right")
+      plt.xlabel("Class name", size = 15)
+      plt.ylabel("Instance count", size = 17)
+      plt.title(title, fontsize=15)
 
     plt.subplots_adjust(left=0.2, bottom=0.3)
-
-    title = "Class distribution"
-    
-    plt.title(title, fontsize=15)
 
     plt.grid(True)
 
     if plot_dir is not None:
-        fig.savefig(os.path.join(plot_dir,"class_distribution_plot.png"))
+        plot_name = "class_distribution_plot"
+        if no_labels: plot_name +="_no_labels"
+        fig.savefig(os.path.join(plot_dir,plot_name+".png"))
     else:
         fig.show()
 
@@ -1077,7 +1088,7 @@ def method_all_classes(model_name, model_dir,
         
         return ACCs
 
-def delta_plot(data, axis_labels, x_label, y_label, horizontal=True, metric="accuracy", title_prefix = "", plot_dir = None, show=False):
+def delta_plot(data, axis_labels, x_label, y_label, horizontal=True, metric="accuracy", title_prefix = "", plot_dir = None, show=False, font_size = 13, ylim = (-0.1, 0.1)):
     '''
         Creates delta plot
         Args:
@@ -1092,44 +1103,66 @@ def delta_plot(data, axis_labels, x_label, y_label, horizontal=True, metric="acc
         Returns
         - saves in directory plots/delta plots the plot created
     ''' 
-    x_hori = x_label
-    y_hori = y_label
-    if not horizontal:
+
+
+    if horizontal:
+        x_hori = x_label
+        y_hori = y_label
+    else:
         x_hori = y_label
         y_hori = x_label
+    
+
     # Create DataFrame
     df = pd.DataFrame(data)
 
+    
     if len(data) == 3 : 
         hue = "augmentations"
         
+        plt.rc('xtick',labelsize=font_size)
+        plt.rc('ytick',labelsize=font_size)
         g = sns.catplot(
             data=df, kind="bar",
             x=x_hori, y=y_hori,hue = hue,
             ci="sd", palette="dark", alpha=.6, height=6,
             legend = True, legend_out = False
         )
-        plt.title(title_prefix+"\nPer-class")
+        plt.title(title_prefix+"\nPer-class", fontsize=font_size)
         title_prefix = "Per_class "+title_prefix
-        #plt.legend(bbox_to_anchor=(1.05, 1), loc=8, borderaxespad=0.)
 
-        #plt.subplot_adjust(top=0.86)
+        if horizontal : 
+            plt.xlabel(axis_labels[0],fontsize=font_size)
+            plt.ylabel(axis_labels[1],fontsize=font_size)
+        else:
+            plt.xlabel(axis_labels[1],fontsize=font_size)
+            plt.ylabel(axis_labels[0],fontsize=font_size)
+
     else:
-        plt.xlim(0, 0.5)
+        plt.rc('xtick',labelsize=font_size)
+        plt.rc('ytick',labelsize=font_size)
         g = sns.catplot(
             data=df, kind="bar",
             x=x_hori, y=y_hori,
             ci="sd", palette="dark", alpha=.6, height=4
         )
-        plt.title(title_prefix+"\nOverall")
+        g.set(ylim = ylim)
+        plt.title(title_prefix+"\nOverall", fontsize=font_size)
         title_prefix = "Overall "+title_prefix
-        #plt.subplot_adjust(top=0.86)
+        if horizontal : 
+            plt.xlabel(axis_labels[0],fontsize=font_size)
+            plt.ylabel(axis_labels[1],fontsize=font_size)
+        else:
+            plt.xlabel(axis_labels[1],fontsize=font_size)
+            plt.ylabel(axis_labels[0],fontsize=font_size)
+
     ax1 = g.axes[0]
-    g.despine(left=True)
-    g.set_axis_labels(axis_labels[0],axis_labels[1])
+   
+    #g.despine(left=True)
     
     plt.xticks(rotation=45, ha="right") 
     plt.yticks(rotation=0)
+    
     
 
     
@@ -1138,7 +1171,7 @@ def delta_plot(data, axis_labels, x_label, y_label, horizontal=True, metric="acc
         if not os.path.exists(plot_dir):
             os.makedirs(plot_dir)
 
-        path = os.path.join(plot_dir,title_prefix.replace(" ","_")+"_delta_plot")+".png"
+        path = os.path.join(plot_dir,title_prefix.replace("\n","_").replace(" ","_")+"_delta_plot")+".png"
         g.savefig(path)
         
     if show:
@@ -1218,7 +1251,6 @@ def plot_delta_on_metric(model_dir, compute, aug_to_test, aug_chosen_for_compara
             if key is aug_chosen_for_comparation:
                 continue
             deltas[key] = {}
-            #names = ["air_conditioner","car_horn","children_playing","dog_bark","drilling","engine_idling","gun_shot","jackhammer","siren","street_music", "All classes"]
             for key_in,value_in in augmentation_delta_computed[aug_chosen_for_comparation].items():
                 deltas[key][classes_names[key_in-1]] = augmentation_delta_computed[key][key_in] - value_in
 
@@ -1226,11 +1258,8 @@ def plot_delta_on_metric(model_dir, compute, aug_to_test, aug_chosen_for_compara
                 data[y].append(key_in)
                 data[x].append(value_in)
                 data[vocab[2]].append(value)
-        #print("######################## data: ")
-        #print(data)
-        delta_plot(data, plot_axes_labels, x, y, horizontal=horizontal, metric=aug_chosen_for_comparation, plot_dir=plot_dir, title_prefix=title_prefix)
-        #delta_plot(data,plot_axes_labels,x,y,horizontal,aug_chosen_for_comparation+" "+plot_axes_labels[0],plot_dir)
-        #delta_plot(data,plot_axes_labels,x,y,horizontal,plot_axes_labels[0],plot_dir)
+        delta_plot(data, plot_axes_labels, x, y, horizontal=horizontal, metric=aug_chosen_for_comparation, plot_dir=plot_dir, title_prefix=title_prefix, font_size = 11)
+
     
     else:
         #in x the metric chosen, y the name of the model
@@ -1254,9 +1283,7 @@ def plot_delta_on_metric(model_dir, compute, aug_to_test, aug_chosen_for_compara
 
                 data[y].append(key)
                 data[x].append(value-base_value)
-        delta_plot(data, plot_axes_labels, x, y, horizontal=horizontal, metric=aug_chosen_for_comparation, plot_dir=plot_dir,title_prefix=title_prefix)
-        #delta_plot(data,plot_axes_labels,x,y,horizontal,aug_chosen_for_comparation+" "+plot_axes_labels[0],plot_dir)
-        #delta_plot(data,plot_axes_labels,x,y,horizontal,plot_axes_labels[0], plot_dir)
+        delta_plot(data, plot_axes_labels, x, y, horizontal=horizontal, metric=aug_chosen_for_comparation, plot_dir=plot_dir,title_prefix=title_prefix, font_size = 15)
 
 def plot_train_test_accuracy_delta(model_dir, model_names, 
                                     metrics = {"accuracy" : "Accuracy"},
@@ -1264,7 +1291,8 @@ def plot_train_test_accuracy_delta(model_dir, model_names,
                                     show = False,
                                     save_to_dir = None,
                                     plot_dir=None,
-                                    title_prefix = ""
+                                    title_prefix = "",
+                                    x_label = "Augmentations"
                                     ):
 
     deltas = {}
@@ -1285,4 +1313,4 @@ def plot_train_test_accuracy_delta(model_dir, model_names,
         
             pd_data = {"augmentations": list(deltas[task_name].keys()), "deltas" : list(deltas[task_name].values())}
 
-            delta_plot(pd_data, ("Augmentation","Train-Test {} delta".format(metric_label)), "augmentations", "deltas", horizontal = True, metric = "accuracy", plot_dir = plot_dir, show=show, title_prefix=title_prefix)
+            delta_plot(pd_data, (x_label,"Train-Test {} delta".format(metric_label)), "augmentations", "deltas", horizontal = True, metric = "accuracy", plot_dir = plot_dir, show=show, title_prefix=title_prefix, font_size = 15, ylim = (0,0.3))
